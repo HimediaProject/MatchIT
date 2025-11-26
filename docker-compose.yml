@@ -13,7 +13,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Mount a single SQL init script so the container only executes the one intended file
+      # If you want multiple files to be executed, you can mount a directory instead.
+      - ./server/db/init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - matchit_network
     restart: unless-stopped
