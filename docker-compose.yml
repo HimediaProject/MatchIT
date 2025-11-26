@@ -50,6 +50,35 @@ services:
       - matchit_network
     restart: unless-stopped
 
+  # Backend 서버
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: matchit_server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+  # Frontend 클라이언트
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: matchit_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
