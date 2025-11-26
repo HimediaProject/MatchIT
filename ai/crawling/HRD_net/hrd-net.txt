@@ -1,0 +1,231 @@
+# HRD-net 사이트 (고용24) Crawling
+
+https://m.work24.go.kr/hr/a/a/1100/trnnCrsInf.do?tracseTme=1&endDate=20261121&keyword1=&keyword2=&pageSize=10&orderBy=&startDate_datepicker=2025-11-21&currentTab=1&topMenuYn=&pop=&tracseId=AIG20253001077153&keywordTrngNm=&crseTracseSeNum=&keywordType=1&gb=&keyword=&kDgtlYn=&ncs=20%7C%EC%A0%95%EB%B3%B4%ED%86%B5%EC%8B%A0+%EC%A0%84%EC%B2%B4&area=00%7C%EC%A0%84%EA%B5%AD+%EC%A0%84%EC%B2%B4&orderKey=&mberSe=&kdgLinkYn=&srchType=all_type&tranRegister=&mberId=&searchYn=N&pageId=2&programMenuIdentification=EBG020000510010&endDate_datepicker=2026-11-21&monthGubun=&pageIndex=1&bgrlInstYn=&tracseTab=1&startDate=20251121&crseTracseSe=&crseTracseSeKDT=&gvrnInstt=&selectNCSKeyword=&action=trnnCrsInfPost.do
+
+paging: monthGubun=&pageIndex= `1` 이부분
+
+sorted: 정보통신 전체
+
+##################################################
+# 전체 공고 link 수집 - 국민내일배움카드 전용 페이지
+##################################################
+1. 페이지 별 공고 link 수집
+<div> .tab_cont
+<div> .#tab-panel-01 .box_tab-contents .active
+<div> .box_table_wrap
+<div> .list_status_info
+<div> .list
+    ->    개별 공고 here
+
+<div> .company_title
+<h3> .t3_sb .mt10
+<a> href here
+    ->    text title='(산대특)...'
+    ->    onclick='fn_viewTracseInfo....'
+    ->    ! link가 없고, onclick으로 redirection. selenium 사용필요
+
+##################################################
+# 개별 공고 정보 수집
+##################################################
+2. 개별 공고 별 정보 수집 - 상단 좌측 파트
+<div> .emp_sumup_wrp .mt16
+<div> .emp_colbox_div
+<div> .left_area .br .js_s
+    ->    상세 정보  start here
+<div> .tit_area
+<div>
+<p> .corp_info
+<strong>
+    ->    text here    ->    '교육원 이름'
+<strong> .title
+    ->    text here    ->    title '(산대특)머신러닝...'
+<p> .btn .small .r30 .type03 here
+    ->    text here    ->    '모집중'    ->    sorting용
+
+
+<div> .content
+<div> .infoList
+<ul> .list
+<li> .full .notC0106 .notC0080
+<strong> .block .b1_sb08
+    ->    text here    ->    '훈련기관 직종별 취업률'
+
+
+<div> .con .mb08
+<div> .graphBar
+<span> .bar label='해당없음'
+    ->    text here    ->    '해당없음'
+
+
+<li>
+<strong> .block .b1_sb8
+    ->    text here    ->    '수강생 평균 만족도'
+
+
+<span> .con .mb08
+<div> .starRating
+<span> .starpoint_bg
+<span> .blind title='만족도 100점 기준 0점'
+    ->    text here    ->    '만족도 ...'
+
+
+<li>
+<strong> .block .b1_Sb .mb08
+    ->    text here    ->    'NCS 직무분류'
+<span> .con .mb08
+    ->    text here    ->    '빅데이터플랫폼구축(20010209)'
+
+
+!!!! 여기부터 <li> class='notC0080'
+<li> .notC0080
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    'NCS 수준'
+<span> .con .mb08
+    ->    text here    ->    '5 수준'
+
+
+<li> .notC0080
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    'NCS 적용 여부'
+<span> .con .mb08
+    ->    text here    ->    '적용'
+
+
+<li> .notC0080
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '관련 자격증'
+<span> .con .mb08
+    ->    text here    ->    '빈 값도 있음'
+
+
+<li> .notC0106
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '훈련기간'
+<span> .con .mb08
+    ->    text here    ->    '2025-11-21 ~ 2026-04-30 (1회차)'
+    ->    전처리 필요함
+
+<li> .notC0106
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '훈련시간'
+<span> .
+    ->    text here    ->    '110일, 총 880시간'
+    ->    전처리 필요함
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '수강생 평균 연령대'
+<span> .con .mb08
+    ->    text here    ->    ' - '
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '담당자 성명'
+<span> .con .mb08
+    ->    text here    ->    '윤성욱'
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '담당자 전화번호'
+<span> .con .mb08
+    ->    text here    ->    '031-698-2053'
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '담당자 이메일'
+<span> .con .mb08
+    ->    text here    ->    'kkammang@naver.com'
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '주관부처'
+<span> .con .mb08
+    ->    text here    ->    '성남고용'
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '훈련유형'
+<span> .con .mb08
+    ->    text here    ->    '산업구조변화대응'
+
+
+<li> .notC0106
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '취업처 임금평균'
+<span> .con .mb08
+    ->    text here    ->    '훈련과정'
+<a> .hiddenMob onclick
+    ->    selenium으로 click해야 열림
+
+
+<li> .notC0106
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '시간표'
+<span> .con .mb08
+<a> .verPC onclick
+    ->    text here    ->    '시간표보기'
+
+
+<li> .notC0106
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '주야구분/주말여부'
+<span> .con .mb08
+    ->    text here    ->    '주간 / 주중'
+
+
+<li> .notC0106 .notC0080
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '실시현황'
+<span> .con .mb08
+    ->    text here    ->    '0회/2회'
+    ->    전처리 필요
+
+
+<li>
+<strong> .block .b1_sb .mb08
+    ->    text here    ->    '원격/집체 여부'
+<span> .con .mb08
+    ->    text here    ->    '집체'
+
+
+<li> .notC0080 style='width: 78px: border-top: 3px solid #d8dfeb:
+<span> .tit style='color: #da6200: margin-top: 20px:
+    ->    text here    ->    '안내사항'
+<span> .con style='margin-top: 20px:
+    ->    text here    -> ' ... <br> ... <br> ... '
+    ->    전처리 필요
+
+
+
+##################################################
+3. 개별 공고 별 정보 수집 - 상단 우측 파트 (훈련비)
+<div> .flex1
+<div> .cell .flx-dir-row .notC0080
+<h3> .t3_sb .underline_hover
+    ->    text here '훈련비' 
+
+<ul> .emp_info_dtl
+<li> .notC0080
+<div> style='display: flex: justify-content: space-between:
+<p> style='margin-right: 20px: font-size: 20px:
+    ->    text here '5,825,600원'    ->    전처리 필요
+
+##################################################
+4. pagination
+<div> .section_bottom
+<div> .box_pagination
+<button> .btn_page .first
+<button> .btn_page .prev
+<button> .active title='1 페이지 이동'
+<button> .active title='2 페이지 이동'
+ 반복 ...
+
+첫 페이지에서 10 페이지까지 이동 가능.
+
+총 공고수 약 2200개
