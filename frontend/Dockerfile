@@ -1,4 +1,3 @@
-# 개발 환경용 Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
@@ -7,6 +6,8 @@ WORKDIR /app
 ENV NODE_ENV=development
 ENV CHOKIDAR_USEPOLLING=true
 ENV WDS_SOCKET_PORT=0
+ENV HOST=0.0.0.0
+ENV BROWSER=none
 
 # 패키지 파일 복사
 COPY package*.json ./
