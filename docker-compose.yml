@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스 (관계형 데이터)
+  postgres:
+    image: postgres:15-alpine
+    container_name: matchit_postgres
+    environment:
+      POSTGRES_DB: matchit_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+  # pgAdmin (PostgreSQL 관리 도구)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: matchit_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@matchit.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_LOGIN_BANNER: "'MatchIT PostgreSQL 관리 도구'"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+  # Redis 캐시
+  redis:
+    image: redis:7-alpine
+    container_name: matchit_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  matchit_network:
+    driver: bridge
