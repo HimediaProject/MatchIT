@@ -13,7 +13,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Mount a single SQL init script so the container only executes the one intended file
+      # If you want multiple files to be executed, you can mount a directory instead.
+      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - matchit_network
     restart: unless-stopped
@@ -46,6 +48,35 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+  # Backend 서버
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: matchit_server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - matchit_network
+    restart: unless-stopped
+
+  # Frontend 클라이언트
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: matchit_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
     networks:
       - matchit_network
     restart: unless-stopped
