@@ -91,33 +91,46 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             전체 보기 →
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <ul className="grid grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => onNavigate('jobDetail')}
-              className="border border-gray-400 bg-white p-5 text-left hover:bg-gray-50"
-            >
-              <div className="flex gap-4 mb-3">
-                <div className="w-14 h-14 border border-gray-500 flex items-center justify-center bg-gray-50 flex-shrink-0">
-                  <span className="text-xl text-gray-400">×</span>
+            <li key={idx} className="border border-gray-400 bg-white p-5 text-left hover:bg-gray-50">
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('jobDetail', { id: idx + 1 });
+                }}
+                className="block"
+              >
+                <div className="flex gap-4 mb-3">
+                  <div className="w-14 h-14 border border-gray-500 flex items-center justify-center bg-gray-50 flex-shrink-0">
+                    <span className="text-xl text-gray-400">×</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-600 mb-1">[Company {idx + 1}]</div>
+                    <div className="text-sm truncate">[Job Title Text]</div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-gray-600 mb-1">[Company {idx + 1}]</div>
-                  <div className="text-sm truncate">[Job Title Text]</div>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  <span className="text-xs border border-gray-500 px-2 py-0.5">React</span>
+                  <span className="text-xs border border-gray-500 px-2 py-0.5">Node.js</span>
                 </div>
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
+                  <span>신입·경력</span>
+                </div>
+              </a>
+              {/* 각 채용공고마다 비교함 담기 버튼 */}
+              <div className="pt-2 border-t border-gray-200">
+                <button
+                  className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
+                  onClick={() => onAddToCompare(idx + 1)} // job ID 전달
+                >
+                  비교함 담기
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1 mb-3">
-                <span className="text-xs border border-gray-500 px-2 py-0.5">React</span>
-                <span className="text-xs border border-gray-500 px-2 py-0.5">Node.js</span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <span>신입·경력</span>
-                <span className="border border-gray-900 px-2 py-0.5">90%</span>
-              </div>
-            </button>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       {/* Recommended Bootcamps Section */}
@@ -134,27 +147,41 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             전체 보기 →
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <ul className="grid grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => onNavigate('bootcampDetail')}
-              className="border border-gray-400 bg-white text-left hover:bg-gray-50"
-            >
-              <div className="h-32 border-b border-gray-400 flex items-center justify-center bg-gray-50">
-                <span className="text-3xl text-gray-400">×</span>
-              </div>
-              <div className="p-4">
-                <div className="text-xs text-gray-600 mb-1">[Institution {idx + 1}]</div>
-                <div className="text-sm mb-3">[Course Title]</div>
-                <div className="flex items-center gap-2 text-xs mb-2">
-                  <span className="border border-gray-900 px-2 py-0.5">6개월</span>
-                  <span className="text-gray-600">국비지원</span>
+            <li key={idx} className="border border-gray-400 bg-white hover:bg-gray-50">
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('bootcampDetail', { id: idx + 1 });
+                }}
+                className="block"
+              >
+                <div className="h-32 border-b border-gray-400 flex items-center justify-center bg-gray-50">
+                  <span className="text-3xl text-gray-400">×</span>
                 </div>
+                <div className="p-4">
+                  <div className="text-xs text-gray-600 mb-1">[Institution {idx + 1}]</div>
+                  <div className="text-sm mb-3">[Course Title]</div>
+                  <div className="flex items-center gap-2 text-xs mb-3">
+                    <span className="border border-gray-900 px-2 py-0.5">6개월</span>
+                    <span className="text-gray-600">국비지원</span>
+                  </div>
+                </div>
+              </a>
+              {/* 각 교육 과정마다 비교함 담기 버튼 */}
+              <div className="pt-2 border-t border-gray-200 px-4 pb-4">
+                <button
+                  className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
+                  onClick={() => onAddToCompare(idx + 1, 'bootcamp')} // bootcamp 타입 구분
+                >
+                  비교함 담기
+                </button>
               </div>
-            </button>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import MyPage from './components/MyPage';
 type PageType = 'login' | 'home' | 'jobList' | 'jobDetail' | 'jobCompare' | 'bootcampList' | 'bootcampDetail' | 'bootcampCompare' | 'chatbot' | 'myPage';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<PageType>('login');
+  const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedJobs, setSelectedJobs] = useState<number[]>([]);
   const [selectedBootcamps, setSelectedBootcamps] = useState<number[]>([]);
 
@@ -97,7 +97,7 @@ export default function App() {
                 onClick={() => setCurrentPage('login')}
                 className="text-sm text-gray-600 hover:underline"
               >
-                로그아웃
+                로그인
               </button>
             </div>
           </div>
