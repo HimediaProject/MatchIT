@@ -12,12 +12,12 @@ import uuid
 from datetime import datetime
 from jwt_token import create_token, create_refresh_token, verify_token
 
-router = APIRouter(prefix='/jwt2')
+router = APIRouter(prefix='/jwt')
 
 # 임시 데이터 저장 (나중에 DB로 대체)
 fake_user = {
     'admin': '1234',
-    'jh': '1234'
+    'hj': '1234'
 }
 retoken = {}
 
@@ -40,7 +40,7 @@ def login(response: Response,
         'created_at': datetime.now()
     }
     # 4. 프로필로 리다이렉트 또는 홈으로 가거나 (인증 절차 후 행동 결정)
-    response = RedirectResponse(url='/jwt2/profile', status_code=302) 
+    response = RedirectResponse(url='/jwt/profile', status_code=302) 
     # 5. 쿠키 토큰 저장 
     response.set_cookie(
         key='access_token',
@@ -93,7 +93,7 @@ def refresh(response: Response,
     new_access_token = create_token(payload)
     
     # 4. 쿠키에 새로 발급한 토큰 저장
-    response = RedirectResponse(url='/jwt2/profile', status_code=302)
+    response = RedirectResponse(url='/jwt/profile', status_code=302)
     response.set_cookie(
         key='access_token',
         value=f"{str(new_access_token)}",
@@ -139,7 +139,7 @@ def profile(access_token: str = Cookie(None),
     # 4. 토큰 만료시 처리
     if isvalid == 'expired':
         if refresh_token:
-            return RedirectResponse(url='/jwt2/refresh', status_code=302)
+            return RedirectResponse(url='/jwt/refresh', status_code=302)
         return RedirectResponse(url='/') 
     
     # 5. 성공 응답 (인증 완료) 프로필 페이지 HTML 응답
