@@ -113,7 +113,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </div>
               <div className="flex items-center justify-between text-xs text-gray-600">
                 <span>신입·경력</span>
-                <span className="border border-gray-900 px-2 py-0.5">90%</span>
+                <button className="border border-gray-900 px-2 py-0.5">비교함 담기</button>
               </div>
             </button>
           ))}

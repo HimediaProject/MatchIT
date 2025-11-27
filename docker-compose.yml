@@ -75,11 +75,15 @@ services:
     container_name: matchit_frontend
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # 컨테이너 내부 node_modules는 호스트와 분리
     depends_on:
       - server
     networks:
       - matchit_network
     restart: unless-stopped
+    command: npm start  # 개발 모드에서 실행 명확히 지정
 
 volumes:
   postgres_data:
