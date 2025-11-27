@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="MatchIT Backend")
@@ -25,3 +26,34 @@ def health_check():
 @app.get("/")
 def root():
     return {"message": "MatchIT Backend is running"}
+
+# 로그인 페이지
+@app.get('/login', response_class=HTMLResponse)
+def login():
+    return"""
+    <html>
+        <body>
+            <div>
+                <h3>구글 로그인</h3>
+                <a href='/auth/google'>
+                    <img src='images/google_login.png'
+                    alt='구글 로그인' style='width: 123px; cursor: pointer;'></img>
+                </a>
+            </div>
+            <div>
+                <h3>네이버 로그인</h3>
+                <a href='/auth/naver'>
+                    <img src='images/naver_login.png'
+                    alt='네이버 로그인' style='width: 123px; cursor: pointer;'></img>
+                </a>
+            </div>
+            <div>
+                <h3>카카오 로그인</h3>
+                <a href='/auth/kakao'>
+                    <img src='images/kakao_login.png'
+                    alt='카카오 로그인' style='width: 123px; cursor: pointer;'></img>
+                </a>
+            </div>
+        </body>
+    </html>
+    """
