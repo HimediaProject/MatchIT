@@ -1,0 +1,200 @@
+리멤버 크롤링
+main: https://career.rememberapp.co.kr/job/postings
+
+공고 창
+https://career.rememberapp.co.kr/job/postings?
+
+속성
+search=%7B%22
+jobCategoryNames%22%3A%5B%7B%22
+level1%22%3A%22SW%EA%B0%9C%EB%B0%9C%22%7D%2C%7B%22
+level1%22%3A%22AI%C2%B7%EB%8D%B0%EC%9D%B4%ED%84%B0%22%7D%5D%7D
+
+https://career.rememberapp.co.kr/job/postings?search=%7B%22jobCategoryNames%22%3A%5B%7B%22level1%22%3A%22SW%EA%B0%9C%EB%B0%9C%22%7D%2C%7B%22level1%22%3A%22AI%C2%B7%EB%8D%B0%EC%9D%B4%ED%84%B0%22%7D%5D%7D
+
+#######################################################################
+
+<body>
+    <div @__next>
+        <header>
+        <div @appbody>
+
+#######################################################################
+1. 각 공고의 link 찾기
+
+- 공고 section
+<section> .sc-32fa1296-0.bldQFx
+
+- 총 공고 개수
+<div> .sc-a34accef-0.cChEjM.sc-32fa1296-1fdagSz
+
+- 공고 전체 table
+<ul> .sc-32fa1296-2.a0zcr
+
+<li> .sc-364cfa5d-0.hzhbKf
+
+<div> .sc-364cfa5d-2.bvLurj
+
+- href here
+<a> .sc-567718ed-0.jzTe0c
+Xpath: 1
+/html/body/div[1]/div[2]/div[2]/div/div[2]/section[2]/ul/li[1]/div/a
+
+Xpath: 2
+/html/body/div[1]/div[2]/div[2]/div/div[2]/section[2]/ul/li[2]/div/a
+
+Xpath: 53
+/html/body/div[1]/div[2]/div[2]/div/div[2]/section[2]/ul/li[53]/div/a
+
+#######################################################################
+2. 개별 공고 redirection
+
+- 상단 간략정보 & 로고
+<div> .sc-de9c5231-0.uLjtM.stickyBoundary
+
+<div> .sc-de9c5231-9.brAoBD
+
+- href here -> 기업의 상세 페이지 redirection                             =>>>>>>>> 기업 상세
+<a> .sc-567718ed-0.jzTe0c
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[1]/a
+
+#######################################################################
+- 공고명
+<div> .sc-a62cb96e-0.0nffC
+
+- text에 공고명 있음
+<h1> #posting-detail-title .sc-db17a579-0.bZazb0
+
+- 시리즈? 및 인원 수 / 하위 div[0] 시리즈, div[1] 인원수
+<div> .sc-949cae4e-0.blAFqL
+
+<div> .sc-a34accef-0.yCGAb
+
+- src img 있음
+<img> .sc-70f5b6f6-5.gvNJmS
+
+- 간략 정보 (연봉, 근무지, 경력, 학력, 마감일)
+<div> .sticky-outer-wrapper
+
+<div> .stikcy-inner-wrapper
+
+<div> .sc-a34accef-0.haemnP
+
+<div> .sc-a34accef-0.gLAKEF.sc-de9c5231-1.cACCae
+
+#######################################################################
+- target data 부모 tag
+<div> .sc-a34accef-0.cBEpAk
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]
+
+- 각각의 div tag에 정보 존재
+<div> sc-148d59de-0.dRGKDy  -->> 연봉, 근무지, 경력, 학력, 마감일 순 동일 class
+
+- text에 연봉 이라고 적힘			# 동일함
+<div> .sc-db17a579-0.lgXy0B
+
+- text에 연봉 적혀있음 '협의' 등		# 하동
+<div> .sc-148d59de-4.cRTmuj
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[1]/div[2]
+
+- text에 근무지 라고 적힘			# 동일함
+<div> .sc-db17a579-0.lgXy0B
+
+- text에 근무지 주소
+<div> .sc-148d59de-4.cRTmuj		# 하동
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[2]/div[2]
+
+- text에 경력 수준
+<div> .sc-148d59de-4.cRTmuj
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[3]/div[2]
+
+- 경력 무관 text
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[4]/div[2]
+
+
+!!!! 맨 밑의 부분만 구조가 다름
+<div> .sc-148d59de-0.dRGKDy
+<div> .sc-148d59de-4.cRTmuj
+<div> .sc-db17a579-0.lgXy0B
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[5]/div[2]/div/div[1]
+
+- 이 부분 == 기업의 사정으로 조기마감 될 수 있습니다
+<div> .sc-db17a579-0.lmoJBC
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[2]/div[2]/div/div/div[1]/div[1]/div[5]/div[2]/div/div[2]
+
+#######################################################################
+- 회사 소개 text
+<div> .sc-70f5b6f6-4.dYefW0
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[1]/section/div/text()
+
+- 주요 업무 text
+<div> .sc-70f5b6f6-4.dYefW0
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[2]/section/div/text()
+
+- 자격 요건 text
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[3]/section/div/text()
+
+- 우대 사항 text
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[4]/section/div/text()
+
+- 채용 절차 text
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[5]/section/div
+
+- 기타 안내 / 근무내용, 복지
+Xpath:
+/html/body/div[1]/div[2]/div[2]/div/div/div/div[1]/div[1]/div[3]/div[6]/section/div/text()
+
+
+#######################################################################
+3. 기업상세
+- 대표자명
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[1]/div[2]
+
+- 설립일
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[2]/div[2]
+
+- 업종
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[3]/div[2]
+
+- 기업유형
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[4]/div[2]
+
+- 홈페이지 -->> a tag. link here
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[5]/a
+
+- 위치
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[2]/div/div[6]/div[2]
+
+
+4. 평균 연봉 정보
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[3]/div/div[1]/b
+
+
+5. 전체 직원 수
+Xpath:
+/html/body/div/div[2]/div[2]/div/div[2]/div/section[4]/div/div[1]/p
+
+
+
+
+https://career.rememberapp.co.kr/job/postings?search=%7B%22jobCategoryNames=AI
