@@ -1,3 +1,15 @@
+### 🚀 프로젝트 초기 설정
+#### 환경 변수 설정
+```bash
+# 환경 변수 파일 복사 (프로젝트 루트에서)
+cp env.example .env
+
+# .env 파일 편집 (텍스트 에디터 사용)
+# Windows: notepad .env
+# macOS: open -e .env
+# Linux: nano .env 또는 vim .env
+```
+
 ### 🐳 Docker를 사용한 실행 (권장)
 
 #### 1. Docker 컨테이너 빌드
@@ -39,5 +51,21 @@ docker-compose up postgres mongodb redis rabbitmq -d
 docker-compose up server -d
 
 # 프론트엔드만 실행
-docker-compose up client -d
+docker-compose up frontend -d
+```
+
+#### 5. 컨테이너 정리
+```bash
+# 컨테이너 중지 및 제거, 네트워크도 함께 삭제
+docker-compose down
+
+# 2. 컨테이너, 네트워크, 그리고 데이터 볼륨까지 삭제
+docker-compose down -v
+```
+
+#### 6. 컨테이너 재시작
+```bash
+# 실행 중인 컨테이너 재시작
+docker-compose restart server
+docker-compose restart fontend
 ```
