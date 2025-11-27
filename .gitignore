@@ -1,6 +1,15 @@
 # Created by https://www.toptal.com/developers/gitignore/api/windows,macos,python,react,git,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,python,react,git,dotenv
 
+
+# 의존성
+node_modules/
+client/node_modules/
+server/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 ### dotenv ###
 .env
 
