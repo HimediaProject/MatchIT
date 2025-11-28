@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-# from models import User, Oauth_accounts
+from models import User, SocialLogin
 
 ENV_PATH = Path(__file__).parent.parent / '.env'    # .env 절대 경로
 
@@ -86,9 +86,9 @@ async def kakao_callback(code: str,
     kakao_thumnail = user_json.get('properties', {}).get('thumnail_image', 'image.png')
 
     # 4. 우리 서버에 사용자 정보를 저장시키기
-    oauth_account = db.query(Oauth_accounts)\
-                      .filter(Oauth_accounts.provider == 'kakao',\
-                              Oauth_accounts.provider_user_id == str(kakao_id)).first()
+    oauth_account = db.query(SocialLogin)\
+                      .filter(SocialLogin.provider == 'kakao',\
+                              SocialLogin.provider_user_id == str(kakao_id)).first()
     
     # 4-1. 존재하면 저장 X -> 엑세스 토큰, 리프레시 토큰 업데이트
     if oauth_account:
@@ -117,7 +117,7 @@ async def kakao_callback(code: str,
             db.commit() # 확정
             db.flush()  # user 테이블에 저장하면서 user의 id를 가져오기 위해서
 
-            oauth_account = Oauth_accounts(
+            oauth_account = SocialLogin(
                 user_id = user.id,
                 provider = 'kakao',
                 provider_user_id = str(kakao_id),    # 문자열로 바꿔서 저장
