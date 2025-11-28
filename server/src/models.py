@@ -1,4 +1,4 @@
-from database import Base
+from src.database import Base
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import (
