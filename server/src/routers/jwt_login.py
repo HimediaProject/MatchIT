@@ -6,7 +6,7 @@ from fastapi import APIRouter, \
                     Form, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse # 해당 페이지로 바로 이동 시켜줌
 from sqlalchemy.orm import Session
-from database import get_db
+from src.database import get_db
 from models import User
 import uuid
 from datetime import datetime
