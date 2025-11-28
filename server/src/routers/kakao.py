@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from database import get_db
+from src.database import get_db
 from datetime import datetime, timedelta
-from models import User, Oauth_accounts
+# from models import User, Oauth_accounts
 
 ENV_PATH = Path(__file__).parent.parent / '.env'    # .env 절대 경로
 
