@@ -65,6 +65,8 @@ services:
       - redis
     networks:
       - matchit_network
+    volumes:
+      - ./server/:/app
     restart: unless-stopped
 
   # Frontend 클라이언트
