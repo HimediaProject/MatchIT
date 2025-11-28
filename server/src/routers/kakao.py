@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-from models import User, SocialLogin
+from src.models import User, SocialLogin
 
 ENV_PATH = Path(__file__).parent.parent / '.env'    # .env 절대 경로
 
