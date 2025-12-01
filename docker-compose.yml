@@ -63,6 +63,8 @@ services:
     depends_on:
       - postgres
       - redis
+    volumes:
+      - ./server:/app
     networks:
       - matchit_network
     restart: unless-stopped
