@@ -19,6 +19,55 @@ export default function HomePage({ onNavigate, onAddToCompare, selectedJobs = []
     { id: 6, name: 'PM', icon: 'PM' },
   ];
 
+  // local handler to ensure consistent behavior if parent doesn't provide onAddToCompare
+  const handleAddToCompare = (id: number, type: 'job' | 'bootcamp' = 'job') => {
+    if (type === 'bootcamp') {
+      // Cannot mix with jobs
+      if ((selectedJobs ?? []).length > 0) {
+        window.alert('부트캠프와 채용공고는 섞어서 비교할 수 없습니다. 현재 채용공고가 선택되어 있습니다.');
+        return;
+      }
+
+      if (onAddToCompare) {
+        onAddToCompare(id, 'bootcamp');
+        return;
+      }
+
+      if (selectedBootcamps && selectedBootcamps.includes(id)) {
+        setSelectedBootcamps && setSelectedBootcamps(selectedBootcamps.filter((i) => i !== id));
+        return;
+      }
+
+      if ((selectedBootcamps ?? []).length >= 3) {
+        window.alert('최대 3개까지 비교할 수 있습니다.');
+        return;
+      }
+      setSelectedBootcamps && setSelectedBootcamps([...(selectedBootcamps ?? []), id]);
+    } else {
+      // job
+      if ((selectedBootcamps ?? []).length > 0) {
+        window.alert('채용공고와 부트캠프는 섞어서 비교할 수 없습니다. 현재 부트캠프가 선택되어 있습니다.');
+        return;
+      }
+
+      if (onAddToCompare) {
+        onAddToCompare(id, 'job');
+        return;
+      }
+
+      if (selectedJobs && selectedJobs.includes(id)) {
+        setSelectedJobs && setSelectedJobs(selectedJobs.filter((i) => i !== id));
+        return;
+      }
+
+      if ((selectedJobs ?? []).length >= 3) {
+        window.alert('최대 3개까지 비교할 수 있습니다.');
+        return;
+      }
+      setSelectedJobs && setSelectedJobs([...(selectedJobs ?? []), id]);
+    }
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-12">
       {/* Hero Section */}
@@ -128,7 +177,7 @@ export default function HomePage({ onNavigate, onAddToCompare, selectedJobs = []
               <div className="pt-2 border-t border-gray-200">
                 <button
                   className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
-                  onClick={() => onAddToCompare && onAddToCompare(idx + 1)} // job ID 전달
+                  onClick={() => handleAddToCompare(idx + 1, 'job')} // job ID 전달
                 >
                   비교함 담기
                 </button>
@@ -179,7 +228,7 @@ export default function HomePage({ onNavigate, onAddToCompare, selectedJobs = []
               <div className="pt-2 border-t border-gray-200 px-4 pb-4">
                 <button
                   className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
-                  onClick={() => onAddToCompare && onAddToCompare(idx + 1, 'bootcamp')} // bootcamp 타입 구분
+                  onClick={() => handleAddToCompare(idx + 1, 'bootcamp')} // bootcamp 타입 구분
                 >
                   비교함 담기
                 </button>
