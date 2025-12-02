@@ -89,7 +89,7 @@ docker compose run --rm app alembic revision --autogenerate -m "create users tab
 #### 4. 마이그레이션 실행
 ```bash
 # Upgrade (적용): 
-docker compose run --rm app alembic upgrade head
+docker compose run --rm server sh -c "cd src && alembic upgrade head"
 
 # Upgrade 특정 버전: 
 docker compose run --rm app alembic upgrade +1 또는 alembic upgrade xxxx
