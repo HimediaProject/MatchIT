@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from server.src.schemas import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy import Column, Enum as SQLEnum
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Tuple, Union, Literal, Optional
@@ -95,7 +95,7 @@ class JobPosts(BaseModel):
     PlatformID: int
     Title: str = Field(max_length = 500)
     CompanyName: str
-    JobCategory: str
+    JobCategoryID: str
     EmploymentType: str
     ExperienceRequirement: str
     EducationRequirement: str

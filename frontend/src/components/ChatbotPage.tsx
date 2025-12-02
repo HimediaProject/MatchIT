@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-type NavigateFunction = (page: string) => void;
+type NavigateFunction = (page: any, params?: any) => void;
 
 interface ChatbotPageProps {
   onNavigate: NavigateFunction;
