@@ -9,13 +9,12 @@ from src.database import get_db
 from datetime import datetime, timedelta
 from src.models import User, SocialLogin
 
-ENV_PATH = Path(__file__).parent.parent / '.env'    # .env 절대 경로
-
+ENV_PATH = Path(__file__).parent.parent.parent / '.env'    # .env 절대 경로
 load_dotenv(ENV_PATH)   # 인자: .env 경로
 
 KAKAO_CLIENT_ID = os.getenv('KAKAO_CLIENT_ID')
 KAKAO_CLIENT_SECRET = os.getenv('KAKAO_CLIENT_SECRET')
-KAKAO_REDIRICT_URI = os.getenv('KAKAO_REDIRICT_URI')
+KAKAO_REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URI')
 
 router = APIRouter(prefix='/auth/kakao', tags=['카카오'])
 
@@ -30,9 +29,9 @@ async def kakao_login():
         f"https://kauth.kakao.com/oauth/authorize"
         f"?response_type=code"                 # 응답으로 인가 코드 요청 (엑세스 토큰으로 교환하기 위한 코드)
         f"&client_id={KAKAO_CLIENT_ID}"
-        f'&redirect_uri={KAKAO_REDIRICT_URI}'
+        f'&redirect_uri={KAKAO_REDIRECT_URI}'
     )
-
+    
     # 2. 엑세스 토근을 발급받을 수 있도록 요청하는 FastAPI의 엔드포인트로 redirect
     return RedirectResponse(url=kakao_auth_url)
 
@@ -49,7 +48,7 @@ async def kakao_callback(code: str,
     token_data = {
         "grant_type": 'authorization_code',
         "client_id": KAKAO_CLIENT_ID,
-        "redirect_uri": KAKAO_REDIRICT_URI,
+        "redirect_uri": KAKAO_REDIRECT_URI,
         "client_secret": KAKAO_CLIENT_SECRET,
         "code": code
     }
