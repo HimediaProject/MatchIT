@@ -1,0 +1,18 @@
+{
+    "gitlens.views.commits.pullRequests.showForBranches": true,
+    "gitlens.views.repositories.pullRequests.showForCommits": true,
+    "gitlens.graph.highlightRowsOnRefHover": false,
+    "gitlens.graph.showGhostRefsOnRowHover": false,
+    "gitlens.graph.showDetailsView": false,
+    "gitlens.graph.scrollMarkers.enabled": false,
+    "gitlens.graph.issues.enabled": false,
+    "gitlens.graph.showUpstreamStatus": false,
+    "gitlens.graph.pullRequests.enabled": false,
+    "gitlens.graph.avatars": false,
+    "gitlens.graph.dateStyle": "absolute",
+    "gitlens.worktrees.promptForLocation": false,
+    "gitlens.views.worktrees.showBranchComparison": false,
+    "gitlens.views.worktrees.pullRequests.enabled": false,
+    "gitlens.views.worktrees.files.compact": false,
+    "gitlens.views.worktrees.avatars": false
+}
