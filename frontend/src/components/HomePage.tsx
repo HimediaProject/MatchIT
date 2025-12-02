@@ -1,10 +1,15 @@
-type NavigateFunction = (page: string) => void;
+type NavigateFunction = (page: any, params?: any) => void;
 
 interface HomePageProps {
   onNavigate: NavigateFunction;
+  onAddToCompare?: (id: number, type?: 'job' | 'bootcamp') => void;
+  selectedJobs?: number[];
+  setSelectedJobs?: (jobs: number[]) => void;
+  selectedBootcamps?: number[];
+  setSelectedBootcamps?: (bootcamps: number[]) => void;
 }
 
-export default function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage({ onNavigate, onAddToCompare, selectedJobs = [], setSelectedJobs, selectedBootcamps = [], setSelectedBootcamps }: HomePageProps) {
   const categories = [
     { id: 1, name: '백엔드', icon: 'BE' },
     { id: 2, name: '프론트엔드', icon: 'FE' },
@@ -13,6 +18,55 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     { id: 5, name: 'DevOps', icon: 'DO' },
     { id: 6, name: 'PM', icon: 'PM' },
   ];
+
+  // local handler to ensure consistent behavior if parent doesn't provide onAddToCompare
+  const handleAddToCompare = (id: number, type: 'job' | 'bootcamp' = 'job') => {
+    if (type === 'bootcamp') {
+      // Cannot mix with jobs
+      if ((selectedJobs ?? []).length > 0) {
+        window.alert('부트캠프와 채용공고는 섞어서 비교할 수 없습니다. 현재 채용공고가 선택되어 있습니다.');
+        return;
+      }
+
+      if (onAddToCompare) {
+        onAddToCompare(id, 'bootcamp');
+        return;
+      }
+
+      if (selectedBootcamps && selectedBootcamps.includes(id)) {
+        setSelectedBootcamps && setSelectedBootcamps(selectedBootcamps.filter((i) => i !== id));
+        return;
+      }
+
+      if ((selectedBootcamps ?? []).length >= 3) {
+        window.alert('최대 3개까지 비교할 수 있습니다.');
+        return;
+      }
+      setSelectedBootcamps && setSelectedBootcamps([...(selectedBootcamps ?? []), id]);
+    } else {
+      // job
+      if ((selectedBootcamps ?? []).length > 0) {
+        window.alert('채용공고와 부트캠프는 섞어서 비교할 수 없습니다. 현재 부트캠프가 선택되어 있습니다.');
+        return;
+      }
+
+      if (onAddToCompare) {
+        onAddToCompare(id, 'job');
+        return;
+      }
+
+      if (selectedJobs && selectedJobs.includes(id)) {
+        setSelectedJobs && setSelectedJobs(selectedJobs.filter((i) => i !== id));
+        return;
+      }
+
+      if ((selectedJobs ?? []).length >= 3) {
+        window.alert('최대 3개까지 비교할 수 있습니다.');
+        return;
+      }
+      setSelectedJobs && setSelectedJobs([...(selectedJobs ?? []), id]);
+    }
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-12">
@@ -98,7 +152,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  onNavigate('jobDetail', { id: idx + 1 });
+                  onNavigate('jobDetail');
                 }}
                 className="block"
               >
@@ -123,7 +177,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <div className="pt-2 border-t border-gray-200">
                 <button
                   className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
-                  onClick={() => onAddToCompare(idx + 1)} // job ID 전달
+                  onClick={() => handleAddToCompare(idx + 1, 'job')} // job ID 전달
                 >
                   비교함 담기
                 </button>
@@ -154,7 +208,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  onNavigate('bootcampDetail', { id: idx + 1 });
+                  onNavigate('bootcampDetail');
                 }}
                 className="block"
               >
@@ -174,7 +228,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <div className="pt-2 border-t border-gray-200 px-4 pb-4">
                 <button
                   className="w-full border border-gray-900 px-2 py-1 text-xs hover:bg-gray-50"
-                  onClick={() => onAddToCompare(idx + 1, 'bootcamp')} // bootcamp 타입 구분
+                  onClick={() => handleAddToCompare(idx + 1, 'bootcamp')} // bootcamp 타입 구분
                 >
                   비교함 담기
                 </button>
@@ -183,6 +237,105 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           ))}
         </ul>
       </div>
+      {/* Right Slide Panel for Comparison - Jobs */}
+      {selectedJobs && selectedJobs.length > 0 && (
+        <div className="fixed right-0 top-0 h-full w-80 bg-white border-l-2 border-gray-900 shadow-xl p-6 flex flex-col">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm">비교 목록</div>
+              <button
+                onClick={() => setSelectedJobs && setSelectedJobs([])}
+                className="text-xs text-gray-600 hover:underline"
+              >
+                전체 삭제
+              </button>
+            </div>
+            <div className="text-xs text-gray-600">최대 3개까지 선택 가능</div>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto">
+            {selectedJobs.map((jobId) => (
+              <div key={jobId} className="border border-gray-400 bg-gray-50 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-600 mb-1">[Company {jobId}]</div>
+                    <div className="text-sm">Job #{jobId}</div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedJobs && setSelectedJobs(selectedJobs.filter((id) => id !== jobId))}
+                    className="w-6 h-6 border border-gray-900 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="text-xs text-gray-600">--</div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => onNavigate('jobCompare')}
+            disabled={selectedJobs.length < 2}
+            className={`w-full py-3 border-2 border-gray-900 text-sm mt-4 ${
+              selectedJobs.length >= 2
+                ? 'bg-gray-900 text-white hover:bg-gray-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            비교하기 ({selectedJobs.length}/3)
+          </button>
+        </div>
+      )}
+
+      {/* Right Slide Panel for Comparison - Bootcamps */}
+      {selectedBootcamps && selectedBootcamps.length > 0 && (
+        <div className="fixed right-0 top-0 h-full w-80 bg-white border-l-2 border-gray-900 shadow-xl p-6 flex flex-col">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm">비교 목록</div>
+              <button
+                onClick={() => setSelectedBootcamps && setSelectedBootcamps([])}
+                className="text-xs text-gray-600 hover:underline"
+              >
+                전체 삭제
+              </button>
+            </div>
+            <div className="text-xs text-gray-600">최대 3개까지 선택 가능</div>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto">
+            {selectedBootcamps.map((bootcampId) => (
+              <div key={bootcampId} className="border border-gray-400 bg-gray-50 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-600 mb-1">[Institution {bootcampId}]</div>
+                    <div className="text-sm">Course #{bootcampId}</div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedBootcamps && setSelectedBootcamps(selectedBootcamps.filter((id) => id !== bootcampId))}
+                    className="w-6 h-6 border border-gray-900 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="text-xs text-gray-600">--</div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => onNavigate('bootcampCompare')}
+            disabled={selectedBootcamps.length < 2}
+            className={`w-full py-3 border-2 border-gray-900 text-sm mt-4 ${
+              selectedBootcamps.length >= 2
+                ? 'bg-gray-900 text-white hover:bg-gray-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            비교하기 ({selectedBootcamps.length}/3)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

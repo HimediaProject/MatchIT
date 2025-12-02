@@ -70,7 +70,7 @@ docker-compose restart server
 docker-compose restart fontend
 ```
 
-### 🐳 Docker를 사용한 alembic 방법
+### 🐳 Docker를 사용한 alembic 방법 (# upgrade에 있는 sh -c cd src && 도 추가)
 #### 1. DB 시작
 ```bash
 docker compose up -d
@@ -78,12 +78,12 @@ docker compose up -d
 
 #### 2. 컨테이너에서 Alembic 초기화:
 ```bash
-docker compose run --rm app alembic init alembic
+docker compose run --rm server alembic init alembic
 ```
 
 #### 3. 마이그레이션 파일 생성
 ```bash
-docker compose run --rm app alembic revision --autogenerate -m "create users table"
+docker compose run --rm server alembic revision --autogenerate -m "create users table"
 ```
 
 #### 4. 마이그레이션 실행
@@ -92,14 +92,14 @@ docker compose run --rm app alembic revision --autogenerate -m "create users tab
 docker compose run --rm server sh -c "cd src && alembic upgrade head"
 
 # Upgrade 특정 버전: 
-docker compose run --rm app alembic upgrade +1 또는 alembic upgrade xxxx
+docker compose run --rm server alembic upgrade +1 또는 alembic upgrade xxxx
 
 #Downgrade (롤백): 
-docker compose run --rm app alembic downgrade -1
+docker compose run --rm server alembic downgrade -1
 
 #현재 상태 확인: 
-docker compose run --rm app alembic current
+docker compose run --rm server alembic current
 
 #히스토리 확인: 
-docker compose run --rm app alembic history
+docker compose run --rm server alembic history
 ```

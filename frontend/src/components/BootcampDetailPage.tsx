@@ -1,4 +1,4 @@
-type NavigateFunction = (page: string) => void;
+type NavigateFunction = (page: any, params?: any) => void;
 
 interface BootcampDetailPageProps {
   onNavigate: NavigateFunction;

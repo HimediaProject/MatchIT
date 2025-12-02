@@ -22,13 +22,71 @@ export default function App() {
       case 'login':
         return <LoginPage onNavigate={setCurrentPage} />;
       case 'home':
-        return <HomePage onNavigate={setCurrentPage} />;
+        return <HomePage
+          onNavigate={setCurrentPage}
+          onAddToCompare={(id: number, type?: 'job' | 'bootcamp') => {
+          if (type === 'bootcamp') {
+            setSelectedBootcamps((prev) => {
+              if (prev.includes(id)) return prev;
+              if (prev.length >= 3) {
+                window.alert('최대 3개까지 비교할 수 있습니다.');
+                return prev;
+              }
+              return [...prev, id];
+            });
+          } else {
+            setSelectedJobs((prev) => {
+              if (prev.includes(id)) return prev;
+              if (prev.length >= 3) {
+                window.alert('최대 3개까지 비교할 수 있습니다.');
+                return prev;
+              }
+              return [...prev, id];
+            });
+          }
+          }}
+          selectedJobs={selectedJobs}
+          setSelectedJobs={setSelectedJobs}
+          selectedBootcamps={selectedBootcamps}
+          setSelectedBootcamps={setSelectedBootcamps}
+        />;
       case 'jobList':
         return (
           <JobListPage
             onNavigate={setCurrentPage}
             selectedJobs={selectedJobs}
             setSelectedJobs={setSelectedJobs}
+            onAddToCompare={(id: number, type?: 'job' | 'bootcamp') => {
+              // delegate to the same handler used by HomePage
+              if (type === 'bootcamp') {
+                if (selectedJobs.length > 0) {
+                  window.alert('부트캠프와 채용공고는 섞어서 비교할 수 없습니다. 현재 채용공고가 선택되어 있습니다.');
+                  return;
+                }
+                setSelectedBootcamps((prev) => {
+                  if (prev.includes(id)) return prev;
+                  if (prev.length >= 3) {
+                    window.alert('최대 3개까지 비교할 수 있습니다.');
+                    return prev;
+                  }
+                  return [...prev, id];
+                });
+              } else {
+                if (selectedBootcamps.length > 0) {
+                  window.alert('채용공고와 부트캠프는 섞어서 비교할 수 없습니다. 현재 부트캠프가 선택되어 있습니다.');
+                  return;
+                }
+                setSelectedJobs((prev) => {
+                  if (prev.includes(id)) return prev;
+                  if (prev.length >= 3) {
+                    window.alert('최대 3개까지 비교할 수 있습니다.');
+                    return prev;
+                  }
+                  return [...prev, id];
+                });
+              }
+            }}
+            selectedBootcamps={selectedBootcamps}
           />
         );
       case 'jobDetail':
@@ -41,6 +99,36 @@ export default function App() {
             onNavigate={setCurrentPage}
             selectedBootcamps={selectedBootcamps}
             setSelectedBootcamps={setSelectedBootcamps}
+            onAddToCompare={(id: number, type?: 'job' | 'bootcamp') => {
+              if (type === 'job') {
+                if (selectedBootcamps.length > 0) {
+                  window.alert('채용공고와 부트캠프는 섞어서 비교할 수 없습니다. 현재 부트캠프가 선택되어 있습니다.');
+                  return;
+                }
+                setSelectedJobs((prev) => {
+                  if (prev.includes(id)) return prev;
+                  if (prev.length >= 3) {
+                    window.alert('최대 3개까지 비교할 수 있습니다.');
+                    return prev;
+                  }
+                  return [...prev, id];
+                });
+              } else {
+                if (selectedJobs.length > 0) {
+                  window.alert('부트캠프와 채용공고는 섞어서 비교할 수 없습니다. 현재 채용공고가 선택되어 있습니다.');
+                  return;
+                }
+                setSelectedBootcamps((prev) => {
+                  if (prev.includes(id)) return prev;
+                  if (prev.length >= 3) {
+                    window.alert('최대 3개까지 비교할 수 있습니다.');
+                    return prev;
+                  }
+                  return [...prev, id];
+                });
+              }
+            }}
+            selectedJobs={selectedJobs}
           />
         );
       case 'bootcampDetail':

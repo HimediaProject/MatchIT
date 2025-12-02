@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import jwt_login, kakao 
+from .routers import jwt_login, kakao, comparison
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(jwt_login.router)
 app.include_router(kakao.router)
+app.include_router(comparison.router)
 
 @app.get("/")
 def root():

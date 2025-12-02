@@ -16,7 +16,7 @@ KAKAO_CLIENT_ID = os.getenv('KAKAO_CLIENT_ID')
 KAKAO_CLIENT_SECRET = os.getenv('KAKAO_CLIENT_SECRET')
 KAKAO_REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URI')
 
-router = APIRouter(prefix='/auth/kakao', tags=['카카오'])
+router = APIRouter(prefix='/auth/kakao', tags=['카카오 소셜로그인 기능'])
 
 @router.get('/login')
 async def kakao_login():

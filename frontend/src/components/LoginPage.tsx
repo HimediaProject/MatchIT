@@ -1,6 +1,3 @@
-import React, { useState } from "react";
-import { authApi } from "../services/apiService";
-
 type NavigateFunction = (page: string) => void;
 
 interface LoginPageProps {
