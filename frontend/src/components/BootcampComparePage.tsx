@@ -13,7 +13,7 @@ export default function BootcampComparePage({ onNavigate, selectedBootcamps }: B
       setBootcamps([]);
       return;
     }
-    fetch('http://localhost:8000/api/bootcamps/compare', {
+    fetch('http://localhost:8000/comparison/bootcamps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(selectedBootcamps),
