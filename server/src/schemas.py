@@ -1,10 +1,14 @@
 from enum import Enum
-from server.src.schemas import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy import Column, Enum as SQLEnum
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Tuple, Union, Literal, Optional
 
 '''
+pipline
+사용자 → FastAPI → Pydantic 검증 → 비즈니스 로직 → SQLAlchemy → DB
+         (API)    (1차 방어)      (처리)          (2차 방어)   (저장)
+
 각 Schema의 column에 입력되는 type을 지정
 
 예시:
@@ -18,10 +22,14 @@ from typing import List, Dict, Tuple, Union, Literal, Optional
 ##################################################################################
 # Enums
 ##################################################################################
-class Provider(str, Enum):
+class Provider_sns(str, Enum):
     KAKAO = 'kakao'
     NAVER = 'naver'
     GOOGLE = 'google'
+
+class Provider_job(str, Enum):
+    REMEMBER = 'remember'
+    WANTED = 'wanted'
 
 class Post_type(str, Enum):
     JOB = 'job'
@@ -38,126 +46,370 @@ class Cost_support_type(str, Enum):
 
 
 ##################################################################################
-# Models
+# === kakao api login ===
 ##################################################################################
-class Users(BaseModel):
-    UserID: int
-    Name: str = Field(max_length = 500)
-    Email: EmailStr
-    CareerLevelID: int
-    CreatedAt: datetime = Field(default_factory = datetime.now)
-    UpdatedAt: datetime = Field(default_factory = datetime.now)
+# === 1. kakao login requier ===
+class SocialLoginRequest(BaseModel):
+    '''
+    front가 보내는 kakao token
+    '''
+    provider: Provider_sns
+    access_token: str = Field(min_length = 1)
+
+# === 2. kakao API response (내부용) ===
+class KakaoUserInfo(BaseModel):
+    '''
+    카카오 API에서 받은 사용자 정보
+    '''
+    id: int  # 카카오 고유 ID
+    kakao_account: dict  # 이메일 등 포함
+    # properties: dict  # 닉네임 등
+
+# === 3. server response ===
+class LoginResponse(BaseModel):
+    '''
+    로그인 성공 후 반환
+    '''
+    access_token: str  # 우리 서버의 JWT
+    token_type: str = "bearer"
+    user: dict  # 사용자 정보
+
+# === 4. user create (/auth/register) ===
+class UserCreateFromSocial(BaseModel):
+    '''
+    소셜 로그인으로 자동 생성
+    '''
+    name: str
+    email: EmailStr
+    provider: Provider_sns
+    provider_user_id: str  # 카카오 ID
+    # Password 없음!
+
+##################################################################################
+# === POST ===
+##################################################################################
+class DesiredJobsPost(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/desiredjobs
+
+    params:
+        desiredjob_id
+
+    description:
+        특정 유저가 원하는 희망 직무를 설정/등록합니다.
+    '''
+    desiredjob_id: int
+
+class UserSkillPost(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/skills
+
+    params:
+        skill_id
+
+    description:
+        특정 유저의 스킬 목록에 새로운 스킬(skill_id)을 추가/등록합니다.
+    '''
+    skill_id: int
+
+class UserScrapPost(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/scraps
+
+    params:
+        post_type(Job, Bootcamp),
+        target_id
+
+    description:
+        특정 유저의 스크랩 목록에 새로운 항목을 추가합니다.
+    '''
+    post_type: Post_type
+    target_id: int
+
+class JobPost(BaseModel):
+    '''
+    endpoint:
+        /jobs
+
+    params:
+        provider, title, company_name,
+        ...
     
-class SocialLogins(BaseModel):
-    SocialLoginID: int
-    UserID: int
-    Provider: Provider
-    ProviderUserID: str
-    LinkedAt: datetime = Field(default_factory = datetime.now)
-    UnlinkedAt: Optional[datetime] = None
+    description:
+        관리자가 새로운 구직공고 정보를 등록.
+        구직공고명, 회사명, 카테고리, 상세 내용 등을 포함하여 생성.
+    '''
+    provider: Provider_job
+    title: str = Field(max_length = 500)
+    company_name: str = Field(max_length = 500)
+    job_category: str = Field(max_length = 500)
+    employment_type: str = Field(max_length = 500)
+    experience_requirement: str
+    education_Rrquirement: str
+    location: str
+    main_tasks: Optional[str] = Field(None, max_length = 10000)
+    qualifications: Optional[str] = Field(None, max_length = 10000)
+    preferences: Optional[str] = Field(None, max_length = 10000)
+    benefits: Optional[str] = Field(None, max_length = 10000)
+    process: Optional[str] = Field(None, max_length = 10000)
+    salary: str
+    posted_date: Optional[datetime] = None
+    close_date: datetime
+    url: HttpUrl
+    is_active: bool
+    created_at: datetime = Field(default_factory = datetime.now)
+    updated_at: datetime = Field(default_factory = datetime.now)
 
-    class Config:
-        from_attributes = True
+class BootcampPost(BaseModel):
+    '''
+    endpoint:
+        /bootcamps
 
-class DesiredJobs(BaseModel):
-    DesiredJobID: int
-    JobName: str
+    params:
+        title, institute_name,
+        job_category_id, location
+        ...
 
-class UserDesiredJobs(BaseModel):
-    UserID: int
-    DesiredJobID: int
+    description:
+        관리자가 새로운 부트캠프 정보를 등록.
+        부트캠프명, 운영 기관, 카테고리, 상세 내용 등을 포함하여 생성.
+    '''
+    title: str = Field(max_length = 500)
+    institute_name: str
+    job_category_id: int
+    location: str
+    online_offline: Online_offline = Online_offline.ONLINE
+    cost_support_type: Cost_support_type = Cost_support_type.PAY_SELF
+    education_content: Optional[str] = Field(None, max_length = 10000)
+    qualification: Optional[str] = Field(None, max_length = 10000)
+    benefits: Optional[str] = Field(None, max_length = 10000)
+    start_date: datetime
+    registration_date: datetime
+    close_date: datetime
+    detail_url: HttpUrl
 
-class UserSkills(BaseModel):
-    UserID: int
-    SkillID: int
+##################################################################################
+# === GET ===
+##################################################################################
+class UserGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}
 
-class UserNotificationSettings(BaseModel):
-    UserNotificationID: int
-    UserID: int
-    NotificationType: str
-    IsEnabled: bool = True
-    NotificationTime: str
+    params:
+        user_id
+    
+    description:
+        "관리자" 권한으로 특정 사용자의 정보를 조회합니다.
+    '''
+    user_id: int
 
-class Skills(BaseModel):
-    SkillID: int
-    SkillName: str
+# 아이디어 있으시면 부탁드립니다.
+# class MyProfileGet(BaseModel):
+#     '''
+#     endpoint:
+#         /users/me
 
-class MemberSkills(BaseModel):
-    MemberID: int
-    SkillID: int
+#     params:
+#         JWT
+    
+#     description:
+#         인증된 사용자가 자신의 프로필 정보를 조회합니다.
+#     '''
+#     JWT: # here... how??
 
-class platforms(BaseModel):
-    PlatformID: int
-    PlatformName: str
+class JobCategoryGet(BaseModel):
+    '''
+    endpoint:
+        /jobcategories/{category_id}
 
-class JobPosts(BaseModel):
-    PostID: int
-    PlatformID: int
-    Title: str = Field(max_length = 500)
-    CompanyName: str
-    JobCategoryID: str
-    EmploymentType: str
-    ExperienceRequirement: str
-    EducationRequirement: str
-    Location: str
-    MainTasks: Optional[str] = Field(None, max_length = 10000)
-    Qualifications: Optional[str] = Field(None, max_length = 10000)
-    Preferences: Optional[str] = Field(None, max_length = 10000)
-    Benefits: Optional[str] = Field(None, max_length = 10000)
-    Process: Optional[str] = Field(None, max_length = 10000)
-    Salary: str
-    PostedDate: datetime = Field(default_factory = datetime.now)
-    CloseDate: datetime = Field(default_factory = datetime.now)
-    ViewCount: int = 0
-    Url: HttpUrl
-    IsActive: bool = True
-    CreatedAt: datetime = Field(default_factory = datetime.now)
-    UpdatedAt: datetime = Field(default_factory = datetime.now)
+    params:
+        category_id
 
-class JobPostSkills(BaseModel):
-    PostID: int
-    SkillID: int
+    description:
+        지정한 카테고리 ID로 직무 카테고리의 상세 정보를 조회.
+        카테고리명, 설명, 상위/하위 구조 등이 반환.
+    '''
+    category_id: int
 
-class Notifications(BaseModel):
-    NotificationID: int
-    MemberID: int
-    NotificationType: str
-    IsEnabled: bool = True
-    NotificationTime: str
+class JobCategoriesGet(BaseModel):
+    '''
+    endpoint:
+        /jobcategories
 
-class UserScraps(BaseModel):
-    ScrapID: int
-    UserID: int
-    PostType: Post_type
-    JobPostID: int
-    BootcampPostID: int
-    ScrappedAt: datetime = Field(default_factory = datetime.now)
+    params:
+        parent_id(optional)
 
-class JobCategories(BaseModel):
-    CategoryID: int
-    CategoryName: str
-    ParentCategoryID: int
-    Depth: int = 1          # 계층 깊이(1 = 대분류, 2 = 중분류, 3 = 소분류)
+    description:
+        모든 직무 카테고리를 트리 구조(계층적)로 조회.
+        필요 시, parent_id 파라미터로 특정 루트/상위 카테고리부터
+        하위 카테고리까지 탐색이 가능합니다.
+    '''
+    parent_id: Optional[int] = None
 
-class BootcampPosts(BaseModel):
-    BootcampID: int
-    Title: str = Field(max_length = 500)
-    InstituteName: str
-    JobCategoryID: int
-    Location: str
-    OnlineOffline: Online_offline = Online_offline.ONLINE
-    CostSupportType: Cost_support_type = Cost_support_type.PAY_SELF
-    EducationContent: Optional[str] = Field(None, max_length = 10000)
-    Qualification: Optional[str] = Field(None, max_length = 10000)
-    Benefits: Optional[str] = Field(None, max_length = 10000)
-    StartDate: datetime
-    RegistrationDate: datetime
-    CloseDate: datetime
-    DetailUrl: HttpUrl
-    ViewCount: int = 0
-    CreatedAt: datetime = Field(default_factory = datetime.now)
-    UpdatedAt: datetime = Field(default_factory = datetime.now)
+# 추후 제한 사항 추가 시, 추가 가능
+# class AllPlatformGet(BaseModel):
+#     '''
+#     endpoint:
+#         /platforms
 
-class CareerLevels(BaseModel):
-    CareerLevelID: int
-    CareerName: str
+#     params:
+#         None
+
+#     description:
+#         등록된 모든 플랫폼(서비스, 웹사이트 등)의 리스트를 조회.
+#         각 플랫폼의 이름, 설명, 제공 서비스가 포함.
+#     '''
+
+class BootcampGet(BaseModel):
+    '''
+    endpoint:
+        /bootcamps{bootcamp_id}
+
+    params:
+        bootcamp_id
+        ...
+
+    description:
+        사용자가 특정 부트캠프의 상세 정보를 확인.
+        교육 과정, 일정, 지원 자격 등이 포함될 수 있음.
+    '''
+    bootcamp_id: int
+
+class SortBootcampGet(BaseModel):
+    '''
+    endpoint:
+        /bootcamps
+
+    params:
+        page, size, keyword,
+        skill, category_id
+
+    description:
+        여러 조건(페이지네이션, 키워드, 스킬, 카테고리 등)으로
+        전체 부트캠프 리스트를 조회. 검색 및 필터링 기능이 포함.
+    '''
+    page: Optional[int] = None
+    # size: ??
+    keyword: Optional[str] = None
+    skill_id: Optional[int] = None
+    skill_name: Optional[str] = None
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+
+class UserScrapGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/scraps
+
+    params:
+        post_type,
+        job_post_id, bootcamp_post_id
+
+    description:
+        특정 유저가 스크랩한 항목(직무/부트캠프)의 목록을 조회.
+        filter를 통해, 직무 또는 부트캠프 별로 필터링.
+    '''
+    post_type: Optional[Post_type] = None
+    job_post_id: Optional[int] = None
+    bootcamp_post_id: Optional[int] = None
+
+class SocialLoginGet(BaseModel):
+    '''
+    endpoint:
+        /auth/social
+
+    params:
+        provider,
+        provider_user_id,
+        email(optional)
+
+    description:
+        소셜 로그인을 시도하거나, 기존 계정에 새로운 소셜 계정을 연결.
+        provider, 소셜 서비스에서의 유저 ID(provider_user_id) 및
+        이메일 정보 사용.
+    '''
+    provider: Provider_sns
+    provider_user_id: str
+    email: Optional[EmailStr] = None
+
+class AllSocialLoginsGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/socials
+
+    params:
+        user_id
+
+    description:
+        특정 유저(user_id) 계정에 현재 연결되어 있는 소셜 계정들의 목록을 조회.
+    '''
+    user_id: str
+
+class NotificationsGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/notifications
+
+    params:
+        user_id
+    
+    description:
+        특정 유저(user_id)의 현재 알림 설정 상태를 조회.
+    '''
+    user_id: str
+
+# 추후 제한 사항 추가 시, 추가 가능
+# class AllDesiredJobsGet(BaseModel):
+#     '''
+#     endpoint:
+#         /desiredjobs/
+
+#     params:
+#         None
+
+#     description:
+#         시스템에 등록된 전체 희망 직무의 목록을 조회. (로그인 불필요)
+#     '''
+    # desired_job_id: int
+    # job_name: str
+
+# 추후 제한 사항 추가 시, 추가 가능
+# class Skill(BaseModel):
+#     '''
+#     endpoint:
+#         /desiredjobs/
+
+#     params:
+#         None
+
+#     description:
+#         시스템에 등록된 전체 스킬의 목록을 조회. (로그인 불필요)
+#     '''
+#     SkillID: int
+#     SkillName: str
+
+##################################################################################
+# === PUT ===
+##################################################################################
+class NotificationPut(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/notifications
+
+    params:
+        user_id, is_enabled,
+        notification_type, notification_time
+
+    description:
+        특정 유저(user_id)의 알림 설정 값을 업데이트합니다.
+        알림의 종류(notification_type), 활성화 여부(is_enabled),
+        알림 시간(notification_time) 등의 정보를 수정할 수 있습니다.
+    '''
+    user_id: int
+    is_enabled: bool = True
+    notification_type: str
+    notification_time: str
