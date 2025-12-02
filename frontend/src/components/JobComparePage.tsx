@@ -13,7 +13,7 @@ export default function JobComparePage({ onNavigate, selectedJobs }: JobCompareP
       setJobs([]);
       return;
     }
-    fetch('http://localhost:8000/api/jobs/compare', {
+    fetch('http://localhost:8000/comparison/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(selectedJobs),

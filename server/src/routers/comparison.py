@@ -4,7 +4,7 @@ from typing import List
 
 from src.database import get_db
 from src import models
-from src.schemas import JobPosts, BootcampPosts
+from src import schemas
 
 router = APIRouter(prefix="/comparison", tags=["비교함 기능"])
 
@@ -59,13 +59,13 @@ def bootcamp_to_dict(b: models.BootcampPost):
     }
 
 
-@router.get('/jobs', response_model=List[JobPosts])
+@router.get('/jobs', response_model=List[schemas.JobPost])
 def list_jobs(limit: int = 50, db: Session = Depends(get_db)):
     jobs = db.query(models.JobPost).filter(models.JobPost.IsActive == True).limit(limit).all()
     return [job_to_dict(j) for j in jobs]
 
 
-@router.get('/jobs/{post_id}', response_model=JobPosts)
+@router.get('/jobs/{post_id}', response_model=schemas.JobPost)
 def get_job(post_id: int, db: Session = Depends(get_db)):
     job = db.query(models.JobPost).filter(models.JobPost.PostID == post_id).first()
     if not job:
@@ -73,7 +73,7 @@ def get_job(post_id: int, db: Session = Depends(get_db)):
     return job_to_dict(job)
 
 
-@router.post('/jobs', response_model=List[JobPosts])
+@router.post('/jobs', response_model=List[schemas.JobPost])
 def compare_jobs(ids: List[int], db: Session = Depends(get_db)):
     if len(ids) > 3:
         raise HTTPException(status_code=400, detail='Maximum of 3 job posts can be compared')
@@ -81,20 +81,20 @@ def compare_jobs(ids: List[int], db: Session = Depends(get_db)):
     return [job_to_dict(j) for j in jobs]
 
 
-@router.get('/bootcamps', response_model=List[BootcampPosts])
+@router.get('/bootcamps', response_model=List[schemas.BootcampPost])
 def list_bootcamps(limit: int = 50, db: Session = Depends(get_db)):
     posts = db.query(models.BootcampPost).limit(limit).all()
     return [bootcamp_to_dict(b) for b in posts]
 
 
-@router.get('/bootcamps/{bootcamp_id}', response_model=BootcampPosts)
+@router.get('/bootcamps/{bootcamp_id}', response_model=schemas.BootcampPost)
 def get_bootcamp(bootcamp_id: int, db: Session = Depends(get_db)):
     b = db.query(models.BootcampPost).filter(models.BootcampPost.BootcampID == bootcamp_id).first()
     if not b:
         raise HTTPException(status_code=404, detail='Bootcamp not found')
     return bootcamp_to_dict(b)
 
-@router.post('/bootcamps', response_model=List[BootcampPosts])
+@router.post('/bootcamps', response_model=List[schemas.BootcampPost])
 def compare_bootcamps(ids: List[int], db: Session = Depends(get_db)):
     if len(ids) > 3:
         raise HTTPException(status_code=400, detail='Maximum of 3 bootcamps can be compared')
