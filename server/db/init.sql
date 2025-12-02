@@ -1,3 +1,6 @@
+-- TimeZone 설정 (Asia/Seoul)
+ALTER DATABASE matchit_db SET TIMEZONE TO 'Asia/SEOUL';
+
 -- 경력 레벨
 CREATE TABLE CareerLevels (
     CareerLevelID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -20,7 +23,7 @@ CREATE TABLE Users (
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW."UpdatedAt" = CURRENT_TIMESTAMP;
+    NEW."updatedat" = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
