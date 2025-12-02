@@ -1,32 +1,56 @@
-type NavigateFunction = (page: string) => void;
+import { useEffect, useState } from 'react';
+type NavigateFunction = (page: any, params?: any) => void;
 
 interface BootcampListPageProps {
   onNavigate: NavigateFunction;
   selectedBootcamps: number[];
   setSelectedBootcamps: (bootcamps: number[]) => void;
+  onAddToCompare?: (id: number, type?: 'job' | 'bootcamp') => void;
+  selectedJobs?: number[];
 }
 
 export default function BootcampListPage({
   onNavigate,
   selectedBootcamps,
   setSelectedBootcamps,
+  onAddToCompare,
+  selectedJobs = [],
 }: BootcampListPageProps) {
+  const [bootcamps, setBootcamps] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/bootcamps')
+      .then((res) => res.json())
+      .then((data) => setBootcamps(data))
+      .catch((e) => console.error('failed to fetch bootcamps', e));
+  }, []);
+
   const toggleBootcampSelection = (bootcampId: number) => {
     if (selectedBootcamps.includes(bootcampId)) {
       setSelectedBootcamps(selectedBootcamps.filter((id) => id !== bootcampId));
-    } else if (selectedBootcamps.length < 3) {
+      return;
+    }
+
+    // Prevent mixing with job selections
+    if ((selectedJobs ?? []).length > 0) {
+      window.alert('부트캠프와 채용공고는 섞어서 비교할 수 없습니다. 현재 채용공고가 선택되어 있습니다.');
+      return;
+    }
+
+    // Add via global handler if present
+    if (onAddToCompare) {
+      onAddToCompare(bootcampId, 'bootcamp');
+      return;
+    }
+
+    if (selectedBootcamps.length < 3) {
       setSelectedBootcamps([...selectedBootcamps, bootcampId]);
+    } else {
+      window.alert('최대 3개까지 비교할 수 있습니다.');
     }
   };
 
-  const bootcamps = Array.from({ length: 12 }).map((_, idx) => ({
-    id: idx + 1,
-    institution: `교육기관 ${idx + 1}`,
-    course: `${['백엔드', '프론트엔드', 'DevOps'][idx % 3]} 개발자 양성 과정`,
-    duration: `${4 + (idx % 3)}개월`,
-    price: idx % 3 === 0 ? '국비지원' : `${300 + idx * 30}만원`,
-    mode: idx % 2 === 0 ? '온라인' : '오프라인',
-  }));
+  // bootcamps loaded from backend
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-8">
@@ -78,7 +102,7 @@ export default function BootcampListPage({
       {/* Bootcamp Grid - 2 Columns with Left Image Layout */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         {bootcamps.map((bootcamp) => (
-          <div key={bootcamp.id} className="border border-gray-400 bg-white hover:bg-gray-50">
+          <div key={bootcamp.BootcampID ?? bootcamp.id} className="border border-gray-400 bg-white hover:bg-gray-50">
             <div className="flex">
               {/* Left: Thumbnail */}
               <div className="w-48 border-r border-gray-400 flex items-center justify-center bg-gray-50 flex-shrink-0">
@@ -93,9 +117,9 @@ export default function BootcampListPage({
                     <div className="text-sm mb-2">{bootcamp.course}</div>
                   </div>
                   <button
-                    onClick={() => toggleBootcampSelection(bootcamp.id)}
-                    className={`w-8 h-8 border flex items-center justify-center flex-shrink-0 ml-2 ${
-                      selectedBootcamps.includes(bootcamp.id)
+                    onClick={() => toggleBootcampSelection(bootcamp.BootcampID ?? bootcamp.id)}
+                      className={`w-8 h-8 border flex items-center justify-center flex-shrink-0 ml-2 ${
+                        selectedBootcamps.includes(bootcamp.BootcampID ?? bootcamp.id)
                         ? 'border-gray-900 bg-gray-900 text-white'
                         : 'border-gray-500 bg-white'
                     }`}
@@ -164,7 +188,7 @@ export default function BootcampListPage({
 
           <div className="flex-1 space-y-3 overflow-y-auto">
             {selectedBootcamps.map((bootcampId) => {
-              const bootcamp = bootcamps.find((b) => b.id === bootcampId);
+              const bootcamp = bootcamps.find((b) => b.BootcampID === bootcampId || b.id === bootcampId);
               return (
                 <div key={bootcampId} className="border border-gray-400 bg-gray-50 p-3">
                   <div className="flex items-start justify-between mb-2">

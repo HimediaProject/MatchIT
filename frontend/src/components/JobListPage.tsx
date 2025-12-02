@@ -1,29 +1,48 @@
-type NavigateFunction = (page: string) => void;
+import { useEffect, useState } from 'react';
+type NavigateFunction = (page: any, params?: any) => void;
 
 interface JobListPageProps {
   onNavigate: NavigateFunction;
   selectedJobs: number[];
   setSelectedJobs: (jobs: number[]) => void;
+  onAddToCompare?: (id: number, type?: 'job' | 'bootcamp') => void;
+  selectedBootcamps?: number[];
 }
 
-export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs }: JobListPageProps) {
+export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs, onAddToCompare, selectedBootcamps = [] }: JobListPageProps) {
+  const [jobs, setJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/jobs')
+      .then((res) => res.json())
+      .then((data) => setJobs(data))
+      .catch((e) => console.error('failed to fetch jobs', e));
+  }, []);
+
   const toggleJobSelection = (jobId: number) => {
     if (selectedJobs.includes(jobId)) {
       setSelectedJobs(selectedJobs.filter((id) => id !== jobId));
-    } else if (selectedJobs.length < 3) {
+      return;
+    }
+
+    // Prevent mixing with bootcamp selections
+    if ((selectedBootcamps ?? []).length > 0) {
+      window.alert('채용공고와 부트캠프는 섞어서 비교할 수 없습니다. 현재 부트캠프가 선택되어 있습니다.');
+      return;
+    }
+
+    // Add either via global handler or local
+    if (onAddToCompare) {
+      onAddToCompare(jobId, 'job');
+      return;
+    }
+
+    if (selectedJobs.length < 3) {
       setSelectedJobs([...selectedJobs, jobId]);
+    } else {
+      window.alert('최대 3개까지 비교할 수 있습니다.');
     }
   };
-
-  const jobs = Array.from({ length: 12 }).map((_, idx) => ({
-    id: idx + 1,
-    company: `테크 회사 ${idx + 1}`,
-    title: `${['백엔드', '프론트엔드', '풀스택'][idx % 3]} 개발자`,
-    location: '서울',
-    type: '정규직',
-    exp: idx % 2 === 0 ? '신입' : '경력 3년',
-    matching: 95 - idx * 2,
-  }));
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-8">
@@ -103,8 +122,8 @@ export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs 
 
           {/* Job Grid */}
           <div className="grid grid-cols-3 gap-4 mb-8">
-            {jobs.map((job) => (
-              <div key={job.id} className="border border-gray-400 bg-white hover:bg-gray-50">
+              {jobs.map((job) => (
+                <div key={job.PostID ?? job.id} className="border border-gray-400 bg-white hover:bg-gray-50">
                 {/* Card Header with Compare Button */}
                 <div className="p-4 border-b border-gray-300 flex items-start justify-between">
                   <div className="flex gap-3 flex-1">
@@ -117,9 +136,9 @@ export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs 
                     </div>
                   </div>
                   <button
-                    onClick={() => toggleJobSelection(job.id)}
+                    onClick={() => toggleJobSelection(job.PostID ?? job.id)}
                     className={`w-8 h-8 border flex items-center justify-center flex-shrink-0 ${
-                      selectedJobs.includes(job.id)
+                      selectedJobs.includes(job.PostID ?? job.id)
                         ? 'border-gray-900 bg-gray-900 text-white'
                         : 'border-gray-500 bg-white'
                     }`}
@@ -136,13 +155,13 @@ export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs 
                     <span className="text-xs border border-gray-500 px-2 py-0.5">AWS</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
-                    <span>{job.exp}</span>
-                    <span>{job.location}</span>
-                    <span>{job.type}</span>
+                    <span>{(job.ExperienceRequirement ?? job.exp) || ''}</span>
+                    <span>{job.Location ?? job.location}</span>
+                    <span>{job.EmploymentType ?? job.type}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs border border-gray-900 px-2 py-1">
-                      매칭 {job.matching}%
+                      매칭 {job.matching ?? 0}%
                     </span>
                     <button
                       onClick={() => onNavigate('jobDetail')}
@@ -192,7 +211,7 @@ export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs 
 
           <div className="flex-1 space-y-3 overflow-y-auto">
             {selectedJobs.map((jobId) => {
-              const job = jobs.find((j) => j.id === jobId);
+              const job = jobs.find((j) => j.PostID === jobId || j.id === jobId);
               return (
                 <div key={jobId} className="border border-gray-400 bg-gray-50 p-3">
                   <div className="flex items-start justify-between mb-2">
@@ -207,7 +226,7 @@ export default function JobListPage({ onNavigate, selectedJobs, setSelectedJobs 
                       ×
                     </button>
                   </div>
-                  <div className="text-xs text-gray-600">매칭 {job?.matching}%</div>
+                  <div className="text-xs text-gray-600">매칭 {job?.matching ?? 0}%</div>
                 </div>
               );
             })}
