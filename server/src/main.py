@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+import time
+import logging
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import jwt_login, kakao, comparison
@@ -22,6 +24,26 @@ app.add_middleware(
 app.include_router(jwt_login.router)
 app.include_router(kakao.router)
 app.include_router(comparison.router)
+
+logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+def on_startup():
+    # Wait for DB to be ready (simple retry loop). This prevents immediate
+    # OperationalError when the DB container is still initializing.
+    from src.database import engine
+    max_retries = 10
+    delay = 1  # seconds
+    for attempt in range(1, max_retries + 1):
+        try:
+            with engine.connect():
+                logger.info("DB connection established on startup (attempt %s)", attempt)
+                return
+        except Exception as e:
+            logger.warning("DB connection attempt %s failed: %s", attempt, e)
+            time.sleep(delay)
+    logger.error("DB did not become ready after %s attempts", max_retries)
 
 @app.get("/")
 def root():
