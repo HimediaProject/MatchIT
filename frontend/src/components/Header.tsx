@@ -45,9 +45,12 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          <button className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-primary-200 hover:text-primary-700 md:inline-flex">
+          <Link
+            to="/login"
+            className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-primary-200 hover:text-primary-700 md:inline-flex"
+          >
             로그인
-          </button>
+          </Link>
           <Link
             to="/"
             className="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:shadow-lg hover:shadow-primary-200"
