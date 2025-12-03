@@ -83,7 +83,7 @@ docker compose run --rm server alembic init alembic
 
 #### 3. 마이그레이션 파일 생성
 ```bash
-docker compose run --rm server alembic revision --autogenerate -m "create users table"
+docker compose run --rm server alembic revision --autogenerate -m "create table"
 ```
 
 #### 4. 마이그레이션 실행
