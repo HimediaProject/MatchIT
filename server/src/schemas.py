@@ -192,6 +192,41 @@ class BootcampPost(BaseModel):
     close_date: datetime
     detail_url: Optional[HttpUrl] = None
 
+class BootcampCreate(BaseModel):
+    Title: str
+    InstituteName: str
+    JobCategoryID: int
+    Location: Optional[str] = None
+    OnlineOffline: str = "온라인"
+    CostSupportType: str = "본인부담"
+    EducationContent: Optional[str] = None
+    Qualification: Optional[str] = None
+    Benefits: Optional[str] = None
+    StartDate: Optional[datetime] = None
+    RegistrationDate: Optional[datetime] = None
+    CloseDate: Optional[datetime] = None
+    DetailUrl: Optional[str] = None
+
+class BootcampResponse(BaseModel):
+    BootcampID: int
+    Title: str
+    InstituteName: str
+    JobCategoryID: int
+    Location: Optional[str]
+    OnlineOffline: str
+    CostSupportType: str
+    EducationContent: Optional[str]
+    Qualification: Optional[str]
+    Benefits: Optional[str]
+    StartDate: Optional[datetime]
+    RegistrationDate: Optional[datetime]
+    CloseDate: Optional[datetime]
+    DetailUrl: Optional[str]
+    ViewCount: int
+    CreatedAt: datetime
+    UpdatedAt: datetime
+
+
 ##################################################################################
 # === GET ===
 ##################################################################################
@@ -330,6 +365,12 @@ class CareerLevelGet(BaseModel):
     career_name: str
     category_name: Optional[str] = None
 
+class PaginatedBootcampResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[BootcampResponse]
+
 class UserScrapGet(BaseModel):
     '''
     endpoint:
@@ -443,3 +484,19 @@ class NotificationPut(BaseModel):
     is_enabled: bool = True
     notification_type: str
     notification_time: str
+
+class BootcampUpdate(BaseModel):
+    Title: Optional[str] = None
+    InstituteName: Optional[str] = None
+    JobCategoryID: Optional[int] = None
+    Location: Optional[str] = None
+    OnlineOffline: Optional[str] = None
+    CostSupportType: Optional[str] = None
+    EducationContent: Optional[str] = None
+    Qualification: Optional[str] = None
+    Benefits: Optional[str] = None
+    StartDate: Optional[datetime] = None
+    RegistrationDate: Optional[datetime] = None
+    CloseDate: Optional[datetime] = None
+    DetailUrl: Optional[str] = None
+    ViewCount: Optional[int] = None
