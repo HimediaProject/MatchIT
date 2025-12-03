@@ -1,117 +1,114 @@
-import { useEffect, useState } from 'react';
-import { authApi } from "../services/apiService";
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { authApi } from '../services/apiService'
 
-type NavigateFunction = (page: string) => void;
+export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
-interface LoginPageProps {
-  onNavigate: NavigateFunction;
-}
-
-export default function LoginPage({ onNavigate }: LoginPageProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: string) => {
     try {
-      setIsLoading(true);
-      window.location.href = authApi.getSocialLoginUrl(provider);
-      // const response = await fetch(authApi.getSocialLoginUrl(provider));
-      // if (response.url) {
-      //   window.location.href = response.url; // 실제 인증 페이지로 이동
-      // } else {
-      //   alert("소셜 로그인 URL을 가져올 수 없습니다.");
-      // }
+      setIsLoading(true)
+      // 외부 인증 페이지로 이동
+      window.location.href = authApi.getSocialLoginUrl(provider)
     } catch (e) {
-      console.error(e);
-      alert("소셜 로그인 중 오류가 발생했습니다.");
+      console.error(e)
+      alert('소셜 로그인 중 오류가 발생했습니다.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
+
+  // 데모/빠른 확인용: 로그인 성공 시 홈으로 이동
+  const handleDemoLogin = () => {
+    // 실제 앱에서는 토큰 저장 등 추가 로직 필요
+    navigate('/')
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-200 p-8">
-      <div className="w-full max-w-lg">
-        {/* Service Logo & Title */}
-        <div className="text-center mb-10">
-          <div className="w-28 h-28 border-2 border-gray-900 mx-auto mb-5 flex items-center justify-center bg-white">
-            <div className="text-4xl text-gray-400">×</div>
-          </div>
-          <div className="mb-2 font-bold text-xl">MatchIT</div>
-          <p className="text-sm text-gray-600">
-            기술 스택 기반 채용·교육 매칭 플랫폼
-          </p>
-        </div>
+    <div className="bg-white">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(45,109,255,0.04),transparent_30%),radial-gradient(circle_at_80%_10%,rgba(245,159,0,0.04),transparent_20%)]" />
+        <div className="relative mx-auto grid max-w-4xl grid-cols-1 items-center gap-10 px-4 py-20 md:px-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700">
+              간편 로그인
+            </div>
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold leading-tight text-slate-950 sm:text-4xl lg:text-4xl">
+                MatchIT에 로그인하여
+                <br /> 나만의 추천을 받아보세요.
+              </h1>
+              <p className="max-w-md text-lg text-slate-600">
+                소셜 계정으로 간편하게 로그인하면 프로필을 저장하고 맞춤 추천을 계속 받을 수 있습니다.
+              </p>
+            </div>
 
-        {/* Login Box */}
-        <div className="border-2 border-gray-900 bg-white p-12">
-          <div className="text-center mb-8">
-            <div className="mb-2 font-semibold">소셜 계정으로 로그인</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:text-primary-700"
+              >
+                뒤로가기
+              </button>
+            </div>
           </div>
 
-          {/* Social Buttons */}
-          <div className="space-y-3">
-            {/* GOOGLE */}
-            <button
-              disabled={isLoading}
-              onClick={() => handleSocialLogin("google")}
-              className="w-full py-3 border border-gray-900 bg-gray-50 hover:bg-gray-100 flex items-center gap-4 px-6 disabled:opacity-50"
-            >
-              <div className="w-7 h-7 border border-gray-600 flex items-center justify-center bg-white">
-                <span className="text-xs">G</span>
+          <div className="relative">
+            <div className="relative rounded-3xl border border-slate-100 bg-white/90 p-8 shadow-soft">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center rounded-xl bg-primary-50 text-primary-700 text-2xl font-bold">IT</div>
+                <h3 className="text-lg font-bold text-slate-900">소셜 계정으로 로그인</h3>
+                <p className="text-sm text-slate-500">Google / Kakao / Naver 계정으로 빠르게 시작하세요.</p>
               </div>
-              <span className="flex-1 text-left">Google 계정으로 계속</span>
-            </button>
 
-            {/* KAKAO */}
-            <button
-              disabled={isLoading}
-              onClick={() => handleSocialLogin("kakao")}
-              className="w-full py-3 border border-gray-900 bg-gray-50 hover:bg-gray-100 flex items-center gap-4 px-6 disabled:opacity-50"
-            >
-              <div className="w-7 h-7 border border-gray-600 flex items-center justify-center bg-white">
-                <span className="text-xs">K</span>
-              </div>
-              <span className="flex-1 text-left">Kakao 계정으로 계속</span>
-            </button>
+              <div className="space-y-3">
+                <button
+                  disabled={isLoading}
+                  onClick={() => handleSocialLogin('google')}
+                  className="w-full py-3 border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-4 px-4 disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-700 border border-slate-200">G</div>
+                  <span className="flex-1 text-left">Google 계정으로 계속</span>
+                </button>
 
-            {/* NAVER */}
-            <button
-              disabled={isLoading}
-              onClick={() => handleSocialLogin("naver")}
-              className="w-full py-3 border border-gray-900 bg-gray-50 hover:bg-gray-100 flex items-center gap-4 px-6 disabled:opacity-50"
-            >
-              <div className="w-7 h-7 border border-gray-600 flex items-center justify-center bg-white">
-                <span className="text-xs">N</span>
+                <button
+                  disabled={isLoading}
+                  onClick={() => handleSocialLogin('kakao')}
+                  className="w-full py-3 border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-4 px-4 disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-700 border border-slate-200">K</div>
+                  <span className="flex-1 text-left">Kakao 계정으로 계속</span>
+                </button>
+
+                <button
+                  disabled={isLoading}
+                  onClick={() => handleSocialLogin('naver')}
+                  className="w-full py-3 border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-4 px-4 disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-700 border border-slate-200">N</div>
+                  <span className="flex-1 text-left">Naver 계정으로 계속</span>
+                </button>
               </div>
-              <span className="flex-1 text-left">Naver 계정으로 계속</span>
-            </button>
+
+              <div className="mt-6 text-center">
+                <p className="text-xs text-slate-500 mb-3">로그인 시 약관에 동의하게 됩니다.</p>
+                <div className="flex gap-2 justify-center text-xs">
+                  <button className="underline">이용약관</button>
+                  <span>|</span>
+                  <button className="underline">개인정보처리방침</button>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t pt-4">
+                <button onClick={handleDemoLogin} className="w-full rounded-md bg-slate-900 px-4 py-2 text-white font-semibold">
+                  데모로 체험하기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Footer Links */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-600 mb-2">
-            로그인 시 아래 약관에 동의하게 됩니다
-          </p>
-          <div className="flex justify-center gap-3 text-xs">
-            <button className="underline">이용약관</button>
-            <span>|</span>
-            <button className="underline">개인정보처리방침</button>
-          </div>
-        </div>
-
-        {/* Demo Access */}
-        <div className="mt-8 border border-gray-500 bg-gray-100 p-4">
-          <p className="text-xs text-center mb-2">[ Wireframe Demo ]</p>
-          <button
-            onClick={() => onNavigate("home")}
-            className="w-full py-2 border border-gray-900 bg-gray-900 text-white hover:bg-gray-700"
-          >
-            데모 보기 →
-          </button>
-        </div>
-      </div>
+      </section>
     </div>
-  );
+  )
 }
