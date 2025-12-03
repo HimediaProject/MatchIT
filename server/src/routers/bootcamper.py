@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from src.database import get_db
 from src.models import BootcampPost, JobCategory, Skill
-from utils.schemas import BootcampCreate, BootcampUpdate, \
+from src.schemas import BootcampCreate, BootcampUpdate, \
                             BootcampResponse, PaginatedBootcampResponse
 from typing import List, Optional
 from datetime import date, datetime
