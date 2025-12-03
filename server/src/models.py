@@ -7,14 +7,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+# Base = declarative_base()
 
 
 # -------------------------------------------------------
 # CareerLevels
 # -------------------------------------------------------
 class CareerLevel(Base):
-    __tablename__ = "CareerLevels"
+    __tablename__ = "careerlevels"
 
     CareerLevelID = Column(Integer, primary_key=True, autoincrement=True)
     CareerName = Column(String(50), unique=True, nullable=False)
@@ -26,12 +26,12 @@ class CareerLevel(Base):
 # Users
 # -------------------------------------------------------
 class User(Base):
-    __tablename__ = "Users"
+    __tablename__ = "users"
 
     UserID = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(String(100))
     Email = Column(String(255), unique=True, nullable=False)
-    CareerLevelID = Column(Integer, ForeignKey("CareerLevels.CareerLevelID"))
+    CareerLevelID = Column(Integer, ForeignKey("CareerLevel.CareerLevelID"))
     CreatedAt = Column(DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -47,7 +47,7 @@ class User(Base):
 # SocialLogins
 # -------------------------------------------------------
 class SocialLogin(Base):
-    __tablename__ = "SocialLogins"
+    __tablename__ = "socialLogins"
 
     SocialLoginID = Column(Integer, primary_key=True, autoincrement=True)
     UserID = Column(Integer, ForeignKey("Users.UserID"), nullable=False)
@@ -69,7 +69,7 @@ class SocialLogin(Base):
 # DesiredJobs + UserDesiredJobs
 # -------------------------------------------------------
 class DesiredJob(Base):
-    __tablename__ = "DesiredJobs"
+    __tablename__ = "desiredjobs"
 
     DesiredJobID = Column(Integer, primary_key=True, autoincrement=True)
     JobName = Column(String(100), unique=True, nullable=False)
@@ -78,7 +78,7 @@ class DesiredJob(Base):
 
 
 class UserDesiredJob(Base):
-    __tablename__ = "UserDesiredJobs"
+    __tablename__ = "userdesiredjobs"
 
     UserID = Column(Integer, ForeignKey("Users.UserID"), primary_key=True)
     DesiredJobID = Column(Integer, ForeignKey("DesiredJobs.DesiredJobID"), primary_key=True)
@@ -88,7 +88,7 @@ class UserDesiredJob(Base):
 # Skills + UserSkills (M2M)
 # -------------------------------------------------------
 class Skill(Base):
-    __tablename__ = "Skills"
+    __tablename__ = "skills"
 
     SkillID = Column(Integer, primary_key=True, autoincrement=True)
     SkillName = Column(String(100), unique=True, nullable=False)
@@ -98,7 +98,7 @@ class Skill(Base):
 
 
 class UserSkill(Base):
-    __tablename__ = "UserSkills"
+    __tablename__ = "userskills"
 
     UserID = Column(Integer, ForeignKey("Users.UserID"), primary_key=True)
     SkillID = Column(Integer, ForeignKey("Skills.SkillID"), primary_key=True)
@@ -108,7 +108,7 @@ class UserSkill(Base):
 # User Notification Settings
 # -------------------------------------------------------
 class UserNotificationSetting(Base):
-    __tablename__ = "UserNotificationSettings"
+    __tablename__ = "usernotificationsettings"
 
     UserNotificationID = Column(Integer, primary_key=True, autoincrement=True)
     UserID = Column(Integer, ForeignKey("Users.UserID"), nullable=False)
@@ -123,7 +123,7 @@ class UserNotificationSetting(Base):
 # Platforms
 # -------------------------------------------------------
 class Platform(Base):
-    __tablename__ = "Platforms"
+    __tablename__ = "platforms"
 
     PlatformID = Column(Integer, primary_key=True, autoincrement=True)
     PlatformName = Column(String(100), unique=True, nullable=False)
@@ -135,7 +135,7 @@ class Platform(Base):
 # JobCategories
 # -------------------------------------------------------
 class JobCategory(Base):
-    __tablename__ = "JobCategories"
+    __tablename__ = "jobcategories"
 
     CategoryID = Column(Integer, primary_key=True, autoincrement=True)
     CategoryName = Column(String(100), nullable=False)
@@ -151,7 +151,7 @@ class JobCategory(Base):
 # JobPosts
 # -------------------------------------------------------
 class JobPost(Base):
-    __tablename__ = "JobPosts"
+    __tablename__ = "jobposts"
 
     PostID = Column(Integer, primary_key=True, autoincrement=True)
     PlatformID = Column(Integer, ForeignKey("Platforms.PlatformID"), nullable=False)
@@ -189,7 +189,7 @@ class JobPost(Base):
 
 
 class JobPostSkill(Base):
-    __tablename__ = "JobPostSkills"
+    __tablename__ = "jobpostskills"
 
     PostID = Column(Integer, ForeignKey("JobPosts.PostID"), primary_key=True)
     SkillID = Column(Integer, ForeignKey("Skills.SkillID"), primary_key=True)
@@ -199,7 +199,7 @@ class JobPostSkill(Base):
 # BootcampPosts
 # -------------------------------------------------------
 class BootcampPost(Base):
-    __tablename__ = "BootcampPosts"
+    __tablename__ = "bootcampposts"
 
     BootcampID = Column(Integer, primary_key=True, autoincrement=True)
     Title = Column(String(255), nullable=False)
@@ -232,7 +232,7 @@ class BootcampPost(Base):
 # UserScraps
 # -------------------------------------------------------
 class UserScrap(Base):
-    __tablename__ = "UserScraps"
+    __tablename__ = "userScraps"
 
     ScrapID = Column(Integer, primary_key=True, autoincrement=True)
     UserID = Column(Integer, ForeignKey("Users.UserID"), nullable=False)
