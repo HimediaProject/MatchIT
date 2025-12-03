@@ -8,9 +8,11 @@ dependencies = [
     "alembic>=1.17.2",
     "fastapi>=0.122.0",
     "passlib[bcrypt]>=1.7.4",
+    "psycopg2>=2.9.11",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
+    "python-jose>=3.5.0",
     "sqlalchemy>=2.0.44",
     "uvicorn>=0.38.0",
 ]
