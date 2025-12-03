@@ -114,17 +114,7 @@ def bootcamp_to_dict(b: models.BootcampPost):
         "detail_url": b.DetailUrl,
     }
 
-
-@router.get('/jobs', response_model=List[schemas.JobPost])
-def list_jobs(limit: int = 50, db: Session = Depends(get_db)):
-    try:
-        jobs = db.query(models.JobPost).filter(models.JobPost.IsActive == True).limit(limit).all()
-        return [job_to_dict(j) for j in jobs]
-    except Exception as e:
-        logger.exception("Failed to list jobs for comparison: %s", e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Error")
-
-
+# JobPosts 비교 관련 엔드포인트
 @router.get('/jobs/{post_id}', response_model=schemas.JobPost)
 def get_job(post_id: int, db: Session = Depends(get_db)):
     try:
@@ -138,7 +128,6 @@ def get_job(post_id: int, db: Session = Depends(get_db)):
         logger.exception("Failed to get job %s: %s", post_id, e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Error")
 
-
 @router.post('/jobs', response_model=List[schemas.JobPost])
 def compare_jobs(ids: List[int], db: Session = Depends(get_db)):
     if len(ids) > 3:
@@ -150,17 +139,7 @@ def compare_jobs(ids: List[int], db: Session = Depends(get_db)):
         logger.exception("Failed to compare jobs %s: %s", ids, e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Error")
 
-
-@router.get('/bootcamps', response_model=List[schemas.BootcampPost])
-def list_bootcamps(limit: int = 50, db: Session = Depends(get_db)):
-    try:
-        posts = db.query(models.BootcampPost).limit(limit).all()
-        return [bootcamp_to_dict(b) for b in posts]
-    except Exception as e:
-        logger.exception("Failed to list bootcamps for comparison: %s", e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Error")
-
-
+# BootcampPosts 비교 관련 엔드포인트
 @router.get('/bootcamps/{bootcamp_id}', response_model=schemas.BootcampPost)
 def get_bootcamp(bootcamp_id: int, db: Session = Depends(get_db)):
     try:
