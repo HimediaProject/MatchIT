@@ -10,6 +10,7 @@ redis>=5.0.1,<6.0.0                     # Redis 클라이언트
 
 # PostgreSQL Driver
 psycopg2-binary>=2.9.11                 # PostgreSQL 연동용 Sync 드라이버 (DB 접속)
+pgvector>=0.4.0,<0.5.0                  # pgvector extension client library for Python
 
 # Security / Password Handling
 passlib[bcrypt]>=1.7.4                  # 비밀번호 해싱(bcrypt) 라이브러리
