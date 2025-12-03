@@ -17,13 +17,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libffi-dev \
     curl \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first to take advantage of Docker layer caching
 COPY requirements.txt ./
 
 # Python 패키지 설치
-RUN pip install --no-cache-dir --upgrade pip \
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt
 
 # 애플리케이션 코드 복사
