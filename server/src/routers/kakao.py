@@ -5,19 +5,18 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from database import get_db
+from src.database import get_db
 from datetime import datetime, timedelta
-from models import User, Oauth_accounts
+from src.models import User, SocialLogin
 
-ENV_PATH = Path(__file__).parent.parent / '.env'    # .env 절대 경로
-
+ENV_PATH = Path(__file__).parent.parent.parent / '.env'    # .env 절대 경로
 load_dotenv(ENV_PATH)   # 인자: .env 경로
 
 KAKAO_CLIENT_ID = os.getenv('KAKAO_CLIENT_ID')
 KAKAO_CLIENT_SECRET = os.getenv('KAKAO_CLIENT_SECRET')
-KAKAO_REDIRICT_URI = os.getenv('KAKAO_REDIRICT_URI')
+KAKAO_REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URI')
 
-router = APIRouter(prefix='/auth/kakao', tags=['카카오'])
+router = APIRouter(prefix='/auth/kakao', tags=['카카오 소셜로그인 기능'])
 
 @router.get('/login')
 async def kakao_login():
@@ -30,9 +29,9 @@ async def kakao_login():
         f"https://kauth.kakao.com/oauth/authorize"
         f"?response_type=code"                 # 응답으로 인가 코드 요청 (엑세스 토큰으로 교환하기 위한 코드)
         f"&client_id={KAKAO_CLIENT_ID}"
-        f'&redirect_uri={KAKAO_REDIRICT_URI}'
+        f'&redirect_uri={KAKAO_REDIRECT_URI}'
     )
-
+    
     # 2. 엑세스 토근을 발급받을 수 있도록 요청하는 FastAPI의 엔드포인트로 redirect
     return RedirectResponse(url=kakao_auth_url)
 
@@ -49,7 +48,7 @@ async def kakao_callback(code: str,
     token_data = {
         "grant_type": 'authorization_code',
         "client_id": KAKAO_CLIENT_ID,
-        "redirect_uri": KAKAO_REDIRICT_URI,
+        "redirect_uri": KAKAO_REDIRECT_URI,
         "client_secret": KAKAO_CLIENT_SECRET,
         "code": code
     }
@@ -86,9 +85,9 @@ async def kakao_callback(code: str,
     kakao_thumnail = user_json.get('properties', {}).get('thumnail_image', 'image.png')
 
     # 4. 우리 서버에 사용자 정보를 저장시키기
-    oauth_account = db.query(Oauth_accounts)\
-                      .filter(Oauth_accounts.provider == 'kakao',\
-                              Oauth_accounts.provider_user_id == str(kakao_id)).first()
+    oauth_account = db.query(SocialLogin)\
+                      .filter(SocialLogin.provider == 'kakao',\
+                              SocialLogin.provider_user_id == str(kakao_id)).first()
     
     # 4-1. 존재하면 저장 X -> 엑세스 토큰, 리프레시 토큰 업데이트
     if oauth_account:
@@ -117,7 +116,7 @@ async def kakao_callback(code: str,
             db.commit() # 확정
             db.flush()  # user 테이블에 저장하면서 user의 id를 가져오기 위해서
 
-            oauth_account = Oauth_accounts(
+            oauth_account = SocialLogin(
                 user_id = user.id,
                 provider = 'kakao',
                 provider_user_id = str(kakao_id),    # 문자열로 바꿔서 저장

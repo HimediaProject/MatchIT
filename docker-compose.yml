@@ -1,18 +1,26 @@
-version: '3.8'
+
 
 services:
   # PostgreSQL 데이터베이스 (관계형 데이터)
   postgres:
-    image: postgres:15-alpine
+    build:
+      context: ./server/db
+      dockerfile: Dockerfile
+    # image을 명시하면 빌드 시 해당 이름으로 태깅됩니다. 만약 registry에서 이미 빌드된 이미지를 사용하고 싶다면
+    # build를 제거하고 image만 남겨서 사용하세요 (예: himediaproject/matchit_postgres:18-pgvector)
+    # 로컬에서 빌드한 이미지를 사용하려면 아래 `image` 이름을 사용해 빌드 및 태깅 후 docker compose up을 실행하면 됩니다.
+    image: matchit_postgres:18-pgvector
     container_name: matchit_postgres
     environment:
       POSTGRES_DB: matchit_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      LANG: en_US.utf8
+      LC_ALL: en_US.utf8
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       # Mount a single SQL init script so the container only executes the one intended file
       # If you want multiple files to be executed, you can mount a directory instead.
       - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -60,6 +68,14 @@ services:
     container_name: matchit_server
     ports:
       - "8000:8000"
+    volumes:
+      - ./server:/app
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: matchit_db
+      DB_PORT: 5432
     depends_on:
       - postgres
       - redis
