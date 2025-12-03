@@ -148,7 +148,7 @@ class JobPost(BaseModel):
     job_category: str = Field(max_length = 500)
     employment_type: str = Field(max_length = 500)
     experience_requirement: str
-    education_Rrquirement: str
+    education_requirement: Optional[str] = None
     location: str
     main_tasks: Optional[str] = Field(None, max_length = 10000)
     qualifications: Optional[str] = Field(None, max_length = 10000)
@@ -158,7 +158,8 @@ class JobPost(BaseModel):
     salary: str
     posted_date: Optional[datetime] = None
     close_date: datetime
-    url: HttpUrl
+    # DB may not always include a valid URL; allow None
+    url: Optional[HttpUrl] = None
     is_active: bool
     created_at: datetime = Field(default_factory = datetime.now)
     updated_at: datetime = Field(default_factory = datetime.now)
@@ -189,7 +190,7 @@ class BootcampPost(BaseModel):
     start_date: datetime
     registration_date: datetime
     close_date: datetime
-    detail_url: HttpUrl
+    detail_url: Optional[HttpUrl] = None
 
 ##################################################################################
 # === GET ===
@@ -298,6 +299,35 @@ class SortBootcampGet(BaseModel):
     skill_id: Optional[int] = None
     skill_name: Optional[str] = None
     category_id: Optional[int] = None
+
+
+class CareerLevelPost(BaseModel):
+    '''
+    endpoint:
+        /careerlevels
+
+    params:
+        career_name
+
+    description:
+        새로운 커리어 레벨을 등록합니다.
+    '''
+    career_name: str = Field(max_length=50)
+
+
+class CareerLevelGet(BaseModel):
+    '''
+    endpoint:
+        /careerlevels/{career_level_id}
+
+    params:
+        career_level_id
+
+    description:
+        커리어 레벨의 상세 정보를 조회합니다. (ID, 이름)
+    '''
+    career_level_id: int
+    career_name: str
     category_name: Optional[str] = None
 
 class UserScrapGet(BaseModel):
