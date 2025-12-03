@@ -9,7 +9,6 @@ const navItems: NavItem[] = [
   { label: '홈', to: '/' },
   { label: '채용', to: '/jobs' },
   { label: '부트캠프', to: '/bootcamps' },
-  { label: '비교', to: '/compare' },
   { label: '내 프로필', to: '/profile' },
 ]
 
