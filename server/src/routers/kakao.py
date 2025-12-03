@@ -87,12 +87,14 @@ async def kakao_callback(code: str,
     # 4. 우리 서버에 사용자 정보를 저장시키기
     oauth_account = db.query(SocialLogin)\
                   .filter(SocialLogin.Provider == 'Kakao',\
-                      SocialLogin.ProviderUserID == str(kakao_id)).first()
+                          SocialLogin.ProviderUserID == str(kakao_id)).first()
     
-    # 4-1. 존재하면 저장 X -> 엑세스 토큰, 리프레시 토큰 업데이트
+    # 4-1. 존재하면 저장 X -> UnlinkedAt 업데이트 (다시 연결됨)
     if oauth_account:
         try:
-            # 기존에 연결된 소셜 계정이면 사용자 정보만 가져옵니다.
+            # 기존에 연결된 소셜 계정이면 UnlinkedAt을 초기화 (재연결)
+            oauth_account.UnlinkedAt = None
+            db.commit()
             user = oauth_account.user
         except Exception as e:
             db.rollback()
@@ -113,7 +115,9 @@ async def kakao_callback(code: str,
             oauth_account = SocialLogin(
                 UserID = user.UserID,
                 Provider = 'Kakao',
-                ProviderUserID = str(kakao_id)
+                ProviderUserID = str(kakao_id),
+                LinkedAt = datetime.now(),
+                UnlinkedAt = None
             )
 
             db.add(oauth_account)
@@ -138,8 +142,14 @@ async def kakao_callback(code: str,
                             <script>
                                 window.onload = function() {{
                                     try {{
+                                        // localStorage에 로그인 상태 저장
+                                        localStorage.setItem('isLoggedIn', 'true');
+                                        localStorage.setItem('userName', '{user.Name}');
+                                        localStorage.setItem('userEmail', '{user.Email}');
                                         alert('회원가입이 완료되었습니다');
-                                    }} catch(e) {{}}
+                                    }} catch(e) {{
+                                        console.error(e);
+                                    }}
                                     // 프론트엔드 프로필 페이지로 이동
                                     window.location.href = '{frontend_profile_url}';
                                 }}
@@ -181,3 +191,64 @@ async def kakao_callback(code: str,
 
     # 6. 응답
     return response
+
+
+# 카카오 로그아웃 엔드포인트
+@router.get('/logout')
+async def kakao_logout(user_id: int, db: Session = Depends(get_db)):
+    """
+    사용자가 카카오 계정과의 연결을 해제하는 엔드포인트
+    """
+    try:
+        # 사용자의 모든 카카오 소셜 계정 찾기
+        oauth_accounts = db.query(SocialLogin)\
+                          .filter(SocialLogin.UserID == user_id,\
+                                  SocialLogin.Provider == 'Kakao')\
+                          .all()
+        
+        if not oauth_accounts:
+            return {'error': '카카오 계정이 연결되지 않음'}
+        
+        # UnlinkedAt을 현재 시간으로 설정하여 로그아웃 표시
+        for oauth_account in oauth_accounts:
+            oauth_account.UnlinkedAt = datetime.now()
+        
+        db.commit()
+        
+        # 홈 페이지로 리디렉트
+        frontend_home_url = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '/'
+        response = HTMLResponse(f"""
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>로그아웃 완료</title>
+                    <script>
+                        window.onload = function() {{
+                            try {{
+                                // localStorage에서 로그인 상태 제거
+                                localStorage.removeItem('isLoggedIn');
+                                localStorage.removeItem('userName');
+                                localStorage.removeItem('userEmail');
+                            }} catch(e) {{
+                                console.error(e);
+                            }}
+                            window.location.href = '{frontend_home_url}';
+                        }}
+                    </script>
+                </head>
+                <body>
+                    <p>로그아웃 중...</p>
+                </body>
+            </html>
+        """)
+        
+        # 쿠키 삭제
+        response.delete_cookie('kakao_access_token')
+        response.delete_cookie('kakao_refresh_token')
+        
+        return response
+        
+    except Exception as e:
+        db.rollback()
+        return {'error': '로그아웃 실패', 'details': str(e)}
