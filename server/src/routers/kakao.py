@@ -11,11 +11,11 @@ from src.models import User, SocialLogin
 
 ENV_PATH = Path(__file__).parent.parent.parent / '.env'    # .env 절대 경로
 load_dotenv(ENV_PATH)   # 인자: .env 경로
-
+# print(ENV_PATH)
 KAKAO_CLIENT_ID = os.getenv('KAKAO_CLIENT_ID')
 KAKAO_CLIENT_SECRET = os.getenv('KAKAO_CLIENT_SECRET')
 KAKAO_REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URI')
-
+# print(KAKAO_REDIRECT_URI)
 router = APIRouter(prefix='/auth/kakao', tags=['카카오 소셜로그인 기능'])
 
 @router.get('/login')
@@ -32,7 +32,7 @@ async def kakao_login():
         f'&redirect_uri={KAKAO_REDIRECT_URI}'
     )
     
-    # 2. 엑세스 토근을 발급받을 수 있도록 요청하는 FastAPI의 엔드포인트로 redirect
+    # 2. 엑세스 토큰을 발급받을 수 있도록 요청하는 FastAPI의 엔드포인트로 redirect
     return RedirectResponse(url=kakao_auth_url)
 
 # 인증 코드를 받아서 엑세스 토큰으로 교환해주는 엔드포인트
@@ -82,21 +82,17 @@ async def kakao_callback(code: str,
     kakao_email = user_json.get('kakao_account', {}).get('email', 'email')
     kakao_nickname = user_json.get('properties', {}).get('nickname', 'nickname')
     kakao_gender = user_json.get('kakao_account', {}).get('gender', 'gender')
-    kakao_thumnail = user_json.get('properties', {}).get('thumnail_image', 'image.png')
+    # kakao_thumnail = user_json.get('properties', {}).get('thumnail_image', 'image.png')
 
     # 4. 우리 서버에 사용자 정보를 저장시키기
     oauth_account = db.query(SocialLogin)\
-                      .filter(SocialLogin.provider == 'kakao',\
-                              SocialLogin.provider_user_id == str(kakao_id)).first()
+                  .filter(SocialLogin.Provider == 'Kakao',\
+                      SocialLogin.ProviderUserID == str(kakao_id)).first()
     
     # 4-1. 존재하면 저장 X -> 엑세스 토큰, 리프레시 토큰 업데이트
     if oauth_account:
         try:
-            oauth_account.refresh_token = refresh_token
-            oauth_account.token_expired_at = token_expired_at
-
-            # 변경사항 저장
-            db.commit()
+            # 기존에 연결된 소셜 계정이면 사용자 정보만 가져옵니다.
             user = oauth_account.user
         except Exception as e:
             db.rollback()
@@ -105,23 +101,19 @@ async def kakao_callback(code: str,
     # 4-2. 우리 서버에 있는 사용자인가 확인하고 존재하지 않으면 저장
     else:
         try:
+            # User 모델의 필드명에 맞춰 생성합니다 (Email, Name 등)
             user = User(
-                email = kakao_email,
-                name = kakao_nickname,
-                login_type = 'oauth',
-                password = None
+                Email = kakao_email,
+                Name = kakao_nickname
             )
 
             db.add(user)
-            db.commit() # 확정
-            db.flush()  # user 테이블에 저장하면서 user의 id를 가져오기 위해서
+            db.flush()  # user의 PK(UserID)를 얻기 위해 flush
 
             oauth_account = SocialLogin(
-                user_id = user.id,
-                provider = 'kakao',
-                provider_user_id = str(kakao_id),    # 문자열로 바꿔서 저장
-                refresh_token = refresh_token,
-                token_expired_at = token_expired_at
+                UserID = user.UserID,
+                Provider = 'Kakao',
+                ProviderUserID = str(kakao_id)
             )
 
             db.add(oauth_account)
@@ -134,16 +126,32 @@ async def kakao_callback(code: str,
     db.refresh(user)    # 응답 페이지에 사용자 정보를 표시하기 위해 새로고침
 
     # 5. 쿠키에 토큰 저장하기
+    # 프론트엔드 개발 서버를 기준으로 로그인 완료 후 알림 창 표시 후 프로필 페이지로 이동시키는 스크립트 포함
+    frontend_profile_url = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '/profile'
+
     html_content = f"""
                     <!DOCTYPE html>
                     <html>
+                        <head>
+                            <meta charset="utf-8" />
+                            <title>로그인 성공</title>
+                            <script>
+                                window.onload = function() {{
+                                    try {{
+                                        alert('회원가입이 완료되었습니다');
+                                    }} catch(e) {{}}
+                                    // 프론트엔드 프로필 페이지로 이동
+                                    window.location.href = '{frontend_profile_url}';
+                                }}
+                            </script>
+                        </head>
                         <body>
                             <h3>성공</h3>
-                            <span>이름: {user.name}</span>
-                            <span>이메일: {user.email}</span>
-                            <span>성별: {kakao_gender}</span>
+                            <div>이름: {user.Name}</div>
+                            <div>이메일: {user.Email}</div>
+                            <div>성별: {kakao_gender}</div>
                             <br>
-                            <a href="/auth/kakao/logout?user_id={user.id}">로그아웃</a>
+                            <a href="/auth/kakao/logout?user_id={user.UserID}">로그아웃</a>
                             <br>
                             <a href='/'>홈으로</a>
                         </body>
