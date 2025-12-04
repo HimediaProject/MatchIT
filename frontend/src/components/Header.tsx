@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { authApi } from '../services/apiService'
 
 type NavItem = {
   label: string
@@ -13,43 +14,57 @@ const navItems: NavItem[] = [
   { label: '내 프로필', to: '/profile' },
 ]
 
-// 쿠키에서 특정 값 가져오기
-const getCookie = (name: string): string | null => {
-  if (typeof document === 'undefined') return null
-  const value = `; ${document.cookie}`
-  const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) return parts.pop()?.split(';').shift() ?? null
-  return null
-}
-
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const navigate = useNavigate()
 
-  // 로그인 상태 확인 (마운트 시 + 정기적으로)
-  useEffect(() => {
-    const checkLoginStatus = () => {
-      // localStorage와 쿠키 둘 다 확인
-      const isLoggedInLocal = localStorage.getItem('isLoggedIn') === 'true'
-      const token = getCookie('kakao_access_token')
-      setIsLoggedIn(isLoggedInLocal || !!token)
+  // API를 통해 로그인 상태 확인
+  const checkLoginStatus = useCallback(async () => {
+    try {
+      const result = await authApi.getCurrentUser()
+      console.log('Login status from API:', result)
+      setIsLoggedIn(result.isLoggedIn === true)
+    } catch (error) {
+      console.error('Error checking login status:', error)
+      setIsLoggedIn(false)
     }
-
-    checkLoginStatus()
-
-    // 1초마다 로그인 상태 확인 (빠른 반응)
-    const interval = setInterval(checkLoginStatus, 1000)
-    return () => clearInterval(interval)
   }, [])
 
-  const handleLogout = () => {
-    // localStorage 삭제
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userName')
-    localStorage.removeItem('userEmail')
-    // 쿠키 삭제 (클라이언트 사이드에서 비우기)
-    document.cookie = 'kakao_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-    document.cookie = 'kakao_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-    setIsLoggedIn(false)
+  // 마운트 시 + 정기적으로 확인
+  useEffect(() => {
+    checkLoginStatus()
+
+    // 2초마다 확인 (빠른 반응성)
+    const interval = setInterval(checkLoginStatus, 2000)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [checkLoginStatus])
+
+  const handleLogout = async () => {
+    try {
+      // AJAX로 로그아웃 요청을 보내면 서버가 쿠키를 삭제하고 JSON을 반환합니다.
+      const resp = await fetch('http://localhost:8000/auth/kakao/logout', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      })
+
+      if (resp.ok) {
+        try { localStorage.removeItem('isLogin') } catch (e) {}
+        setIsLoggedIn(false)
+        navigate('/')
+        return
+      }
+
+      // 실패하면 폴백으로 직접 이동
+      window.location.href = 'http://localhost:8000/auth/kakao/logout'
+    } catch (error) {
+      console.error('Logout error:', error)
+      // 네트워크 에러 등인 경우에도 직접 이동하여 서버에서 처리하게 함
+      window.location.href = 'http://localhost:8000/auth/kakao/logout'
+    }
   }
 
   return (
