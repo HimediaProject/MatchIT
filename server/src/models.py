@@ -195,6 +195,7 @@ class JobPostSkill(Base):
     SkillID = Column("skillid", Integer, ForeignKey("skills.skillid"), primary_key=True)
 
 
+
 # -------------------------------------------------------
 # BootcampPosts
 # -------------------------------------------------------
