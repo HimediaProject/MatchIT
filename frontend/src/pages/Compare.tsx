@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { XCircle, ChevronRight } from 'lucide-react' // 아이콘 라이브러리 예시 (없으면 텍스트나 다른 아이콘으로 대체 가능)
 
 // 백엔드 스키마와 매칭되는 타입 정의 (화면 표시용)
 type ComparedJob = {
@@ -134,7 +133,7 @@ const ComparePage = () => {
 
   return (
     <div className="bg-white min-h-screen">
-      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         
         {/* 헤더 섹션 */}
         <div className="mb-10">
@@ -142,16 +141,16 @@ const ComparePage = () => {
             {mode === 'jobs' ? '채용공고 비교해 볼까요?' : '부트캠퍼 비교해 볼까요?'}
           </h1>
           
-          {/* 탭 전환 버튼 */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMode('jobs')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                mode === 'jobs'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
+        {/* 탭 전환 버튼 */}
+        <div className="flex items-center gap-3">
+          <button
+          onClick={() => setMode('jobs')}
+          className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
+          mode === 'jobs'
+          ? 'bg-primary-600 text-white shadow-md'
+          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+        }`}
+          >
               채용 비교
             </button>
             <button
@@ -195,9 +194,9 @@ const ComparePage = () => {
                           {/* 삭제 버튼 */}
                           <button
                             onClick={() => handleRemove(item.id)}
-                            className="absolute right-4 top-4 text-slate-300 hover:text-red-500 transition-colors"
+                            className="absolute right-4 top-4 text-slate-300 hover:text-red-500 transition-colors text-lg font-bold"
                           >
-                            <XCircle size={24} />
+                            ×
                           </button>
 
                           <div className="mb-6">
