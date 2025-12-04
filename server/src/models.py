@@ -6,6 +6,8 @@ from sqlalchemy import (
     ForeignKey, UniqueConstraint, CheckConstraint, Index, func
 )
 from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 # Base = declarative_base()
 
@@ -41,6 +43,7 @@ class User(Base):
     skills = relationship("Skill", secondary="userskills", back_populates="users")
     notifications = relationship("UserNotificationSetting", back_populates="user")
     scraps = relationship("UserScrap", back_populates="user")
+    sessions = relationship("UserSession", back_populates="user")
 
 
 # -------------------------------------------------------
@@ -257,3 +260,19 @@ class UserScrap(Base):
     user = relationship("User", back_populates="scraps")
     job_post = relationship("JobPost", back_populates="scraps")
     bootcamp_post = relationship("BootcampPost", back_populates="scraps")
+
+
+# -------------------------------------------------------
+# UserSessions
+# -------------------------------------------------------
+class UserSession(Base):
+    __tablename__ = "usersessions"
+
+    SessionID = Column("sessionid", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    UserID = Column("userid", Integer, ForeignKey("users.userid"), nullable=False)
+    AccessToken = Column("accesstoken", String(255), nullable=False)
+    RefreshToken = Column("refreshtoken", String(255))
+    ExpiresAt = Column("expiresat", DateTime(timezone=True), nullable=False)
+    CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="sessions")
