@@ -103,3 +103,8 @@ docker compose run --rm server alembic current
 #히스토리 확인: 
 docker compose run --rm server alembic history
 ```
+
+### 🐳 docker volume 삭제 후 다시 생성하면 pg admin에서 server 생성하는 방법
+#### 1. Servers 우클릭 > create > Server Group > name: (아무거나 상관 없음) > save
+#### 2. 생성한 server group 우클릭 > Register > Server > name: (아무거나 상관 없음)
+#### 3. Connection > Host name/address: matchit_postgres > password: password > save password 체크 후 save
