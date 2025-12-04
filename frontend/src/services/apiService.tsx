@@ -30,4 +30,19 @@ export const skillsApi = {
     if (!res.ok) throw new Error(`Skills autocomplete failed: ${res.status}`);
     return res.json();
   },
+  async getCurrentUser() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
+        method: 'GET',
+        credentials: 'include', // 쿠키 포함
+      })
+      if (!response.ok) {
+        return { isLoggedIn: false, user: null }
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Failed to fetch current user:', error)
+      return { isLoggedIn: false, user: null }
+    }
+  },
 };
