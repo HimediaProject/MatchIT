@@ -1,6 +1,6 @@
-import { type ReactNode, useMemo, useState, useEffect } from 'react'
+import { type ReactNode, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { skillsApi } from '../services/apiService'
+import { skillsApi, metaApi } from '../services/apiService'
 
 // 아이콘 SVG 컴포넌트 (의존성 제거를 위해 인라인 정의)
 const SearchIcon = () => (
@@ -68,11 +68,48 @@ const HomePage = () => {
   }, [])
 
   const [selectedStacks, setSelectedStacks] = useState<string[]>([])
-  
-  const careerStages = useMemo(
-    () => ['주니어·인턴', '1-3년차', '4-6년차', '시니어', '커리어 전환 준비'],
-    [],
-  )
+
+  // DB-driven career levels & experience ranges
+  const [careerLevels, setCareerLevels] = useState<any[]>([])
+  const [experienceRanges, setExperienceRanges] = useState<any[]>([])
+  const [loadingMeta, setLoadingMeta] = useState(true)
+
+  const [selectedSource, setSelectedSource] = useState<'전체' | '채용'|'부트캠프'>('전체')
+  const [selectedCareerLevelId, setSelectedCareerLevelId] = useState<number | null>(null)
+  const [selectedExperienceRangeId, setSelectedExperienceRangeId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchMeta = async () => {
+      try {
+        const [cls, ers] = await Promise.all([
+          metaApi.getCareerLevels().catch((e) => {
+            console.error(e); return []
+          }),
+          metaApi.getExperienceRanges().catch((e) => {
+            console.error(e); return []
+          }),
+        ])
+
+        // try to normalize possible shapes
+        const careerList = Array.isArray(cls) ? cls : (cls && cls.careerlevels) ? cls.careerlevels : []
+        const expList = Array.isArray(ers) ? ers : (ers && ers.experienceranges) ? ers.experienceranges : []
+
+        setCareerLevels(careerList)
+        setExperienceRanges(expList)
+
+        if (careerList.length > 0 && selectedCareerLevelId === null) {
+          setSelectedCareerLevelId(careerList[0].id ?? careerList[0].CareerLevelID ?? null)
+        }
+        if (expList.length > 0 && selectedExperienceRangeId === null) {
+          setSelectedExperienceRangeId(expList[0].id ?? expList[0].RangeID ?? null)
+        }
+      } finally {
+        setLoadingMeta(false)
+      }
+    }
+
+    fetchMeta()
+  }, [])
 
   const previewItems: PreviewItem[] = [
     { title: '프론트엔드 엔지니어', company: '핀테크 스타트업', tag: 'React · TS', type: '채용' },
@@ -226,12 +263,11 @@ const HomePage = () => {
                 기술 스택과 커리어 단계만 선택하면 AI가 바로 큐레이션합니다. 추후 프로필 연동으로 더 정교해집니다.
               </p>
             </div>
-            <Link
-              to="/"
+            <button
               className="inline-flex w-fit items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
             >
               30초만에 시작하기
-            </Link>
+            </button>
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -364,16 +400,64 @@ const HomePage = () => {
               }}
               index={2}
             >
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {careerStages.map((stage) => (
-                  <div
-                    key={stage}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:bg-white cursor-pointer"
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {/* Source selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">항목</label>
+                  <select
+                    value={selectedSource}
+                    onChange={(e) => setSelectedSource(e.target.value as '전체' | '채용'|'부트캠프')}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
                   >
-                    {stage}
-                    <span className="text-xs font-bold text-primary-600">선택</span>
-                  </div>
-                ))}
+                    <option value="전체">전체</option>
+                    <option value="채용">채용공고</option>
+                    <option value="부트캠프">부트캠프</option>
+                  </select>
+                </div>
+
+                {/* Career level selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">커리어 레벨</label>
+                  <select
+                    value={selectedCareerLevelId ?? ''}
+                    onChange={(e) => setSelectedCareerLevelId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
+                  >
+                    {careerLevels.length === 0 ? (
+                      <option value="">불러오는 중...</option>
+                    ) : (
+                      careerLevels.map((c: any) => {
+                        const id = c.id ?? c.CareerLevelID ?? c.careerlevelid
+                        const name = c.name ?? c.CareerName ?? c.careername
+                        return (
+                          <option key={id} value={id}>{name}</option>
+                        )
+                      })
+                    )}
+                  </select>
+                </div>
+
+                {/* Experience range selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">경력 구간</label>
+                  <select
+                    value={selectedExperienceRangeId ?? ''}
+                    onChange={(e) => setSelectedExperienceRangeId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
+                  >
+                    {experienceRanges.length === 0 ? (
+                      <option value="">불러오는 중...</option>
+                    ) : (
+                      experienceRanges.map((r: any) => {
+                        const id = r.id ?? r.RangeID ?? r.rangeid
+                        const label = r.name ?? r.RangeName ?? r.rangename ?? r.label ?? r.range
+                        return (
+                          <option key={id} value={id}>{label}</option>
+                        )
+                      })
+                    )}
+                  </select>
+                </div>
               </div>
             </StepCard>
           </div>

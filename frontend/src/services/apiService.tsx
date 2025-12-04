@@ -46,3 +46,19 @@ export const skillsApi = {
     }
   },
 };
+
+export const metaApi = {
+  async getCareerLevels() {
+    const url = `${API_BASE_URL}/careerlevels`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Get career levels failed: ${res.status}`);
+    return res.json();
+  },
+
+  async getExperienceRanges() {
+    const url = `${API_BASE_URL}/experienceranges`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Get experience ranges failed: ${res.status}`);
+    return res.json();
+  },
+};

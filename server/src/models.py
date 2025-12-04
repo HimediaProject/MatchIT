@@ -25,6 +25,26 @@ class CareerLevel(Base):
 
 
 # -------------------------------------------------------
+# ExperienceRanges
+# -------------------------------------------------------
+class ExperienceRange(Base):
+    __tablename__ = "experienceranges"
+
+    RangeID = Column("rangeid", Integer, primary_key=True, autoincrement=True)
+    RangeName = Column("rangename", String(100), nullable=False)
+    MinYears = Column("minyears", Integer, nullable=True)
+    MaxYears = Column("maxyears", Integer, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.RangeID,
+            "name": self.RangeName,
+            "min_years": self.MinYears,
+            "max_years": self.MaxYears,
+        }
+
+
+# -------------------------------------------------------
 # Users
 # -------------------------------------------------------
 class User(Base):
