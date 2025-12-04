@@ -6,3 +6,28 @@ export const authApi = {
     return `${API_BASE_URL}/auth/${provider}/login`;
   },
 };
+
+export const searchApi = {
+  async search(keyword: string) {
+    const url = `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Search request failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+export const skillsApi = {
+  async getAllSkills() {
+    const url = `${API_BASE_URL}/skills/all`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Get all skills failed: ${res.status}`);
+    return res.json();
+  },
+
+  async autocomplete(query: string) {
+    const url = `${API_BASE_URL}/skills?query=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Skills autocomplete failed: ${res.status}`);
+    return res.json();
+  },
+};

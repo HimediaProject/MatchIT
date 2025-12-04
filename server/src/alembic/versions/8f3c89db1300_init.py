@@ -25,8 +25,7 @@ def upgrade():
     op.execute("""
     INSERT INTO CareerLevels (CareerName) VALUES
     ('신입'),
-    ('경력'),
-    ('전문가');
+    ('경력');
     """)
 
     # Users 더미 데이터
@@ -34,7 +33,7 @@ def upgrade():
     INSERT INTO Users (Name, Email, CareerLevelID) VALUES
     ('홍길동', 'hong@example.com', 1),
     ('김철수', 'kim@example.com', 2),
-    ('박영희', 'park@example.com', 3);
+    ('박영희', 'park@example.com', 2);
     """)
 
     # Skills 더미 데이터
