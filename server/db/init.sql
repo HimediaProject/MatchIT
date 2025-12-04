@@ -226,3 +226,13 @@ CREATE UNIQUE INDEX uq_userscraps_job
 CREATE UNIQUE INDEX uq_userscraps_bootcamp
     ON UserScraps (UserID, BootcampPostID)
     WHERE PostType = 'Bootcamp';
+
+-- Login Session DB 저장
+CREATE TABLE UserSessions (
+    SessionID UUID PRIMARY KEY,
+    UserID INT NOT NULL REFERENCES Users(UserID),
+    AccessToken VARCHAR(255) NOT NULL,
+    RefreshToken VARCHAR(255),
+    ExpiresAt TIMESTAMP NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
