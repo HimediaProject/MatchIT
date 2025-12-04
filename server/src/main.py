@@ -83,3 +83,7 @@ def login():
         </body>
     </html>
     """
+
+@app.get("/auth/kakao/callback")
+async def kakao_callback(code: str | None = None, error: str | None = None):
+    print("kakao_callback:", code, error)
