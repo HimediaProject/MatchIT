@@ -24,6 +24,7 @@ def upgrade():
     # CareerLevels 더미 데이터
     op.execute("""
     INSERT INTO CareerLevels (CareerName) VALUES
+    ('학생'),
     ('신입'),
     ('경력');
     """)
@@ -139,6 +140,15 @@ def upgrade():
     (1, 'Job', 1, NULL),
     (2, 'Job', 2, NULL),
     (3, 'Bootcamp', NULL, 3);
+    """)
+
+    # ExperienceRanges 더미 데이터
+    op.execute("""
+    INSERT INTO ExperienceRanges (RangeName, MinYears, MaxYears) VALUES
+    ('1년 미만', 0, 1),
+    ('1~3년', 1, 3),
+    ('3~5년', 3, 5),
+    ('5년 이상', 5, NULL);
     """)
 
 
