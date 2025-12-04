@@ -1,50 +1,42 @@
 import os
 import httpx
+import uuid
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import APIRouter, Depends, Cookie, Response, Request
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-from src.models import User, SocialLogin
+from src.models import User, SocialLogin, UserSession
+from typing import Optional
 
-ENV_PATH = Path(__file__).parent.parent.parent / '.env'    # .env 절대 경로
-load_dotenv(ENV_PATH)   # 인자: .env 경로
-# print(ENV_PATH)
+ENV_PATH = Path(__file__).parent.parent.parent / '.env'    
+load_dotenv(ENV_PATH)
+
 KAKAO_CLIENT_ID = os.getenv('KAKAO_CLIENT_ID')
 KAKAO_CLIENT_SECRET = os.getenv('KAKAO_CLIENT_SECRET')
 KAKAO_REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URI')
-# print(KAKAO_REDIRECT_URI)
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000') # Docker 환경 변수 주의
+
 router = APIRouter(prefix='/auth/kakao', tags=['카카오 소셜로그인 기능'])
 
 @router.get('/login')
 async def kakao_login():
-    """
-    사용자에게 카카오 로그인 허용 요청을 하는 엔드포인트
-    """
-
-    # 1. 카카오 서버에 로그인 허용 요청
+    """카카오 로그인 페이지로 리다이렉트"""
     kakao_auth_url = (
         f"https://kauth.kakao.com/oauth/authorize"
-        f"?response_type=code"                 # 응답으로 인가 코드 요청 (엑세스 토큰으로 교환하기 위한 코드)
+        f"?response_type=code"
         f"&client_id={KAKAO_CLIENT_ID}"
         f'&redirect_uri={KAKAO_REDIRECT_URI}'
     )
-    
-    # 2. 엑세스 토큰을 발급받을 수 있도록 요청하는 FastAPI의 엔드포인트로 redirect
     return RedirectResponse(url=kakao_auth_url)
 
-# 인증 코드를 받아서 엑세스 토큰으로 교환해주는 엔드포인트
 @router.get('/callback')
-async def kakao_callback(code: str,
-                         db: Session = Depends(get_db)): # 인증코드 code, 데이터베이스 연결 객체
+async def kakao_callback(code: str, db: Session = Depends(get_db)): 
     
-    # 1. 엑세스 토큰으로 교환하기 위한 요청
-
-    # 1-1. 토큰 요청 URL & 토큰 교환에 필요한 데이터를 준비
+    # 1. 토큰 교환
     token_url = "https://kauth.kakao.com/oauth/token"
-
     token_data = {
         "grant_type": 'authorization_code',
         "client_id": KAKAO_CLIENT_ID,
@@ -53,202 +45,247 @@ async def kakao_callback(code: str,
         "code": code
     }
 
-    # 2. post 요청으로 토큰 교환 api 요청
     async with httpx.AsyncClient() as client:
         token_response = await client.post(token_url, data=token_data)
     
-    # 2-1. 토큰 응답 파싱 (값을 가져올 때)
     token_json = token_response.json()
     access_token = token_json.get('access_token')
     refresh_token = token_json.get('refresh_token')
-    expires_in = token_json.get('expires_in', 60*60*6)                  # 만료시간 -> 카카오가 정해준 만료시간을 따라야 함 6시간
-    token_expired_at = datetime.now() + timedelta(seconds=expires_in)   # 현재 시간을 기준으로 설정한 만료시간
+    expires_in = token_json.get('expires_in', 60*60*6)
 
-    # 만약 토큰 응답을 못했을 때
     if not access_token:
-        return {'error': '토큰 발급 실패', 'details': token_json}
+        return JSONResponse(status_code=400, content={'error': '토큰 발급 실패', 'details': token_json})
 
-    # 3. 엑세스 토큰으로 사용자 정보 가져오기
+    # 2. 사용자 정보 가져오기
     user_info_url = "https://kapi.kakao.com/v2/user/me"
-    headers = {'Authorization': f"Bearer {access_token}"}   # 토큰으로 인증 요청을 할 때 표준으로 사용하는 방식
+    headers = {'Authorization': f"Bearer {access_token}"}
 
     async with httpx.AsyncClient() as Client:
         user_response = await Client.get(user_info_url, headers=headers)
     
-    # 사용자 응답에서 사용자 정보 파싱
     user_json = user_response.json()
-
     kakao_id = user_json.get('id')
-    kakao_email = user_json.get('kakao_account', {}).get('email', 'email')
-    kakao_nickname = user_json.get('properties', {}).get('nickname', 'nickname')
-    kakao_gender = user_json.get('kakao_account', {}).get('gender', 'gender')
-    # kakao_thumnail = user_json.get('properties', {}).get('thumnail_image', 'image.png')
+    kakao_account = user_json.get('kakao_account', {})
+    kakao_email = kakao_account.get('email')
+    kakao_nickname = user_json.get('properties', {}).get('nickname', 'Unknown')
+    kakao_gender = kakao_account.get('gender')
 
-    # 4. 우리 서버에 사용자 정보를 저장시키기
-    oauth_account = db.query(SocialLogin)\
-                  .filter(SocialLogin.Provider == 'Kakao',\
-                          SocialLogin.ProviderUserID == str(kakao_id)).first()
-    
-    # 4-1. 존재하면 저장 X -> UnlinkedAt 업데이트 (다시 연결됨)
-    if oauth_account:
-        try:
-            # 기존에 연결된 소셜 계정이면 UnlinkedAt을 초기화 (재연결)
+    # 3. [요구사항: DB 저장] 회원가입 및 로그인 처리
+    try:
+        # 3-1. 소셜 계정 확인
+        oauth_account = db.query(SocialLogin)\
+            .filter(SocialLogin.Provider == 'Kakao', SocialLogin.ProviderUserID == str(kakao_id))\
+            .first()
+        
+        user = None
+        newly_created = False
+        if oauth_account:
+            # 이미 가입된 계정 -> 재연결 처리
             oauth_account.UnlinkedAt = None
-            db.commit()
-            user = oauth_account.user
-        except Exception as e:
-            db.rollback()
-            return {'error': '로그인 실패', 'details': str(e)}
-         
-    # 4-2. 우리 서버에 있는 사용자인가 확인하고 존재하지 않으면 저장
-    else:
-        try:
-            # User 모델의 필드명에 맞춰 생성합니다 (Email, Name 등)
-            user = User(
-                Email = kakao_email,
-                Name = kakao_nickname
-            )
+            user = oauth_account.user # 관계 설정된 User 객체 가져오기
+        else:
+            # 신규 가입
+            # 이메일 중복 체크 (소셜로그인이 아닌 일반 가입이 있을 수 있으므로)
+            if kakao_email:
+                user = db.query(User).filter(User.Email == kakao_email).first()
+            
+            if not user:
+                user = User(
+                    Email = kakao_email if kakao_email else f"kakao_{kakao_id}@no-email.com", # 이메일 없을 경우 대비
+                    Name = kakao_nickname
+                )
+                db.add(user)
+                db.flush() # UserID 생성
+                newly_created = True
 
-            db.add(user)
-            db.flush()  # user의 PK(UserID)를 얻기 위해 flush
-
-            oauth_account = SocialLogin(
+            new_oauth = SocialLogin(
                 UserID = user.UserID,
                 Provider = 'Kakao',
                 ProviderUserID = str(kakao_id),
                 LinkedAt = datetime.now(),
                 UnlinkedAt = None
             )
+            db.add(new_oauth)
+        
+        db.commit()
+        db.refresh(user)
 
-            db.add(oauth_account)
-            db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=500, content={'error': 'DB 처리 실패', 'details': str(e)})
 
-        except Exception as e:
-            db.rollback()
-            return {'error': '회원가입 실패', 'details': str(e)}
-    
-    db.refresh(user)    # 응답 페이지에 사용자 정보를 표시하기 위해 새로고침
+    # 4. [요구사항: 세션 DB 저장] UserSessions 테이블에 세션 정보 저장
+    try:
+        session_id = uuid.uuid4()
+        expires_at = datetime.now() + timedelta(seconds=expires_in)
+        
+        user_session = UserSession(
+            SessionID=session_id,
+            UserID=user.UserID,
+            AccessToken=access_token,
+            RefreshToken=refresh_token,
+            ExpiresAt=expires_at
+        )
+        db.add(user_session)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=500, content={'error': '세션 저장 실패', 'details': str(e)})
 
-    # 5. 쿠키에 토큰 저장하기
-    # 프론트엔드 개발 서버를 기준으로 로그인 완료 후 알림 창 표시 후 프로필 페이지로 이동시키는 스크립트 포함
-    frontend_profile_url = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '/profile'
-
-    html_content = f"""
-                    <!DOCTYPE html>
-                    <html>
-                        <head>
-                            <meta charset="utf-8" />
-                            <title>로그인 성공</title>
-                            <script>
-                                window.onload = function() {{
-                                    try {{
-                                        // localStorage에 로그인 상태 저장
-                                        localStorage.setItem('isLoggedIn', 'true');
-                                        localStorage.setItem('userName', '{user.Name}');
-                                        localStorage.setItem('userEmail', '{user.Email}');
-                                        alert('회원가입이 완료되었습니다');
-                                    }} catch(e) {{
-                                        console.error(e);
-                                    }}
-                                    // 프론트엔드 프로필 페이지로 이동
-                                    window.location.href = '{frontend_profile_url}';
-                                }}
-                            </script>
-                        </head>
-                        <body>
-                            <h3>성공</h3>
-                            <div>이름: {user.Name}</div>
-                            <div>이메일: {user.Email}</div>
-                            <div>성별: {kakao_gender}</div>
-                            <br>
-                            <a href="/auth/kakao/logout?user_id={user.UserID}">로그아웃</a>
-                            <br>
-                            <a href='/'>홈으로</a>
-                        </body>
-                    </html>
-                    """
+    # 4. [요구사항: 세션 저장] 쿠키 설정 및 프론트엔드 이동
+    # HTML 응답 생성 (프론트엔드 리다이렉트용)
+    # 신규 가입인 경우만 팝업을 띄우고, 기존 사용자는 바로 프로필 페이지로 이동합니다.
+    if newly_created:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <script>
+                    // 1. 로컬 스토리지에 플래그 설정 (프론트엔드 UI 즉시 반영용)
+                    try {{ localStorage.setItem('isLogin', 'true'); }} catch(e){{}}
+                    // 2. 회원가입 완료 팝업
+                    alert('회원가입 완료되었습니다.');
+                    // 3. 프로필 페이지로 이동
+                    window.location.href = '{FRONTEND_URL}/profile';
+                </script>
+            </head>
+            <body></body>
+        </html>
+        """
+    else:
+        # 기존 사용자는 팝업 없이 바로 이동
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <script>
+                    // 1. 로컬 스토리지에 플래그 설정
+                    try {{ localStorage.setItem('isLogin', 'true'); }} catch(e){{}}
+                    // 2. 바로 프로필 페이지로 이동 (팝업 없음)
+                    window.location.href = '{FRONTEND_URL}/profile';
+                </script>
+            </head>
+            <body></body>
+        </html>
+        """
     response = HTMLResponse(html_content)
 
-    # access_token
+    # 쿠키 보안 설정 (Docker/배포 환경 고려)
+    # Secure=False는 로컬 개발용(http), https 적용 시 True로 변경 필요
+    cookie_options = {
+        "httponly": True,  # 자바스크립트 접근 불가 (보안)
+        "secure": False,   # HTTPS가 아니면 False (로컬 Docker 환경)
+        "samesite": "lax",
+        "path": "/"
+    }
+
+    # 핵심 인증 정보 (HttpOnly)
+    # SessionID 쿠키 추가 (DB에 저장된 세션 ID 참조)
+    response.set_cookie(key='session_id', value=str(session_id), max_age=60*60*24*30, **cookie_options)
+    response.set_cookie(key='user_id', value=str(user.UserID), max_age=60*60*24*30, **cookie_options)
+    response.set_cookie(key='kakao_access_token', value=access_token, max_age=expires_in, **cookie_options)
+    response.set_cookie(key='kakao_refresh_token', value=refresh_token, max_age=60*60*24*30, **cookie_options)
+    
+    # UI 제어용 비보안 쿠키 (자바스크립트 접근 가능 -> 버튼 변경용)
     response.set_cookie(
-        key = 'kakao_access_token',
-        value = access_token,
-        max_age = expires_in,
-        httponly = True,
-        secure = False,
-        samesite = 'lax'
+        key='is_login', 
+        value='true', 
+        httponly=False, # JS에서 document.cookie로 읽을 수 있음
+        secure=False, 
+        samesite="lax",
+        path='/'
     )
 
-    # refresh_token
-    response.set_cookie(
-        key = 'kakao_refresh_token',
-        value = refresh_token,
-        max_age = 60*60*24*30,
-        httponly = True,
-        secure = False,
-        samesite = 'lax'
-    )
-
-    # 6. 응답
     return response
 
 
-# 카카오 로그아웃 엔드포인트
-@router.get('/logout')
-async def kakao_logout(user_id: int, db: Session = Depends(get_db)):
+# [요구사항: 로그인/로그아웃 버튼 변경]을 위한 상태 확인 API
+@router.get('/me')
+async def get_current_user(
+    # Query Parameter가 아니라 Cookie에서 user_id를 읽어옵니다.
+    user_id: Optional[str] = Cookie(None), 
+    db: Session = Depends(get_db)
+):
     """
-    사용자가 카카오 계정과의 연결을 해제하는 엔드포인트
+    프론트엔드가 이 API를 호출하여 로그인 상태를 확인하고
+    로그인 상태면 '로그아웃' 버튼을, 아니면 '로그인' 버튼을 렌더링합니다.
     """
+    if not user_id:
+        return {'isLoggedIn': False, 'user': None}
+    
     try:
-        # 사용자의 모든 카카오 소셜 계정 찾기
-        oauth_accounts = db.query(SocialLogin)\
-                          .filter(SocialLogin.UserID == user_id,\
-                                  SocialLogin.Provider == 'Kakao')\
-                          .all()
+        user = db.query(User).filter(User.UserID == int(user_id)).first()
+        if not user:
+            return {'isLoggedIn': False, 'user': None}
         
-        if not oauth_accounts:
-            return {'error': '카카오 계정이 연결되지 않음'}
-        
-        # UnlinkedAt을 현재 시간으로 설정하여 로그아웃 표시
-        for oauth_account in oauth_accounts:
-            oauth_account.UnlinkedAt = datetime.now()
-        
-        db.commit()
-        
-        # 홈 페이지로 리디렉트
-        frontend_home_url = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '/'
-        response = HTMLResponse(f"""
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <meta charset="utf-8" />
-                    <title>로그아웃 완료</title>
-                    <script>
-                        window.onload = function() {{
-                            try {{
-                                // localStorage에서 로그인 상태 제거
-                                localStorage.removeItem('isLoggedIn');
-                                localStorage.removeItem('userName');
-                                localStorage.removeItem('userEmail');
-                            }} catch(e) {{
-                                console.error(e);
-                            }}
-                            window.location.href = '{frontend_home_url}';
-                        }}
-                    </script>
-                </head>
-                <body>
-                    <p>로그아웃 중...</p>
-                </body>
-            </html>
-        """)
-        
-        # 쿠키 삭제
-        response.delete_cookie('kakao_access_token')
-        response.delete_cookie('kakao_refresh_token')
-        
-        return response
-        
-    except Exception as e:
-        db.rollback()
-        return {'error': '로그아웃 실패', 'details': str(e)}
+        return {
+            'isLoggedIn': True,
+            'user': {
+                'id': user.UserID,
+                'name': user.Name,
+                'email': user.Email
+            }
+        }
+    except Exception:
+        return {'isLoggedIn': False, 'user': None}
+
+
+@router.get('/logout')
+async def kakao_logout(
+    request: Request,
+    session_id: Optional[str] = Cookie(None),  # 세션 ID
+    user_id: Optional[str] = Cookie(None), # 쿠키에서 자동 추출
+    db: Session = Depends(get_db)
+):
+    # 기본적으로는 이동 및 alert을 제공하는 HTML 응답을 반환합니다.
+    # 그러나 AJAX/Fetch 요청으로 호출되는 경우 JSON 응답을 반환합니다.
+
+    # 쿠키 삭제를 위한 응답 객체 선택
+    accept_header = request.headers.get('accept', '')
+
+    # 공통적으로 삭제할 쿠키들 (path를 명시)
+    def clear_cookies(resp):
+        resp.delete_cookie('session_id', path='/')
+        resp.delete_cookie('user_id', path='/')
+        resp.delete_cookie('kakao_access_token', path='/')
+        resp.delete_cookie('kakao_refresh_token', path='/')
+        resp.delete_cookie('is_login', path='/')
+        return resp
+
+    # DB에서 세션 삭제 및 UnlinkedAt 업데이트
+    if session_id:
+        try:
+            # 세션 삭제
+            db.query(UserSession).filter(UserSession.SessionID == session_id).delete()
+            db.commit()
+        except:
+            db.rollback()
+    
+    if user_id:
+        try:
+            oauth_accounts = db.query(SocialLogin)\
+                .filter(SocialLogin.UserID == int(user_id), SocialLogin.Provider == 'Kakao')\
+                .all()
+            for account in oauth_accounts:
+                account.UnlinkedAt = datetime.now()
+            db.commit()
+        except:
+            pass # 로그아웃은 DB 에러가 나도 사용자 입장에선 진행되어야 함
+
+    # JSON 요청 (대부분 AJAX) -> JSONResponse
+    if 'application/json' in accept_header or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        resp = JSONResponse({'ok': True, 'message': '로그아웃 되었습니다.'})
+        clear_cookies(resp)
+        return resp
+
+    # 브라우저 직접 접근 -> HTML + JS로 로컬스토리지 삭제 후 리다이렉트
+    html = f"""
+        <script>
+            try {{ localStorage.removeItem('isLogin'); }} catch(e){{}}
+            alert('로그아웃 되었습니다.');
+            window.location.href = '{FRONTEND_URL}';
+        </script>
+    """
+    resp = HTMLResponse(html)
+    clear_cookies(resp)
+    return resp
