@@ -1,5 +1,6 @@
 import os
 import httpx
+import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Cookie, Response, Request
@@ -7,7 +8,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-from src.models import User, SocialLogin
+from src.models import User, SocialLogin, UserSession
 from typing import Optional
 
 ENV_PATH = Path(__file__).parent.parent.parent / '.env'    
@@ -113,6 +114,24 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
         db.rollback()
         return JSONResponse(status_code=500, content={'error': 'DB 처리 실패', 'details': str(e)})
 
+    # 4. [요구사항: 세션 DB 저장] UserSessions 테이블에 세션 정보 저장
+    try:
+        session_id = uuid.uuid4()
+        expires_at = datetime.now() + timedelta(seconds=expires_in)
+        
+        user_session = UserSession(
+            SessionID=session_id,
+            UserID=user.UserID,
+            AccessToken=access_token,
+            RefreshToken=refresh_token,
+            ExpiresAt=expires_at
+        )
+        db.add(user_session)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=500, content={'error': '세션 저장 실패', 'details': str(e)})
+
     # 4. [요구사항: 세션 저장] 쿠키 설정 및 프론트엔드 이동
     # HTML 응답 생성 (프론트엔드 리다이렉트용)
     # 신규 가입인 경우만 팝업을 띄우고, 기존 사용자는 바로 프로필 페이지로 이동합니다.
@@ -161,6 +180,8 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     }
 
     # 핵심 인증 정보 (HttpOnly)
+    # SessionID 쿠키 추가 (DB에 저장된 세션 ID 참조)
+    response.set_cookie(key='session_id', value=str(session_id), max_age=60*60*24*30, **cookie_options)
     response.set_cookie(key='user_id', value=str(user.UserID), max_age=60*60*24*30, **cookie_options)
     response.set_cookie(key='kakao_access_token', value=access_token, max_age=expires_in, **cookie_options)
     response.set_cookie(key='kakao_refresh_token', value=refresh_token, max_age=60*60*24*30, **cookie_options)
@@ -212,6 +233,7 @@ async def get_current_user(
 @router.get('/logout')
 async def kakao_logout(
     request: Request,
+    session_id: Optional[str] = Cookie(None),  # 세션 ID
     user_id: Optional[str] = Cookie(None), # 쿠키에서 자동 추출
     db: Session = Depends(get_db)
 ):
@@ -223,13 +245,22 @@ async def kakao_logout(
 
     # 공통적으로 삭제할 쿠키들 (path를 명시)
     def clear_cookies(resp):
+        resp.delete_cookie('session_id', path='/')
         resp.delete_cookie('user_id', path='/')
         resp.delete_cookie('kakao_access_token', path='/')
         resp.delete_cookie('kakao_refresh_token', path='/')
         resp.delete_cookie('is_login', path='/')
         return resp
 
-    # DB 업데이트 (UnlinkedAt)
+    # DB에서 세션 삭제 및 UnlinkedAt 업데이트
+    if session_id:
+        try:
+            # 세션 삭제
+            db.query(UserSession).filter(UserSession.SessionID == session_id).delete()
+            db.commit()
+        except:
+            db.rollback()
+    
     if user_id:
         try:
             oauth_accounts = db.query(SocialLogin)\
