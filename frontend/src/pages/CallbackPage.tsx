@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../services/apiService";
 
 export default function CallbackPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -17,9 +18,13 @@ export default function CallbackPage() {
           console.log("로그인 성공:", result.user);
         }
 
-        // 짧은 딜레이 후 홈으로 이동
+        // 신규 회원가입인 경우 프로필 페이지로, 아니면 홈으로 이동
+        const isSignup = searchParams.get('signup') === 'true';
+        const targetPath = isSignup ? '/profile' : '/';
+
+        // 짧은 딜레이 후 이동
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate(targetPath, { replace: true });
         }, 500);
       } catch (error) {
         console.error("Callback 처리 중 오류:", error);
@@ -29,7 +34,7 @@ export default function CallbackPage() {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
