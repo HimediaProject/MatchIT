@@ -3,13 +3,74 @@ const API_BASE_URL = "http://localhost:8000";   // dev
 
 export const authApi = {
   getSocialLoginUrl(provider: string) {
-    return `${API_BASE_URL}/auth/${provider}/login`;
+    return `${API_BASE_URL}/auth/${provider}/login?prompt=login`;
+  },
+
+  async getCurrentUser() {
+    try {
+      console.log('[API] getCurrentUser 호출 시작')
+      const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
+        method: 'GET',
+        credentials: 'include', // 쿠키 포함
+      })
+      
+      console.log('[API] 응답 상태:', response.status)
+      
+      if (!response.ok) {
+        console.warn('[API] 응답 실패 (상태 코드):', response.status)
+        return { isLoggedIn: false, user: null }
+      }
+      
+      const data = await response.json()
+      console.log('[API] 응답 데이터:', data)
+      return data
+    } catch (error) {
+      console.error('[API] getCurrentUser 중 오류:', error)
+      return { isLoggedIn: false, user: null }
+    }
   },
 };
 
 export const searchApi = {
   async search(keyword: string) {
     const url = `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Search request failed: ${res.status}`);
+    return res.json();
+  },
+
+  async searchWithFilters(params: {
+    keyword?: string;
+    skills?: string[];
+    source?: '전체' | '채용' | '부트캠프';
+    careerLevelId?: number;
+    experienceRangeId?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.keyword) {
+      queryParams.append('keyword', params.keyword);
+    }
+    if (params.skills && params.skills.length > 0) {
+      params.skills.forEach(skill => {
+        queryParams.append('skills', skill);
+      });
+    }
+    if (params.source && params.source !== '전체') {
+      queryParams.append('source', params.source);
+    }
+    if (params.careerLevelId) {
+      queryParams.append('career_level_id', params.careerLevelId.toString());
+    }
+    if (params.experienceRangeId) {
+      queryParams.append('experience_range_id', params.experienceRangeId.toString());
+    }
+    if (params.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+
+    const url = `${API_BASE_URL}/search?${queryParams.toString()}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Search request failed: ${res.status}`);
     return res.json();
@@ -29,21 +90,6 @@ export const skillsApi = {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Skills autocomplete failed: ${res.status}`);
     return res.json();
-  },
-  async getCurrentUser() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
-        method: 'GET',
-        credentials: 'include', // 쿠키 포함
-      })
-      if (!response.ok) {
-        return { isLoggedIn: false, user: null }
-      }
-      return await response.json()
-    } catch (error) {
-      console.error('Failed to fetch current user:', error)
-      return { isLoggedIn: false, user: null }
-    }
   },
 };
 
