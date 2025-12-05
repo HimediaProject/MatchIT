@@ -34,8 +34,8 @@ const Header = () => {
   useEffect(() => {
     checkLoginStatus()
 
-    // 2초마다 확인 (빠른 반응성)
-    const interval = setInterval(checkLoginStatus, 2000)
+    // 1초마다 확인 (빠른 반응성)
+    const interval = setInterval(checkLoginStatus, 1000)
 
     return () => {
       clearInterval(interval)

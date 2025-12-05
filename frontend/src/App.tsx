@@ -8,6 +8,7 @@ import JobsPage from './pages/Jobs'
 import LoginPage from './components/LoginPage'
 import ProfilePage from './pages/Profile'
 import SearchResultsPage from './pages/SearchResults'
+import CallbackPage from './pages/CallbackPage'
 
 
 const Layout = () => {
@@ -32,6 +33,7 @@ function App() {
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/callback" element={<CallbackPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<HomePage />} />
       </Route>
