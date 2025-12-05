@@ -3,21 +3,29 @@ const API_BASE_URL = "http://localhost:8000";   // dev
 
 export const authApi = {
   getSocialLoginUrl(provider: string) {
-    return `${API_BASE_URL}/auth/${provider}/login`;
+    return `${API_BASE_URL}/auth/${provider}/login?prompt=login`;
   },
 
   async getCurrentUser() {
     try {
+      console.log('[API] getCurrentUser 호출 시작')
       const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
         method: 'GET',
         credentials: 'include', // 쿠키 포함
       })
+      
+      console.log('[API] 응답 상태:', response.status)
+      
       if (!response.ok) {
+        console.warn('[API] 응답 실패 (상태 코드):', response.status)
         return { isLoggedIn: false, user: null }
       }
-      return await response.json()
+      
+      const data = await response.json()
+      console.log('[API] 응답 데이터:', data)
+      return data
     } catch (error) {
-      console.error('Failed to fetch current user:', error)
+      console.error('[API] getCurrentUser 중 오류:', error)
       return { isLoggedIn: false, user: null }
     }
   },

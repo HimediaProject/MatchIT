@@ -1,10 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../services/apiService'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const checkExecuted = useRef(false)
+
+  // 로그인 페이지 진입 시 캐시 상태 확인 및 정리 (한 번만 실행)
+  useEffect(() => {
+    if (checkExecuted.current) return
+    checkExecuted.current = true
+
+    const cleanupAuthCache = async () => {
+      try {
+        console.log('[LoginPage] 로그인 페이지 진입, 캐시 상태 확인 중...')
+        
+        // 현재 로그인 상태 확인
+        const result = await authApi.getCurrentUser()
+        console.log('[LoginPage] 현재 로그인 상태:', result)
+        
+        if (result?.isLoggedIn === true) {
+          // 이미 로그인된 상태면 홈으로 리다이렉트
+          console.log('[LoginPage] 이미 로그인됨, 홈으로 이동')
+          navigate('/', { replace: true })
+        }
+      } catch (e) {
+        console.error('[LoginPage] 캐시 확인 중 오류:', e)
+      }
+    }
+
+    // 약간의 딜레이 후 실행
+    const timer = setTimeout(() => {
+      cleanupAuthCache()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [navigate])
 
   const handleSocialLogin = async (provider: string) => {
     try {
@@ -17,12 +49,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  // 데모/빠른 확인용: 로그인 성공 시 홈으로 이동
-  const handleDemoLogin = () => {
-    // 실제 앱에서는 토큰 저장 등 추가 로직 필요
-    navigate('/')
   }
 
   return (
@@ -98,12 +124,6 @@ export default function LoginPage() {
                   <span>|</span>
                   <button className="underline">개인정보처리방침</button>
                 </div>
-              </div>
-
-              <div className="mt-6 border-t pt-4">
-                <button onClick={handleDemoLogin} className="w-full rounded-md bg-slate-900 px-4 py-2 text-white font-semibold">
-                  데모로 체험하기
-                </button>
               </div>
             </div>
           </div>
