@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { XCircle, ChevronRight } from 'lucide-react' // 아이콘 라이브러리 예시 (없으면 텍스트나 다른 아이콘으로 대체 가능)
+// import { XCircle, ChevronRight } from 'lucide-react' // 아이콘 라이브러리 예시 (없으면 텍스트나 다른 아이콘으로 대체 가능)
 
 // 백엔드 스키마와 매칭되는 타입 정의 (화면 표시용)
 type ComparedJob = {
