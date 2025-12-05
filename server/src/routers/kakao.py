@@ -145,8 +145,8 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
                     try {{ localStorage.setItem('isLogin', 'true'); }} catch(e){{}}
                     // 2. 회원가입 완료 팝업
                     alert('회원가입 완료되었습니다.');
-                    // 3. 프로필 페이지로 이동
-                    window.location.href = '{FRONTEND_URL}/profile';
+                    // 3. 콜백 페이지로 이동 (쿠키 동기화 후 홈으로)
+                    window.location.href = '{FRONTEND_URL}/callback';
                 </script>
             </head>
             <body></body>
@@ -161,8 +161,8 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
                 <script>
                     // 1. 로컬 스토리지에 플래그 설정
                     try {{ localStorage.setItem('isLogin', 'true'); }} catch(e){{}}
-                    // 2. 바로 프로필 페이지로 이동 (팝업 없음)
-                    window.location.href = '{FRONTEND_URL}/profile';
+                    // 2. 콜백 페이지로 이동 (쿠키 동기화 후 홈으로)
+                    window.location.href = '{FRONTEND_URL}/callback';
                 </script>
             </head>
             <body></body>
