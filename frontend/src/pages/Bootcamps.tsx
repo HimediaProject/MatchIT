@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
-import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 type Bootcamp = {
