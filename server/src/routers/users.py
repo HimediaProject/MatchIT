@@ -163,6 +163,22 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     return read_profile(user.UserID, db)
 
+@router.delete("/{user_id}", status_code=204)
+def delete_profile(user_id: int, db: Session = Depends(get_db)):
+    user = (
+        db.query(models.User)
+        .filter(models.User.UserID == user_id)
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+    db.delete(user)
+    db.commit()
+
+    return Response(status_code=204)
+
+
 
 if __name__ == "__main__":
     import uvicorn
