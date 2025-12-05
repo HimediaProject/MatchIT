@@ -3,7 +3,7 @@ const API_BASE_URL = "http://localhost:8000";   // dev
 
 export const authApi = {
   getSocialLoginUrl(provider: string) {
-    return `${API_BASE_URL}/auth/${provider}/login`;
+    return `${API_BASE_URL}/auth/${provider}/login?prompt=login`;
   },
 
   async getCurrentUser() {
