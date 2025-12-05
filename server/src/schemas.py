@@ -212,6 +212,26 @@ class BootcampResponse(BaseModel):
     Title: str
     InstituteName: str
     JobCategoryID: int
+    CategoryName: Optional[str]  # 추가
+    Location: Optional[str]
+    OnlineOffline: str
+    CostSupportType: str
+    EducationContent: Optional[str]
+    Qualification: Optional[str]
+    Benefits: Optional[str]
+    StartDate: Optional[datetime]
+    RegistrationDate: Optional[datetime]
+    CloseDate: Optional[datetime]
+    DetailUrl: Optional[str]
+    ViewCount: int
+    CreatedAt: datetime
+    UpdatedAt: datetime
+
+class BootcampDetailResponse(BaseModel):
+    BootcampID: int
+    Title: str
+    InstituteName: str
+    JobCategoryID: int
     Location: Optional[str]
     OnlineOffline: str
     CostSupportType: str
