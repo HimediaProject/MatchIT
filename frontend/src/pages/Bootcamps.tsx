@@ -495,15 +495,6 @@ const BootcampsPage = () => {
                         >
                           전체삭제
                         </button>
-                        <button
-                          onClick={() => {
-                            const ids = compareList.map((b) => b.id).join(',')
-                            navigate(`/compare?mode=bootcamps&ids=${encodeURIComponent(ids)}`)
-                          }}
-                          className="text-xs font-semibold text-white bg-primary-600 px-3 py-1 rounded-md hover:bg-primary-700"
-                        >
-                          비교하기
-                        </button>
                       </div>
                     </div>
 
