@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { skillsApi, metaApi } from '../services/apiService'
 
 // 아이콘 SVG 컴포넌트 (의존성 제거를 위해 인라인 정의)
@@ -44,6 +44,7 @@ const StepCard = ({ step, index, children, className }: { step: Step; index: num
 )
 
 const HomePage = () => {
+  const navigate = useNavigate()
   const [isSkillSearchOpen, setIsSkillSearchOpen] = useState(false)
   
   // 스킬 목록 
@@ -264,6 +265,35 @@ const HomePage = () => {
               </p>
             </div>
             <button
+              onClick={() => {
+                // 선택한 필터들을 쿼리 파라미터로 변환
+                const params = new URLSearchParams()
+                
+                // 기술 스택
+                if (selectedStacks.length > 0) {
+                  selectedStacks.forEach(skill => {
+                    params.append('skills', skill)
+                  })
+                }
+                
+                // 항목 (전체가 아닐 때만)
+                if (selectedSource && selectedSource !== '전체') {
+                  params.append('source', selectedSource)
+                }
+                
+                // 커리어 레벨
+                if (selectedCareerLevelId) {
+                  params.append('careerLevelId', selectedCareerLevelId.toString())
+                }
+                
+                // 경력 구간
+                if (selectedExperienceRangeId) {
+                  params.append('experienceRangeId', selectedExperienceRangeId.toString())
+                }
+                
+                // 검색 결과 페이지로 이동
+                navigate(`/search?${params.toString()}`)
+              }}
               className="inline-flex w-fit items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
             >
               30초만에 시작하기
