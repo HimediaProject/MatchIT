@@ -9,6 +9,10 @@ function useQuery() {
 const SearchResultsPage = () => {
   const query = useQuery()
   const keyword = query.get('keyword') || ''
+  const skills = query.getAll('skills')
+  const source = query.get('source') as '전체' | '채용' | '부트캠프' | null
+  const careerLevelId = query.get('careerLevelId') ? Number(query.get('careerLevelId')) : undefined
+  const experienceRangeId = query.get('experienceRangeId') ? Number(query.get('experienceRangeId')) : undefined
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -16,24 +20,58 @@ const SearchResultsPage = () => {
   const [bootcamps, setBootcamps] = useState<any[]>([])
 
   useEffect(() => {
-    if (!keyword) return
+    // 필터가 하나라도 있으면 검색 실행
+    const hasFilters = keyword || skills.length > 0 || source || careerLevelId || experienceRangeId
+    
+    if (!hasFilters) {
+      setJobs([])
+      setBootcamps([])
+      return
+    }
+
     setLoading(true)
     setError(null)
+    
     searchApi
-      .search(keyword)
+      .searchWithFilters({
+        keyword: keyword || undefined,
+        skills: skills.length > 0 ? skills : undefined,
+        source: source || undefined,
+        careerLevelId,
+        experienceRangeId,
+        limit: 50,
+      })
       .then((data) => {
         setJobs(data.jobs || [])
         setBootcamps(data.bootcamps || [])
       })
       .catch((err) => setError(err.message || '검색 중 오류가 발생했습니다'))
       .finally(() => setLoading(false))
-  }, [keyword])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, source, careerLevelId, experienceRangeId, skills.length, ...skills])
+
+  // 필터 정보 표시
+  const filterInfo = []
+  if (keyword) filterInfo.push(`키워드: ${keyword}`)
+  if (skills.length > 0) filterInfo.push(`기술 스택: ${skills.join(', ')}`)
+  if (source && source !== '전체') filterInfo.push(`항목: ${source}`)
+  if (careerLevelId) filterInfo.push(`커리어 레벨 ID: ${careerLevelId}`)
+  if (experienceRangeId) filterInfo.push(`경력 구간 ID: ${experienceRangeId}`)
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">검색 결과</h1>
-        <p className="text-sm text-slate-600">키워드: <strong>{keyword}</strong></p>
+        {filterInfo.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {filterInfo.map((info, idx) => (
+              <p key={idx} className="text-sm text-slate-600">{info}</p>
+            ))}
+          </div>
+        )}
+        {filterInfo.length === 0 && (
+          <p className="text-sm text-slate-600">필터를 선택해주세요.</p>
+        )}
       </div>
 
       {loading && <p>검색 중...</p>}
