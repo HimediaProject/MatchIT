@@ -28,7 +28,8 @@ async def kakao_login():
         f"https://kauth.kakao.com/oauth/authorize"
         f"?response_type=code"
         f"&client_id={KAKAO_CLIENT_ID}"
-        f'&redirect_uri={KAKAO_REDIRECT_URI}'
+        f"&redirect_uri={KAKAO_REDIRECT_URI}"
+        f"&prompt=login"
     )
     return RedirectResponse(url=kakao_auth_url)
 
@@ -336,13 +337,13 @@ async def kakao_logout(
         # httponly 쿠키들 삭제
         resp.delete_cookie('session_id', **cookie_delete_opts)
         resp.delete_cookie('user_id', **cookie_delete_opts)
-        # 토큰 쿠키는 생성되지 않으므로 삭제할 필요 없음
-        # resp.delete_cookie('kakao_access_token', **cookie_delete_opts)
-        # resp.delete_cookie('kakao_refresh_token', **cookie_delete_opts)
-        # resp.delete_cookie('naver_access_token', **cookie_delete_opts)
-        # resp.delete_cookie('naver_refresh_token', **cookie_delete_opts)
-        # resp.delete_cookie('google_access_token', **cookie_delete_opts)
-        # resp.delete_cookie('google_refresh_token', **cookie_delete_opts)
+        # 토큰 쿠키 삭제
+        resp.delete_cookie('kakao_access_token', **cookie_delete_opts)
+        resp.delete_cookie('kakao_refresh_token', **cookie_delete_opts)
+        resp.delete_cookie('naver_access_token', **cookie_delete_opts)
+        resp.delete_cookie('naver_refresh_token', **cookie_delete_opts)
+        resp.delete_cookie('google_access_token', **cookie_delete_opts)
+        resp.delete_cookie('google_refresh_token', **cookie_delete_opts)
         
         # httponly가 아닌 쿠키들 삭제
         resp.delete_cookie('is_login', **cookie_delete_opts_no_httponly)
