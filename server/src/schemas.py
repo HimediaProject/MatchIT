@@ -141,26 +141,29 @@ class JobPost(BaseModel):
     description:
         관리자가 새로운 구직공고 정보를 등록.
         구직공고명, 회사명, 카테고리, 상세 내용 등을 포함하여 생성.
+
+    주의:
+        실데이터에는 일부 필드가 NULL/빈값일 수 있으므로 Optional로 허용한다.
     '''
     provider: Provider_job
-    title: str = Field(max_length = 500)
-    company_name: str = Field(max_length = 500)
-    job_category: str = Field(max_length = 500)
-    employment_type: str = Field(max_length = 500)
-    experience_requirement: str
+    title: Optional[str] = Field(None, max_length = 500)
+    company_name: Optional[str] = Field(None, max_length = 500)
+    job_category: Optional[str] = Field(None, max_length = 500)
+    employment_type: Optional[str] = Field(None, max_length = 500)
+    experience_requirement: Optional[str] = None
     education_requirement: Optional[str] = None
-    location: str
+    location: Optional[str] = None
     main_tasks: Optional[str] = Field(None, max_length = 10000)
     qualifications: Optional[str] = Field(None, max_length = 10000)
     preferences: Optional[str] = Field(None, max_length = 10000)
     benefits: Optional[str] = Field(None, max_length = 10000)
     process: Optional[str] = Field(None, max_length = 10000)
-    salary: str
+    salary: Optional[str] = None
     posted_date: Optional[datetime] = None
-    close_date: datetime
-    # DB may not always include a valid URL; allow None
-    url: Optional[HttpUrl] = None
-    is_active: bool
+    close_date: Optional[datetime] = None
+    # 실데이터에 스킴 없는 문자열이 존재할 수 있어 문자열로 완화
+    url: Optional[str] = None
+    is_active: Optional[bool] = True
     created_at: datetime = Field(default_factory = datetime.now)
     updated_at: datetime = Field(default_factory = datetime.now)
 
@@ -177,20 +180,23 @@ class BootcampPost(BaseModel):
     description:
         관리자가 새로운 부트캠프 정보를 등록.
         부트캠프명, 운영 기관, 카테고리, 상세 내용 등을 포함하여 생성.
+
+    주의:
+        실데이터 필드가 비어 있을 수 있어 Optional 허용.
     '''
     title: str = Field(max_length = 500)
     institute_name: str
     job_category_id: int
-    location: str
+    location: Optional[str] = None
     online_offline: Online_offline = Online_offline.ONLINE
     cost_support_type: Cost_support_type = Cost_support_type.PAY_SELF
     education_content: Optional[str] = Field(None, max_length = 10000)
     qualification: Optional[str] = Field(None, max_length = 10000)
     benefits: Optional[str] = Field(None, max_length = 10000)
-    start_date: datetime
-    registration_date: datetime
-    close_date: datetime
-    detail_url: Optional[HttpUrl] = None
+    start_date: Optional[datetime] = None
+    registration_date: Optional[datetime] = None
+    close_date: Optional[datetime] = None
+    detail_url: Optional[str] = None
 
 class BootcampCreate(BaseModel):
     Title: str
