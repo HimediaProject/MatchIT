@@ -1,5 +1,13 @@
-import { type ReactNode, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { type ReactNode, useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { skillsApi, metaApi } from '../services/apiService'
+
+// 아이콘 SVG 컴포넌트 (의존성 제거를 위해 인라인 정의)
+const SearchIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21 21L15.0001 15.0001M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
 
 type Step = {
   title: string
@@ -19,13 +27,13 @@ type Recommendation = {
   tags: string[]
 }
 
-const StepCard = ({ step, index, children }: { step: Step; index: number; children: ReactNode }) => (
-  <div className="rounded-2xl border border-slate-100 bg-white/90 p-6 shadow-soft">
+const StepCard = ({ step, index, children, className }: { step: Step; index: number; children: ReactNode; className?: string }) => (
+  <div className={`rounded-2xl border border-slate-100 bg-white/90 p-6 shadow-soft ${className}`}>
     <div className="flex items-start gap-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-sm font-semibold text-primary-700">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-sm font-semibold text-primary-700">
         {index}
       </div>
-      <div className="space-y-2">
+      <div className="w-full space-y-2">
         <div className="text-sm font-semibold text-primary-700">STEP {index}</div>
         <h3 className="text-lg font-bold text-slate-900">{step.title}</h3>
         <p className="text-sm text-slate-600">{step.description}</p>
@@ -36,16 +44,80 @@ const StepCard = ({ step, index, children }: { step: Step; index: number; childr
 )
 
 const HomePage = () => {
-  const techStacks = useMemo(() => ['React', 'TypeScript', 'Node.js', 'Spring', 'Next.js'], [])
-  const careerStages = useMemo(
-    () => ['주니어·인턴', '1-3년차', '4-6년차', '시니어', '커리어 전환 준비'],
-    [],
-  )
+  const navigate = useNavigate()
+  const [isSkillSearchOpen, setIsSkillSearchOpen] = useState(false)
+  
+  // 스킬 목록 
+  const [allSkills, setAllSkills] = useState<string[]>([])
+  const [loadingSkills, setLoadingSkills] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const data = await skillsApi.getAllSkills()
+        setAllSkills(data.skills)
+      } catch (error) {
+        console.error('Failed to fetch skills:', error)
+        setAllSkills([])
+      } finally {
+        setLoadingSkills(false)
+      }
+    }
+
+    fetchSkills()
+  }, [])
+
+  const [selectedStacks, setSelectedStacks] = useState<string[]>([])
+
+  // DB-driven career levels & experience ranges
+  const [careerLevels, setCareerLevels] = useState<any[]>([])
+  const [experienceRanges, setExperienceRanges] = useState<any[]>([])
+  const [loadingMeta, setLoadingMeta] = useState(true)
+
+  const [selectedSource, setSelectedSource] = useState<'전체' | '채용'|'부트캠프'>('전체')
+  const [selectedCareerLevelId, setSelectedCareerLevelId] = useState<number | null>(null)
+  const [selectedExperienceRangeId, setSelectedExperienceRangeId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchMeta = async () => {
+      try {
+        const [cls, ers] = await Promise.all([
+          metaApi.getCareerLevels().catch((e) => {
+            console.error(e); return []
+          }),
+          metaApi.getExperienceRanges().catch((e) => {
+            console.error(e); return []
+          }),
+        ])
+
+        // try to normalize possible shapes
+        const careerList = Array.isArray(cls) ? cls : (cls && cls.careerlevels) ? cls.careerlevels : []
+        const expList = Array.isArray(ers) ? ers : (ers && ers.experienceranges) ? ers.experienceranges : []
+
+        setCareerLevels(careerList)
+        setExperienceRanges(expList)
+
+        if (careerList.length > 0 && selectedCareerLevelId === null) {
+          setSelectedCareerLevelId(careerList[0].id ?? careerList[0].CareerLevelID ?? null)
+        }
+        if (expList.length > 0 && selectedExperienceRangeId === null) {
+          setSelectedExperienceRangeId(expList[0].id ?? expList[0].RangeID ?? null)
+        }
+      } finally {
+        setLoadingMeta(false)
+      }
+    }
+
+    fetchMeta()
+  }, [])
+
   const previewItems: PreviewItem[] = [
     { title: '프론트엔드 엔지니어', company: '핀테크 스타트업', tag: 'React · TS', type: '채용' },
     { title: '백엔드 부트캠프', company: '클라우드 집중 과정', tag: 'Spring · AWS', type: '부트캠프' },
     { title: '풀스택 포지션', company: '커머스 스케일업', tag: 'Next.js · Node', type: '채용' },
   ]
+  
   const recommendations: Recommendation[] = [
     {
       title: '초보 Python 개발자에게 인기 있는 채용 포지션',
@@ -68,6 +140,14 @@ const HomePage = () => {
       tags: ['백엔드', 'AWS', 'DevOps'],
     },
   ]
+
+  const toggleStack = (stack: string) => {
+    if (selectedStacks.includes(stack)) {
+      setSelectedStacks(prev => prev.filter(s => s !== stack))
+    } else {
+      setSelectedStacks(prev => [...prev, stack])
+    }
+  }
 
   return (
     <div className="bg-white">
@@ -184,34 +264,162 @@ const HomePage = () => {
                 기술 스택과 커리어 단계만 선택하면 AI가 바로 큐레이션합니다. 추후 프로필 연동으로 더 정교해집니다.
               </p>
             </div>
-            <Link
-              to="/"
+            <button
+              onClick={() => {
+                // 선택한 필터들을 쿼리 파라미터로 변환
+                const params = new URLSearchParams()
+                
+                // 기술 스택
+                if (selectedStacks.length > 0) {
+                  selectedStacks.forEach(skill => {
+                    params.append('skills', skill)
+                  })
+                }
+                
+                // 항목 (전체가 아닐 때만)
+                if (selectedSource && selectedSource !== '전체') {
+                  params.append('source', selectedSource)
+                }
+                
+                // 커리어 레벨
+                if (selectedCareerLevelId) {
+                  params.append('careerLevelId', selectedCareerLevelId.toString())
+                }
+                
+                // 경력 구간
+                if (selectedExperienceRangeId) {
+                  params.append('experienceRangeId', selectedExperienceRangeId.toString())
+                }
+                
+                // 검색 결과 페이지로 이동
+                navigate(`/search?${params.toString()}`)
+              }}
               className="inline-flex w-fit items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
             >
               30초만에 시작하기
-            </Link>
+            </button>
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            {/* STEP 1: 기술 스택 입력 - 수정된 부분 */}
             <StepCard
               step={{
                 title: '기술 스택 입력',
-                description: '주력 기술 3개를 선택하면 관련 채용과 부트캠프를 먼저 보여드려요.',
+                description: '주력 기술을 선택하면 관련 채용과 부트캠프를 먼저 보여드려요.',
               }}
               index={1}
+              className="relative overflow-visible"
             >
-              <div className="mt-3 flex flex-wrap gap-2">
-                {techStacks.map((stack) => (
-                  <span
-                    key={stack}
-                    className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-inset ring-slate-200"
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  {selectedStacks.map((stack) => (
+                    <span
+                      key={stack}
+                      className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-inset ring-slate-200"
+                    >
+                      {stack}
+                      <button 
+                        onClick={() => toggleStack(stack)}
+                        className="ml-2 text-slate-400 hover:text-slate-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {/* + 선택 버튼 */}
+                  <button 
+                    onClick={() => setIsSkillSearchOpen(!isSkillSearchOpen)}
+                    className="flex items-center gap-1 rounded-full border border-dashed border-primary-300 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 transition hover:bg-primary-100"
                   >
-                    {stack}
-                  </span>
-                ))}
-                <button className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary-300 hover:text-primary-700">
-                  + 직접 입력
-                </button>
+                    + 스킬 선택
+                  </button>
+                </div>
+
+                {/* 검색창 UI 팝업 */}
+                {isSkillSearchOpen && (
+                  <div className="absolute left-0 mt-3 w-full z-10 px-6">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-slate-900/5">
+                      {/* 검색 인풋 */}
+                        <div className="relative mb-4">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <SearchIcon />
+                        </div>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const q = searchQuery.trim()
+                              if (!q) return
+
+                              // 대소문자 구분 없이 기존 스킬이면 해당 스킬로 토글
+                              const found = allSkills.find(s => s.toLowerCase() === q.toLowerCase())
+                              if (found) {
+                                toggleStack(found)
+                              } else {
+                                if (!selectedStacks.includes(q)) {
+                                  setSelectedStacks(prev => [...prev, q])
+                                }
+                              }
+                              setSearchQuery('')
+                            }
+                          }}
+                          className="block w-full rounded-xl border-0 bg-white py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                          placeholder="찾으시는 스킬을 입력해주세요"
+                          autoFocus
+                        />
+                      </div>
+                      {/* 검색어가 목록에 없으면 직접 추가할 수 있는 버튼 */}
+                      {searchQuery.trim() !== '' && !allSkills.some(s => s.toLowerCase() === searchQuery.trim().toLowerCase()) && !selectedStacks.includes(searchQuery.trim()) && (
+                        <div className="mb-2">
+                          <button
+                            onClick={() => {
+                              const q = searchQuery.trim()
+                              if (!q) return
+                              setSelectedStacks(prev => (prev.includes(q) ? prev : [...prev, q]))
+                              setSearchQuery('')
+                            }}
+                            className="rounded-full border px-4 py-2 text-sm transition-colors border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          >
+                            + 추가: "{searchQuery}"
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 스킬 태그 목록 */}
+                      <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                        {loadingSkills ? (
+                          <div className="text-sm text-slate-500">불러오는 중...</div>
+                        ) : (
+                          allSkills.map((skill) => (
+                            <button
+                              key={skill}
+                              onClick={() => {
+                                toggleStack(skill)
+                                setSearchQuery('')
+                              }}
+                              className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                selectedStacks.includes(skill)
+                                  ? 'border-primary-200 bg-primary-50 text-primary-700 font-semibold'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              {skill}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    {/* 백드롭 (외부 클릭 시 닫기용) */}
+                    <div 
+                      className="fixed inset-0 z-[-1]" 
+                      onClick={() => setIsSkillSearchOpen(false)} 
+                    />
+                  </div>
+                )}
               </div>
             </StepCard>
 
@@ -222,16 +430,64 @@ const HomePage = () => {
               }}
               index={2}
             >
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {careerStages.map((stage) => (
-                  <div
-                    key={stage}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:bg-white"
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {/* Source selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">항목</label>
+                  <select
+                    value={selectedSource}
+                    onChange={(e) => setSelectedSource(e.target.value as '전체' | '채용'|'부트캠프')}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
                   >
-                    {stage}
-                    <span className="text-xs font-bold text-primary-600">선택</span>
-                  </div>
-                ))}
+                    <option value="전체">전체</option>
+                    <option value="채용">채용공고</option>
+                    <option value="부트캠프">부트캠프</option>
+                  </select>
+                </div>
+
+                {/* Career level selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">커리어 레벨</label>
+                  <select
+                    value={selectedCareerLevelId ?? ''}
+                    onChange={(e) => setSelectedCareerLevelId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
+                  >
+                    {careerLevels.length === 0 ? (
+                      <option value="">불러오는 중...</option>
+                    ) : (
+                      careerLevels.map((c: any) => {
+                        const id = c.id ?? c.CareerLevelID ?? c.careerlevelid
+                        const name = c.name ?? c.CareerName ?? c.careername
+                        return (
+                          <option key={id} value={id}>{name}</option>
+                        )
+                      })
+                    )}
+                  </select>
+                </div>
+
+                {/* Experience range selector */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">경력 구간</label>
+                  <select
+                    value={selectedExperienceRangeId ?? ''}
+                    onChange={(e) => setSelectedExperienceRangeId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-primary-600"
+                  >
+                    {experienceRanges.length === 0 ? (
+                      <option value="">불러오는 중...</option>
+                    ) : (
+                      experienceRanges.map((r: any) => {
+                        const id = r.id ?? r.RangeID ?? r.rangeid
+                        const label = r.name ?? r.RangeName ?? r.rangename ?? r.label ?? r.range
+                        return (
+                          <option key={id} value={id}>{label}</option>
+                        )
+                      })
+                    )}
+                  </select>
+                </div>
               </div>
             </StepCard>
           </div>
