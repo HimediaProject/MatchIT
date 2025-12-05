@@ -51,9 +51,6 @@ def get_user_data(db: Session, user_id: int):
 
 @router.get("/{user_id}", response_model=ProfileOut)
 def read_profile(user_id: int, db: Session = Depends(get_db)):
-    """
-    return 어떤것을 해야하는지
-    """
     user = get_user_data(db, user_id)
     career_name = None
 
