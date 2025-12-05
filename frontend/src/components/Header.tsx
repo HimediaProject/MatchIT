@@ -10,10 +10,10 @@ const navItems: NavItem[] = [
   { label: '홈', to: '/' },
   { label: '채용', to: '/jobs' },
   { label: '부트캠프', to: '/bootcamps' },
-  { label: '내 프로필', to: '/profile' },
+  { label: '프로필', to: '/profile' },
 ]
 
-// 쿠키에서 특정 값 가져오기
+// Cookie helper used to check login state
 const getCookie = (name: string): string | null => {
   if (typeof document === 'undefined') return null
   const value = `; ${document.cookie}`
@@ -25,28 +25,22 @@ const getCookie = (name: string): string | null => {
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  // 로그인 상태 확인 (마운트 시 + 정기적으로)
   useEffect(() => {
     const checkLoginStatus = () => {
-      // localStorage와 쿠키 둘 다 확인
       const isLoggedInLocal = localStorage.getItem('isLoggedIn') === 'true'
       const token = getCookie('kakao_access_token')
       setIsLoggedIn(isLoggedInLocal || !!token)
     }
 
     checkLoginStatus()
-
-    // 1초마다 로그인 상태 확인 (빠른 반응)
     const interval = setInterval(checkLoginStatus, 1000)
     return () => clearInterval(interval)
   }, [])
 
   const handleLogout = () => {
-    // localStorage 삭제
     localStorage.removeItem('isLoggedIn')
     localStorage.removeItem('userName')
     localStorage.removeItem('userEmail')
-    // 쿠키 삭제 (클라이언트 사이드에서 비우기)
     document.cookie = 'kakao_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     document.cookie = 'kakao_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     setIsLoggedIn(false)
@@ -60,8 +54,8 @@ const Header = () => {
             IT
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-primary-700">MatchIt</p>
-            <p className="text-xs text-slate-500">맞춤 채용/부트캠프 추천</p>
+            <p className="text-sm font-semibold text-primary-700">MatchIT</p>
+            <p className="text-xs text-slate-500">맞춤 채용 · 부트캠프 추천</p>
           </div>
         </Link>
 
@@ -102,7 +96,7 @@ const Header = () => {
             to="/"
             className="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:shadow-lg hover:shadow-primary-200"
           >
-            지금 바로 추천 받기
+            추천 받기
           </Link>
         </div>
       </div>
