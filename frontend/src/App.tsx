@@ -5,6 +5,7 @@ import BootcampsPage from './pages/Bootcamps'
 import ComparePage from './pages/Compare'
 import HomePage from './pages/Home'
 import JobsPage from './pages/Jobs'
+import JobDetail from './pages/JobDetail'
 import LoginPage from './components/LoginPage'
 import ProfilePage from './pages/Profile'
 
@@ -27,6 +28,7 @@ function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/jobs/:jobId" element={<JobDetail />} />
         <Route path="/bootcamps" element={<BootcampsPage/>} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/login" element={<LoginPage />} />
