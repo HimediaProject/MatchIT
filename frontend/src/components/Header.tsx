@@ -34,8 +34,8 @@ const Header = () => {
   useEffect(() => {
     checkLoginStatus()
 
-    // 2초마다 확인 (빠른 반응성)
-    const interval = setInterval(checkLoginStatus, 2000)
+    // 1초마다 확인 (빠른 반응성)
+    const interval = setInterval(checkLoginStatus, 1000)
 
     return () => {
       clearInterval(interval)
@@ -44,26 +44,77 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      // AJAX로 로그아웃 요청을 보내면 서버가 쿠키를 삭제하고 JSON을 반환합니다.
+      console.log('[LOGOUT] 로그아웃 시작...')
+      
+      // 1. 로컬스토리지에서 모든 사용자 데이터 삭제
+      const cacheKeys = [
+        'isLogin',
+        'isLoggedIn',
+        'isNewUser',
+        'access_token',
+        'userName',
+        'userEmail',
+        'kakao_access_token',
+        'naver_access_token',
+        'google_access_token',
+      ]
+      
+      cacheKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+          console.log(`[LOGOUT] 캐시 삭제: ${key}`)
+        } catch (e) {
+          console.warn(`캐시 항목 삭제 실패: ${key}`, e)
+        }
+      })
+
+      // 2. IndexedDB 캐시 삭제
+      try {
+        const dbs = await window.indexedDB.databases?.()
+        if (dbs) {
+          dbs.forEach(db => {
+            if (db.name) {
+              indexedDB.deleteDatabase(db.name)
+              console.log(`[LOGOUT] IndexedDB 삭제: ${db.name}`)
+            }
+          })
+        }
+      } catch (e) {
+        console.warn('IndexedDB 삭제 중 오류:', e)
+      }
+
+      // 3. 모든 쿠키 삭제 (document.cookie 사용)
+      const cookieNames = ['session_id', 'user_id', 'is_login']
+      cookieNames.forEach(name => {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        document.cookie = `${name}=; max-age=0; path=/;`
+        console.log(`[LOGOUT] 쿠키 삭제: ${name}`)
+      })
+
+      // 4. AJAX로 로그아웃 요청을 보내면 서버가 쿠키를 삭제하고 JSON을 반환합니다.
       const resp = await fetch('http://localhost:8000/auth/kakao/logout', {
         method: 'GET',
         credentials: 'include',
         headers: { 'Accept': 'application/json' },
       })
 
-      if (resp.ok) {
-        try { localStorage.removeItem('isLogin') } catch (e) {}
-        setIsLoggedIn(false)
-        navigate('/')
-        return
-      }
+      console.log('[LOGOUT] 서버 응답:', resp.status)
 
-      // 실패하면 폴백으로 직접 이동
-      window.location.href = 'http://localhost:8000/auth/kakao/logout'
+      // 5. 상태 업데이트 및 페이지 리로드
+      setIsLoggedIn(false)
+      
+      // 페이지 완전 새로고침으로 모든 상태 초기화
+      setTimeout(() => {
+        console.log('[LOGOUT] 페이지 리로드')
+        window.location.href = '/'
+      }, 300)
     } catch (error) {
-      console.error('Logout error:', error)
-      // 네트워크 에러 등인 경우에도 직접 이동하여 서버에서 처리하게 함
-      window.location.href = 'http://localhost:8000/auth/kakao/logout'
+      console.error('[LOGOUT] 로그아웃 중 오류:', error)
+      // 네트워크 에러 등인 경우에도 페이지 새로고침
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 200)
     }
   }
 
