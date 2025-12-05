@@ -5,6 +5,22 @@ export const authApi = {
   getSocialLoginUrl(provider: string) {
     return `${API_BASE_URL}/auth/${provider}/login`;
   },
+
+  async getCurrentUser() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
+        method: 'GET',
+        credentials: 'include', // 쿠키 포함
+      })
+      if (!response.ok) {
+        return { isLoggedIn: false, user: null }
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Failed to fetch current user:', error)
+      return { isLoggedIn: false, user: null }
+    }
+  },
 };
 
 export const searchApi = {
@@ -66,21 +82,6 @@ export const skillsApi = {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Skills autocomplete failed: ${res.status}`);
     return res.json();
-  },
-  async getCurrentUser() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/kakao/me`, {
-        method: 'GET',
-        credentials: 'include', // 쿠키 포함
-      })
-      if (!response.ok) {
-        return { isLoggedIn: false, user: null }
-      }
-      return await response.json()
-    } catch (error) {
-      console.error('Failed to fetch current user:', error)
-      return { isLoggedIn: false, user: null }
-    }
   },
 };
 
