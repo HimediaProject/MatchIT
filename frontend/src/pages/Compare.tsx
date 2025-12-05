@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 
+// API 베이스 URL 설정
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 // 백엔드 스키마와 매칭되는 타입 정의 (화면 표시용)
 type ComparedJob = {
   id: string
@@ -96,7 +99,7 @@ const ComparePage = () => {
     setError(null)
     try {
       const endpoint = modeToFetch === 'jobs' ? '/comparison/jobs' : '/comparison/bootcamps'
-      const res = await fetch(endpoint, {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ids),
