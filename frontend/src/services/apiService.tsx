@@ -14,6 +14,43 @@ export const searchApi = {
     if (!res.ok) throw new Error(`Search request failed: ${res.status}`);
     return res.json();
   },
+
+  async searchWithFilters(params: {
+    keyword?: string;
+    skills?: string[];
+    source?: '전체' | '채용' | '부트캠프';
+    careerLevelId?: number;
+    experienceRangeId?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.keyword) {
+      queryParams.append('keyword', params.keyword);
+    }
+    if (params.skills && params.skills.length > 0) {
+      params.skills.forEach(skill => {
+        queryParams.append('skills', skill);
+      });
+    }
+    if (params.source && params.source !== '전체') {
+      queryParams.append('source', params.source);
+    }
+    if (params.careerLevelId) {
+      queryParams.append('career_level_id', params.careerLevelId.toString());
+    }
+    if (params.experienceRangeId) {
+      queryParams.append('experience_range_id', params.experienceRangeId.toString());
+    }
+    if (params.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+
+    const url = `${API_BASE_URL}/search?${queryParams.toString()}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Search request failed: ${res.status}`);
+    return res.json();
+  },
 };
 
 export const skillsApi = {
