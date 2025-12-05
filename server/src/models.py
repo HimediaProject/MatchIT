@@ -134,6 +134,7 @@ class Platform(Base):
 # -------------------------------------------------------
 # JobCategories
 # -------------------------------------------------------
+# 이 값을 못가져옴....
 class JobCategory(Base):
     __tablename__ = "jobcategories"
 
