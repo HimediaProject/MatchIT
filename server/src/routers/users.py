@@ -142,6 +142,7 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     #         if not skill:
     #             raise HTTPException(status_code=400, detail=f"존재하지 않는 스킬: {name}")
     #         new_skill_objs.append(skill)
+
     #     user.skills = new_skill_objs
 
 
@@ -154,6 +155,7 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     #         if not job:
     #             raise HTTPException(status_code=400, detail=f"존재하지 않는 희망직무: {name}")
     #         new_job_objs.append(job)
+    
     #     user.desired_jobs = new_job_objs
 
     db.commit()
