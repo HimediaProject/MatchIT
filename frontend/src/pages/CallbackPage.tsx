@@ -1,59 +1,45 @@
 import { useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { authApi } from "../services/apiService";
 
 export default function CallbackPage() {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const code = params.get("code");
-    const state = params.get("state");
-    const provider = params.get("provider");
+    const handleCallback = async () => {
+      try {
+        // API를 호출하여 로그인 상태를 미리 확인
+        // 이렇게 하면 백엔드에서 쿠키를 설정한 후 프론트가 상태를 확인할 수 있음
+        const result = await authApi.getCurrentUser();
+        console.log("Callback - Login status:", result);
 
-    if (!code || !provider) {
-      alert("잘못된 접근입니다.");
-      navigate("/");
-      return;
-    }
+        if (result.isLoggedIn) {
+          console.log("로그인 성공:", result.user);
+        }
 
-const fetchToken = async () => {
-  try {
-    // provider가 state를 요구하는 경우에만 쿼리에 포함
-    const qs = new URLSearchParams({ code });
-    if (state) qs.set("state", state);
+        // 짧은 딜레이 후 홈으로 이동
+        setTimeout(() => {
+          navigate("/", { replace: true });
+        }, 500);
+      } catch (error) {
+        console.error("Callback 처리 중 오류:", error);
+        // 에러가 나도 홈으로 이동
+        navigate("/", { replace: true });
+      }
+    };
 
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/auth/${provider}/callback?${qs.toString()}`,
-      { method: "GET", credentials: "include" } // 서버가 쿠키를 Set-Cookie로 내려줄 수도 있으므로 credentials 포함
-    );
+    handleCallback();
+  }, [navigate]);
 
-    if (!res.ok) throw new Error("로그인 실패");
-
-    const data = await res.json();
-    // data.accessToken, data.refreshToken, data.user?.name / email 등 가정
-
-    // 1) Header가 참조하는 플래그 저장
-    localStorage.setItem("isLoggedIn", "true");
-
-    // 2) 선택: 프론트가 직접 토큰을 보관할 경우
-    if (data.accessToken) {
-      localStorage.setItem("access_token", data.accessToken);
-      // Header는 쿠키 'kakao_access_token'을 읽으므로 동일 이름으로 세팅
-      // provider가 kakao가 아니더라도, Header 코드와 맞추려면 동일 키를 사용하거나 Header 쪽 조건을 일반화해야 합니다.
-      document.cookie = `kakao_access_token=${data.accessToken}; path=/;`;
-    }
-
-    // 3) 선택: 사용자 정보 저장
-    if (data.user?.name) localStorage.setItem("userName", data.user.name);
-    if (data.user?.email) localStorage.setItem("userEmail", data.user.email);
-
-    // 4) 이동
-    navigate("/");
-  } catch (err) {
-    console.error(err);
-    alert("로그인 처리 중 오류 발생");
-    navigate("/");
-  }
-};
-
-fetchToken();
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full border-4 border-primary-200 border-t-primary-600 animate-spin"></div>
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">로그인 중입니다</h1>
+        <p className="text-slate-600">잠시만 기다려주세요...</p>
+      </div>
+    </div>
+  );
+}
