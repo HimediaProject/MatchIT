@@ -5,7 +5,7 @@
 읽어서 DB에 삽입합니다.
 
 실행 방법:
-    python import_preprocessed_to_db.py
+    python 8_import_preprocessed_to_db.py
 
 필요 패키지:
     pip install psycopg2-binary sqlalchemy
@@ -60,9 +60,9 @@ if not all([USER, PASSWORD, DB]):
     print("   - POSTGRES_PASSWORD")
     print("   - POSTGRES_DB")
     print("\n   예시 (.env 파일):")
-    print("   POSTGRES_USER=myuser")
-    print("   POSTGRES_PASSWORD=mypassword")
-    print("   POSTGRES_DB=mydb\n")
+    print("   POSTGRES_USER = myuser")
+    print("   POSTGRES_PASSWORD = mypassword")
+    print("   POSTGRES_DB = mydb\n")
     exit(1)
 
 # URL 인코딩 (특수문자 처리)
@@ -78,12 +78,12 @@ print(f"   인코딩: PGCLIENTENCODING={os.environ.get('PGCLIENTENCODING')}")
 try:
     engine = create_engine(
         DATABASE_URL,
-        echo=False,
-        client_encoding='utf8',
-        connect_args={
+        echo = False,
+        client_encoding = 'utf8',
+        connect_args = {
             'client_encoding': 'utf8'
         },
-        isolation_level="AUTOCOMMIT"
+        isolation_level = "AUTOCOMMIT"
     )
     SessionLocal = sessionmaker(bind=engine)
     print("   ✅ 엔진 생성 완료\n")
@@ -98,7 +98,8 @@ except Exception as e:
 class MasterDataManager:
     """Skills, JobCategories, Platforms의 ID 관리"""
 
-    def __init__(self, db_session):
+    def __init__(self,
+                 db_session):
         self.db = db_session
         self.skill_cache = {}      # {skill_name_lower: skill_id}
         self.category_cache = {}   # {category_name_lower: category_id}
@@ -108,7 +109,7 @@ class MasterDataManager:
 
     def _load_existing_data(self):
         """기존 DB의 Skills, JobCategories, Platforms 로드"""
-        print("📋 기존 마스터 데이터 로드 중...")
+        print("📋 기존 DB마스터 데이터 로드 중...")
 
         # Skills
         result = self.db.execute(text("SELECT skillid, skillname FROM skills"))
@@ -145,7 +146,8 @@ class MasterDataManager:
 
         return skill_id
 
-    def get_or_create_platform(self, platform_name: str) -> int:
+    def get_or_create_platform(self,
+                               platform_name: str) -> int:
         """Platform ID 가져오기 (없으면 생성)"""
         platform_lower = platform_name.lower()
 
@@ -162,7 +164,8 @@ class MasterDataManager:
 
         return platform_id
 
-    def get_or_create_category(self, category_name: str) -> int:
+    def get_or_create_category(self,
+                               category_name: str) -> int:
         """Category ID 가져오기 (없으면 생성)"""
         category_lower = category_name.lower()
 
@@ -358,7 +361,9 @@ def insert_job_posts(db_session, preprocessed_jobs: List[Dict], master_data: Mas
 # JobPostSkills 삽입
 # ============================================
 
-def insert_job_post_skills(db_session, job_post_mapping: Dict, master_data: MasterDataManager):
+def insert_job_post_skills(db_session,
+                           job_post_mapping: Dict,
+                           master_data: MasterDataManager):
     """JobPostSkills 관계 테이블 삽입"""
 
     print("=" * 70)
@@ -401,7 +406,9 @@ def insert_job_post_skills(db_session, job_post_mapping: Dict, master_data: Mast
 # BootcampPosts 삽입
 # ============================================
 
-def insert_bootcamp_posts(db_session, preprocessed_bootcamps: List[Dict], master_data: MasterDataManager):
+def insert_bootcamp_posts(db_session,
+                          preprocessed_bootcamps: List[Dict],
+                          master_data: MasterDataManager):
     """BootcampPosts 테이블에 전처리된 데이터 삽입"""
 
     print("=" * 70)
@@ -510,15 +517,21 @@ def main():
         if preprocessed_jobs:
             print("\n[1/2] 채용 공고 DB 삽입")
             print("-" * 70)
-            job_post_mapping = insert_job_posts(db, preprocessed_jobs, master_data)
-            insert_job_post_skills(db, job_post_mapping, master_data)
+            job_post_mapping = insert_job_posts(db,
+                                                preprocessed_jobs,
+                                                master_data)
+            insert_job_post_skills(db,
+                                   job_post_mapping,
+                                   master_data)
 
         # 2. 부트캠프 처리
         preprocessed_bootcamps = preprocessed_data.get('bootcamps', [])
         if preprocessed_bootcamps:
             print("\n[2/2] 부트캠프 DB 삽입")
             print("-" * 70)
-            insert_bootcamp_posts(db, preprocessed_bootcamps, master_data)
+            insert_bootcamp_posts(db,
+                                  preprocessed_bootcamps,
+                                  master_data)
 
         # 최종 결과
         print("=" * 70)
