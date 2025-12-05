@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { authApi } from '../services/apiService'
 
 type NavItem = {
@@ -16,9 +16,8 @@ const navItems: NavItem[] = [
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const navigate = useNavigate()
 
-  // API를 통해 로그인 상태 확인
+  /** 로그인 상태 체크 */
   const checkLoginStatus = useCallback(async () => {
     try {
       const result = await authApi.getCurrentUser()
@@ -30,23 +29,23 @@ const Header = () => {
     }
   }, [])
 
-  // 마운트 시 + 정기적으로 확인
+  /** 마운트 + 일정 간격으로 체크 */
   useEffect(() => {
     checkLoginStatus()
 
-    // 1초마다 확인 (빠른 반응성)
-    const interval = setInterval(checkLoginStatus, 1000)
-
+    // 5초마다 확인 (빠른 반응성)
+    const interval = setInterval(checkLoginStatus, 5000)
     return () => {
       clearInterval(interval)
     }
   }, [checkLoginStatus])
 
+  /** 로그아웃 기능 */
   const handleLogout = async () => {
     try {
-      console.log('[LOGOUT] 로그아웃 시작...')
+      console.log('[LOGOUT] 로그아웃 시작')
       
-      // 1. 로컬스토리지에서 모든 사용자 데이터 삭제
+      /** 1. 로컬스토리지 + 세션스토리지 초기화 */
       const cacheKeys = [
         'isLogin',
         'isLoggedIn',
@@ -65,11 +64,11 @@ const Header = () => {
           sessionStorage.removeItem(key)
           console.log(`[LOGOUT] 캐시 삭제: ${key}`)
         } catch (e) {
-          console.warn(`캐시 항목 삭제 실패: ${key}`, e)
+          console.warn(`[LOGOUT] 캐시 삭제 실패: ${key}`, e)
         }
       })
 
-      // 2. IndexedDB 캐시 삭제
+      /** 2. IndexedDB 초기화 */
       try {
         const dbs = await window.indexedDB.databases?.()
         if (dbs) {
@@ -84,7 +83,7 @@ const Header = () => {
         console.warn('IndexedDB 삭제 중 오류:', e)
       }
 
-      // 3. 모든 쿠키 삭제 (document.cookie 사용)
+      /** 3. 쿠키 삭제 */
       const cookieNames = ['session_id', 'user_id', 'is_login']
       cookieNames.forEach(name => {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
@@ -92,7 +91,7 @@ const Header = () => {
         console.log(`[LOGOUT] 쿠키 삭제: ${name}`)
       })
 
-      // 4. AJAX로 로그아웃 요청을 보내면 서버가 쿠키를 삭제하고 JSON을 반환합니다.
+      /** 4. 서버 로그아웃 요청 */
       const resp = await fetch('http://localhost:8000/auth/kakao/logout', {
         method: 'GET',
         credentials: 'include',
@@ -101,7 +100,7 @@ const Header = () => {
 
       console.log('[LOGOUT] 서버 응답:', resp.status)
 
-      // 5. 상태 업데이트 및 페이지 리로드
+      /** 5. 상태 초기화 후 새로고침 */
       setIsLoggedIn(false)
       
       // 페이지 완전 새로고침으로 모든 상태 초기화
@@ -110,8 +109,7 @@ const Header = () => {
         window.location.href = '/'
       }, 300)
     } catch (error) {
-      console.error('[LOGOUT] 로그아웃 중 오류:', error)
-      // 네트워크 에러 등인 경우에도 페이지 새로고침
+      console.error('[LOGOUT] 오류:', error)
       setTimeout(() => {
         window.location.href = '/'
       }, 200)
@@ -121,6 +119,8 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
+
+        {/* 로고 */}
         <Link to="/" className="flex items-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-base font-bold text-white shadow-soft">
             IT
@@ -131,6 +131,7 @@ const Header = () => {
           </div>
         </Link>
 
+        {/* 네비게이션 */}
         <nav className="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
           {navItems.map((item) => (
             <NavLink
