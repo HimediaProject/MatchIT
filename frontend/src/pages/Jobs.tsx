@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 type Job = {
   id: string
@@ -63,6 +64,45 @@ const JobsPage = () => {
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
   const [selectedExperience, setSelectedExperience] = useState<Job['experience'] | ''>('')
   const [sort, setSort] = useState<'latest' | 'deadline' | 'salary'>('latest')
+  const getInitialCompare = () => {
+    try {
+      if (typeof window === 'undefined') return []
+      const raw = localStorage.getItem('compare_jobs')
+      return raw ? (JSON.parse(raw) as Job[]) : []
+    } catch {
+      return []
+    }
+  }
+
+  const [compareList, setCompareList] = useState<Job[]>(getInitialCompare)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('compare_jobs', JSON.stringify(compareList))
+    } catch {}
+  }, [compareList])
+
+  const navigate = useNavigate()
+
+  const addToCompare = (job: Job) => {
+    setCompareList((prev) => {
+      if (prev.find((j) => j.id === job.id)) {
+        window.alert('이미 비교함에 담긴 공고입니다.')
+        return prev
+      }
+      if (prev.length >= 3) {
+        window.alert('비교함은 최대 3개까지 담을 수 있습니다.')
+        return prev
+      }
+      return [...prev, job]
+    })
+  }
+
+  const removeFromCompare = (id: string) => {
+    setCompareList((prev) => prev.filter((j) => j.id !== id))
+  }
+
+  const clearCompare = () => setCompareList([])
 
   const toggleSet = (value: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
     setter((prev) => {
@@ -193,6 +233,7 @@ const JobsPage = () => {
                       <span className="rounded-full bg-slate-100 px-3 py-1">{job.location}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{job.salary}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{job.experience}</span>
+                      
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {job.skills.map((skill) => (
@@ -208,6 +249,12 @@ const JobsPage = () => {
                   <button className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto">
                     상세 보기
                   </button>
+                  <button
+                    onClick={() => addToCompare(job)}
+                    className="w-full rounded-x2 border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto"
+                  >
+                    {compareList.find((j) => j.id === job.id) ? '담겼음' : '비교함 담기'}
+                  </button>
                 </div>
               ))}
               {!filteredJobs.length && (
@@ -219,6 +266,53 @@ const JobsPage = () => {
           </section>
         </div>
       </div>
+
+      {compareList.length > 0 && (
+        <aside className="fixed right-6 top-24 w-80 max-h-[70vh] overflow-auto bg-white border border-slate-100 rounded-2xl p-4 shadow-lg z-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-slate-900">비교함 ({compareList.length}/3)</h4>
+            <button
+              onClick={clearCompare}
+              className="text-xs font-semibold text-red-600 hover:underline"
+            >
+              전체삭제
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {compareList.map((item) => (
+              <div key={item.id} className="flex items-start justify-between gap-2 p-2 border rounded-lg">
+                <div>
+                  <p className="text-xs font-semibold text-primary-700">{item.company}</p>
+                  <p className="text-sm font-bold text-slate-900">{item.position}</p>
+                  <p className="text-xs text-slate-600">{item.salary}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={() => removeFromCompare(item.id)}
+                    className="text-xs font-semibold text-primary-700 hover:underline"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => {
+                const ids = compareList.map((j) => j.id).join(',')
+                navigate(`/compare?mode=jobs&ids=${encodeURIComponent(ids)}`)
+              }}
+              className="text-sm font-semibold text-white bg-primary-600 px-3 py-2 rounded-md hover:bg-primary-700"
+            >
+              비교하기
+            </button>
+          </div>
+        </aside>
+      )}
+
     </div>
   )
 }
