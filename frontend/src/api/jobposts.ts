@@ -42,6 +42,7 @@ export interface JobListParams {
   category_id?: number
   location?: string
   experience_requirement?: string
+  sort?: 'latest' | 'deadline' | 'salary'
 }
 
 export async function fetchJobList(
@@ -54,6 +55,7 @@ export async function fetchJobList(
     category_id,
     location,
     experience_requirement,
+    sort,
   } = params
 
   const response = await apiClient.get<PaginatedJobPostResponse>('/jobs/', {
@@ -63,6 +65,7 @@ export async function fetchJobList(
     category_id,
     location,
     experience_requirement,
+    sort,
   })
 
   return response
