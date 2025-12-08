@@ -52,7 +52,7 @@ class User(Base):
 
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
-    Email = Column("email", String(255), unique=True, nullable=False)
+    Email = Column("email", String(255), unique=True, nullable=True)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
