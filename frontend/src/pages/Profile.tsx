@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { authApi } from '../services/apiService'
 
 type RecommendationCard = {
   title: string
@@ -12,10 +14,17 @@ const stacks = ['Python', 'Pandas', 'SQL', 'React', 'Node.js', 'TensorFlow', 'Py
 
 const ProfilePage = () => {
   const [name, setName] = useState('홍길동')
+  const [email, setEmail] = useState('hong@example.com')
   const [career, setCareer] = useState<string>('주니어')
   const [selectedInterests, setSelectedInterests] = useState<Set<string>>(new Set(['백엔드']))
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set(['Python', 'SQL']))
   const [showRecommendations, setShowRecommendations] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [scraps, setScraps] = useState<string[]>([])
+  const [recentViews, setRecentViews] = useState<string[]>([])
+  const navigate = useNavigate()
+  // 개발용: URL 쿼리로 미리보기 모드 허용 (/profile?preview=true)
+  const previewMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'true'
 
   const recommendations = useMemo<RecommendationCard[]>(
     () => [
@@ -41,6 +50,50 @@ const ProfilePage = () => {
     })
   }
 
+  // 인증 확인: 로그인한 사용자만 접근 가능
+  useEffect(() => {
+    if (previewMode) {
+      // 미리보기 모드: 인증 건너뜀, 샘플 데이터 세팅
+      setIsLoading(false)
+      setScraps(['[샘플] Python 백엔드 채용 공고', '[샘플] 데이터 분석 인턴십'])
+      setRecentViews(['[샘플] React 개발자 채용', '[샘플] ML 엔지니어 공고'])
+      return
+    }
+
+    let mounted = true
+    const check = async () => {
+      try {
+        const res = await authApi.getCurrentUser()
+        if (!mounted) return
+        if (!res || res.isLoggedIn !== true) {
+          // 로그인 필요
+          navigate('/login', { replace: true })
+          return
+        }
+
+        // 사용자 정보 바인딩 (있으면 채워줌)
+        const user = res.user || {}
+        if (user.name) setName(user.name)
+        if (user.email) setEmail(user.email)
+        if (user.career) setCareer(user.career)
+        if (Array.isArray(user.skills) && user.skills.length > 0) setSelectedStacks(new Set(user.skills))
+        if (Array.isArray(user.wantedJobs) && user.wantedJobs.length > 0) setSelectedInterests(new Set(user.wantedJobs))
+        if (Array.isArray(user.scraps)) setScraps(user.scraps)
+        if (Array.isArray(user.recentViews)) setRecentViews(user.recentViews)
+      } catch (e) {
+        console.error('Profile: auth check failed', e)
+        navigate('/login', { replace: true })
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
+    }
+
+    check()
+    return () => {
+      mounted = false
+    }
+  }, [navigate, previewMode])
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
@@ -56,18 +109,34 @@ const ProfilePage = () => {
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
             <h2 className="text-lg font-bold text-slate-900">기본 정보</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm text-slate-700">
-                이름
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  placeholder="이름을 입력하세요"
-                />
-              </label>
+              {isLoading ? (
+                <div className="text-sm text-slate-600">로그인 상태 확인 중...</div>
+              ) : (
+                <>
+                  <label className="text-sm text-slate-700">
+                    이름
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      placeholder="이름을 입력하세요"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    이메일
+                    <input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      placeholder="이메일"
+                    />
+                  </label>
+                </>
+              )}
 
               <label className="text-sm text-slate-700">
-                현재 커리어 단계
+                경력
                 <div className="mt-2 flex flex-wrap gap-2">
                   {careerStages.map((stage) => (
                     <button
@@ -87,7 +156,7 @@ const ProfilePage = () => {
               </label>
 
               <div>
-                <p className="text-sm font-semibold text-slate-900">관심 직무</p>
+                <p className="text-sm font-semibold text-slate-900">희망직무</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {interests.map((interest) => {
                     const active = selectedInterests.has(interest)
@@ -110,7 +179,7 @@ const ProfilePage = () => {
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-slate-900">보유 기술 스택</p>
+                <p className="text-sm font-semibold text-slate-900">기술스택</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {stacks.map((stack) => {
                     const active = selectedStacks.has(stack)
@@ -173,6 +242,35 @@ const ProfilePage = () => {
                 ))}
               </div>
             )}
+
+            {/* 스크랩 & 최근 열람 */}
+            <div className="mt-6 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">스크랩</h3>
+                {scraps.length === 0 ? (
+                  <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">스크랩한 공고가 없습니다.</div>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {scraps.map((s, i) => (
+                      <li key={i} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">{s}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">최근 열람 공고</h3>
+                {recentViews.length === 0 ? (
+                  <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">최근 열람한 공고가 없습니다.</div>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {recentViews.map((r, i) => (
+                      <li key={i} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">{r}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </section>
         </div>
       </div>
