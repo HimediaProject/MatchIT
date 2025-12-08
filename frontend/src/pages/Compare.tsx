@@ -21,9 +21,12 @@ type ComparedBootcamp = {
   title: string
   period: string
   schedule: string
-  time: string
   mode: string
   location: string
+  costSupportType: string
+  educationContent: string
+  qualification: string
+  benefits: string
 }
 
 const formatDate = (d?: string | null) => {
@@ -84,9 +87,12 @@ const ComparePage = () => {
       title: b.title || b.Title || '',
       period: reg || close ? `${formatDate(reg)} ~ ${formatDate(close)}` : '',
       schedule: start ? formatDate(start) : '',
-      time: b.time || '',
       mode: b.online_offline || b.OnlineOffline || '',
       location: b.location || b.Location || '',
+      costSupportType: b.cost_support_type || b.CostSupportType || '',
+      educationContent: b.education_content || b.EducationContent || '',
+      qualification: b.qualification || b.Qualification || '',
+      benefits: b.benefits || b.Benefits || '',
     }
   }
 
@@ -254,36 +260,53 @@ const ComparePage = () => {
                   {!isJob && (
                     <>
                       <div>
-                        <span className="mb-1 block text-xs text-slate-500">모집일정</span>
+                        <span className="mb-1 block text-xs text-slate-500">교육·모집일정</span>
                         <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.period}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">교육일정</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.schedule}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">수업시간</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.time}
+                          {camp.schedule || '-'} {camp.period || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">수업방식</span>
                         <p className="text-sm font-bold text-slate-900">
-                          {camp.mode}
+                          {camp.mode || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육장소</span>
-                         {/* JSON 문자열 등 파싱이 필요할 수 있으나 단순 표시 */}
                         <p className="text-sm font-bold text-slate-900 break-keep">
-                          {camp.location.replace(/["{}]/g, '').replace('district:', '')}
+                          {camp.location || '-'}
                         </p>
                       </div>
+                      <div>
+                        <span className="mb-1 block text-xs text-slate-500">비용지원유형</span>
+                        <p className="text-sm font-bold text-slate-900">
+                          {camp.costSupportType || '-'}
+                        </p>
+                      </div>
+                      {camp.educationContent && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">교육내용</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.educationContent}
+                          </p>
+                        </div>
+                      )}
+                      {camp.qualification && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">자격요건</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.qualification}
+                          </p>
+                        </div>
+                      )}
+                      {camp.benefits && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">혜택</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.benefits}
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
 

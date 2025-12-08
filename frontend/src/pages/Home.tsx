@@ -266,8 +266,14 @@ const HomePage = () => {
             </div>
             <button
               onClick={() => {
-                // 선택한 필터들을 쿼리 파라미터로 변환
                 const params = new URLSearchParams()
+                const isCareerLevelOne = selectedCareerLevelId === 1
+
+                // 커리어 레벨 1 사용자는 기술 스택이 필수
+                if (isCareerLevelOne && selectedStacks.length === 0) {
+                  window.alert('커리어 레벨 1은 기술 스택 키워드를 최소 1개 입력해주세요.')
+                  return
+                }
                 
                 // 기술 스택
                 if (selectedStacks.length > 0) {
@@ -276,8 +282,10 @@ const HomePage = () => {
                   })
                 }
                 
-                // 항목 (전체가 아닐 때만)
-                if (selectedSource && selectedSource !== '전체') {
+                // 항목: 커리어 레벨 1은 부트캠프만 강제
+                if (isCareerLevelOne) {
+                  params.set('source', '부트캠프')
+                } else if (selectedSource && selectedSource !== '전체') {
                   params.append('source', selectedSource)
                 }
                 
@@ -291,7 +299,6 @@ const HomePage = () => {
                   params.append('experienceRangeId', selectedExperienceRangeId.toString())
                 }
                 
-                // 검색 결과 페이지로 이동
                 navigate(`/search?${params.toString()}`)
               }}
               className="inline-flex w-fit items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
