@@ -38,11 +38,12 @@ const JobsPage = () => {
   const navigate = useNavigate()
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['jobList', page],
+    queryKey: ['jobList', page, sort],
     queryFn: () =>
       fetchJobList({
         page,
         size,
+        sort,
       }),
     keepPreviousData: true,
   })
@@ -81,6 +82,28 @@ const JobsPage = () => {
 
   const clearCompare = () => setCompareList([])
 
+  const parseDateValue = (value?: string | null) => {
+    if (!value) return null
+    const ts = Date.parse(value)
+    return Number.isNaN(ts) ? null : ts
+  }
+
+  const parseSalaryValue = (salary?: string | null) => {
+    if (!salary) return null
+    const matches = salary.match(/\d+/g)
+    if (!matches) return null
+    const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n))
+    if (!nums.length) return null
+    return Math.max(...nums)
+  }
+
+  const compareWithNulls = (a: number | null, b: number | null, direction: 'asc' | 'desc') => {
+    if (a === null && b === null) return 0
+    if (a === null) return 1
+    if (b === null) return -1
+    return direction === 'asc' ? a - b : b - a
+  }
+
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const categoryMatch = selectedCategories.size
@@ -94,6 +117,28 @@ const JobsPage = () => {
       return categoryMatch && stackMatch && expMatch
     })
   }, [jobs, selectedCategories, selectedStacks, selectedExperience])
+
+  const sortedJobs = useMemo(() => {
+    const list = [...filteredJobs]
+    list.sort((a, b) => {
+      if (sort === 'latest') {
+        const aTs = parseDateValue(a.PostedDate) ?? parseDateValue(a.CreatedAt)
+        const bTs = parseDateValue(b.PostedDate) ?? parseDateValue(b.CreatedAt)
+        return compareWithNulls(aTs, bTs, 'desc')
+      }
+
+      if (sort === 'deadline') {
+        const aDeadline = parseDateValue(a.CloseDate)
+        const bDeadline = parseDateValue(b.CloseDate)
+        return compareWithNulls(aDeadline, bDeadline, 'asc')
+      }
+
+      const aSalary = parseSalaryValue(a.Salary)
+      const bSalary = parseSalaryValue(b.Salary)
+      return compareWithNulls(aSalary, bSalary, 'desc')
+    })
+    return list
+  }, [filteredJobs, sort])
 
   if (isLoading) {
     return <div className="flex justify-center py-10">채용을 불러오는 중입니다...</div>
@@ -194,7 +239,7 @@ const JobsPage = () => {
             </div>
 
             <div className="space-y-4">
-              {filteredJobs.map((job) => (
+              {sortedJobs.map((job) => (
                 <div
                   key={job.PostID}
                   className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
