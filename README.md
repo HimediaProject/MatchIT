@@ -83,13 +83,16 @@ docker compose run --rm server alembic init alembic
 
 #### 3. 마이그레이션 파일 생성
 ```bash
-docker compose run --rm server alembic revision --autogenerate -m "create users table"
+docker compose run --rm server alembic revision --autogenerate -m "create table"
 ```
 
 #### 4. 마이그레이션 실행
 ```bash
 # Upgrade (적용): 
 docker compose run --rm server sh -c "cd src && alembic upgrade head"
+
+# py파일 Upgrade (적용): 
+docker compose run --rm server sh -c "cd data && python 8_import_preprocessed_to_db.py"
 
 # Upgrade 특정 버전: 
 docker compose run --rm server alembic upgrade +1 또는 alembic upgrade xxxx
@@ -103,3 +106,8 @@ docker compose run --rm server alembic current
 #히스토리 확인: 
 docker compose run --rm server alembic history
 ```
+
+### 🐳 docker volume 삭제 후 다시 생성하면 pg admin에서 server 생성하는 방법
+#### 1. Servers 우클릭 > create > Server Group > name: (아무거나 상관 없음) > save
+#### 2. 생성한 server group 우클릭 > Register > Server > name: (아무거나 상관 없음)
+#### 3. Connection > Host name/address: matchit_postgres > password: password > save password 체크 후 save
