@@ -32,8 +32,35 @@ class ProfileUpdate(BaseModel):
     career_level: Optional[Union[str, int]] = None
     skills: Optional[List[str]] = None
     desired_jobs: Optional[List[str]] = None
-    employment_type: Optional[str] = None
-    work_type: Optional[str] = None
+    # employment_type: Optional[str] = None
+    # work_type: Optional[str] = None
+
+
+# class ProfileCreate(BaseModel):
+#     name: str
+#     career_level: Optional[Union[str, int]] = None
+#     skills: Optional[List[str]] = None
+#     desired_jobs: Optional[List[str]] = None
+
+#     class Config:
+#         orm_mode = True
+
+class UserScrapGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/scraps
+
+    params:
+        post_type,
+        job_post_id, bootcamp_post_id
+
+    description:
+        특정 유저가 스크랩한 항목(직무/부트캠프)의 목록을 조회.
+        filter를 통해, 직무 또는 부트캠프 별로 필터링.
+    '''
+    post_type: Optional[str] = None
+    job_post_id: Optional[int] = None
+    bootcamp_post_id: Optional[int] = None
 
     
 def get_user_data(db: Session, user_id: int):
@@ -47,6 +74,17 @@ def get_user_data(db: Session, user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
     return user
+
+def get_user_scrap(db: Session, user_id: int):
+    scrap = (
+        db.query(models.UserScrap)
+        .filter(models.UserScrap.UserID == user_id)
+        .first()
+    )
+
+    if not scrap:
+        raise HTTPException(status_code=404, detail="스크랩 항목을 찾을 수 없습니다.")
+    return scrap
 
 
 @router.get("/{user_id}", response_model=ProfileOut)
@@ -163,21 +201,93 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     return read_profile(user.UserID, db)
 
-@router.delete("/{user_id}", status_code=204)
-def delete_profile(user_id: int, db: Session = Depends(get_db)):
-    user = (
-        db.query(models.User)
-        .filter(models.User.UserID == user_id)
-        .first()
+# @router.post("/", response_model=ProfileOut, status_code=201)
+# def create_profile(data: ProfileCreate, db: Session = Depends(get_db)):
+#     user = models.User(Name=data.name)
+#     db.add(user)
+
+#     # 경력 레벨
+#     if data.career_level is not None:
+#         # 문자열인 경우
+#         if isinstance(data.career_level, str):
+#             career = db.query(models.CareerLevel).filter(
+#                 models.CareerLevel.CareerName == data.career_level
+#             ).first()
+#             if not career:
+#                 raise HTTPException(400, "존재하지 않는 커리어 레벨 이름입니다.")
+
+#             user.CareerLevelID = career.CareerLevelID
+
+#         # 숫자인 경우
+#         elif isinstance(data.career_level, int):
+#             career = db.query(models.CareerLevel).filter(
+#                 models.CareerLevel.CareerLevelID == data.career_level
+#             ).first()
+#             if not career:
+#                 raise HTTPException(400, "유효하지 않은 커리어 레벨 ID입니다.")
+
+#             user.CareerLevelID = data.career_level
+
+#     db.flush()
+
+#     # 스킬
+#     if data.skills is not None:
+#         new_skill_objs = []
+#         for name in data.skills:
+#             skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
+#             if not skill:
+#                 skill = models.Skill(SkillName=name)
+#                 db.add(skill)
+#                 db.flush()
+#             new_skill_objs.append(skill)
+
+#         user.skills = new_skill_objs
+
+
+#     # 4) 희망직무
+#     if data.desired_jobs is not None:
+#         new_job_objs = []
+#         for name in data.desired_jobs:
+#             job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
+#             if not job:
+#                 job = models.DesiredJob(JobName=name)
+#                 db.add(job)
+#                 db.flush()
+#             new_job_objs.append(job)
+
+#         user.desired_jobs = new_job_objs
+
+#     db.commit()
+#     db.refresh(user)
+
+#     return read_profile(user.UserID, db)
+
+
+
+# @router.delete("/{user_id}", status_code=204)
+# def delete_profile(user_id: int, db: Session = Depends(get_db)):
+#     user = get_user_data(db, user_id)
+#     if not user:
+#         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    
+#     user.skills = []
+#     user.desired_jobs = []
+#     db.commit()
+
+#     db.delete(user)
+#     db.commit()
+
+#     return Response(status_code=204)
+
+@router.get("/{user_id}/scraps", response_model=UserScrapGet)
+def read_userscrap(user_id: int, db: Session = Depends(get_db)):
+    scrap = get_user_scrap(db, user_id)
+
+    return UserScrapGet(
+        post_type=scrap.PostType,
+        job_post_id=scrap.JobPostID,
+        bootcamp_post_id=scrap.BootcampPostID,
     )
-    if not user:
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-    db.delete(user)
-    db.commit()
-
-    return Response(status_code=204)
-
 
 
 if __name__ == "__main__":
