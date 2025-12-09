@@ -112,3 +112,31 @@ export const metaApi = {
     return res.json();
   },
 };
+
+export const chatApi = {
+  async sendMessage(messages: Array<{ role: string; content: string }>, model?: string) {
+    const url = `${API_BASE_URL}/chat/`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages,
+        ...(model && { model }),
+      }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || `Chat request failed: ${res.status}`);
+    }
+    return res.json();
+  },
+
+  async checkHealth() {
+    const url = `${API_BASE_URL}/chat/health`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Chat health check failed: ${res.status}`);
+    return res.json();
+  },
+};

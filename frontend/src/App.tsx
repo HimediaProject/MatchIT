@@ -1,6 +1,7 @@
 import { Outlet, Route, Routes } from 'react-router-dom'
 import Footer from './components/Footer'
 import Header from './components/Header'
+import Chatbot from './components/Chatbot'
 import BootcampsPage from './pages/Bootcamps'
 import ComparePage from './pages/Compare'
 import HomePage from './pages/Home'
@@ -19,6 +20,7 @@ const Layout = () => {
         <Outlet />
       </main>
       <Footer />
+      <Chatbot />
     </div>
   )
 }
