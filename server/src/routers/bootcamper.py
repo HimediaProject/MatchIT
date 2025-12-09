@@ -1,80 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
 from src.database import get_db
-from src.models import BootcampPost, JobCategory, Skill
+from src.models import BootcampPost as BootcampPo, JobCategory, Skill
 from src.schemas import BootcampCreate, BootcampUpdate, \
-                            BootcampResponse, PaginatedBootcampResponse
+                            BootcampResponse, PaginatedBootcampResponse, \
+                            BootcampDetailResponse
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
 
 router = APIRouter(prefix = '/bootcamps')
-
-
-# # Pydantic schemas for request/response
-# class BootcampCreate(BaseModel):
-#     Title: str
-#     InstituteName: str
-#     JobCategoryID: int
-#     Location: Optional[str] = None
-#     OnlineOffline: str = "온라인"
-#     CostSupportType: str = "본인부담"
-#     EducationContent: Optional[str] = None
-#     Qualification: Optional[str] = None
-#     Benefits: Optional[str] = None
-#     StartDate: Optional[date] = None
-#     RegistrationDate: Optional[date] = None
-#     CloseDate: Optional[date] = None
-#     DetailUrl: Optional[str] = None
-
-
-# class BootcampUpdate(BaseModel):
-#     Title: Optional[str] = None
-#     InstituteName: Optional[str] = None
-#     JobCategoryID: Optional[int] = None
-#     Location: Optional[str] = None
-#     OnlineOffline: Optional[str] = None
-#     CostSupportType: Optional[str] = None
-#     EducationContent: Optional[str] = None
-#     Qualification: Optional[str] = None
-#     Benefits: Optional[str] = None
-#     StartDate: Optional[date] = None
-#     RegistrationDate: Optional[date] = None
-#     CloseDate: Optional[date] = None
-#     DetailUrl: Optional[str] = None
-#     ViewCount: Optional[int] = None
-
-
-# class BootcampResponse(BaseModel):
-#     BootcampID: int
-#     Title: str
-#     InstituteName: str
-#     JobCategoryID: int
-#     Location: Optional[str]
-#     OnlineOffline: str
-#     CostSupportType: str
-#     EducationContent: Optional[str]
-#     Qualification: Optional[str]
-#     Benefits: Optional[str]
-#     StartDate: Optional[date]
-#     RegistrationDate: Optional[date]
-#     CloseDate: Optional[date]
-#     DetailUrl: Optional[str]
-#     ViewCount: int
-#     CreatedAt: datetime
-#     UpdatedAt: datetime
-
-#     class Config:
-#         from_attributes = True
-
-
-# class PaginatedBootcampResponse(BaseModel):
-#     total: int
-#     page: int
-#     size: int
-#     items: List[BootcampResponse]
-
 
 @router.post('/', response_model = BootcampResponse, status_code = 201)
 def create_bootcamp(
@@ -85,14 +21,16 @@ def create_bootcamp(
     부트캠프 게시글 생성
     """
     # JobCategory 존재 확인
+    # 이게 None...
     category = db.query(JobCategory).filter(
         JobCategory.CategoryID == bootcamp.JobCategoryID
     ).first()
+    print(f'🛠️🛠️ JobCategory: {category}')
     if not category:
         raise HTTPException(status_code = 404, detail = "JobCategory not found")
 
     # 새 부트캠프 게시글 생성
-    db_bootcamp = BootcampPost(**bootcamp.model_dump())
+    db_bootcamp = BootcampPo(**bootcamp.model_dump())
     db.add(db_bootcamp)
     db.commit()
     db.refresh(db_bootcamp)
@@ -114,51 +52,92 @@ def get_bootcamp_list(
     """
     부트캠프 목록 조회 (페이지네이션, 필터링, 검색)
     """
-    # 기본 쿼리
-    query = db.query(BootcampPost)
+    # Jobcategory join
+    # query = db.query(BootcampPo).join(
+    #     JobCategory, BootcampPo.JobCategoryID == JobCategory.CategoryID
+    # )
+
+    # query = db.query(BootcampPo).options(
+    #     joinedload(BootcampPo.job_category)
+    # )
+
+    query = (
+        db.query(BootcampPo)
+        ).join(
+            BootcampPo.job_category
+        )
+    print(f'🛠️🛠️ query: {query.all()}')
+    # print(f'🛠️🛠️ JobCategory: {JobCategory}')
 
     # 필터 적용
     filters = []
 
     if keyword:
         keyword_filter = or_(
-            BootcampPost.Title.ilike(f"%{keyword}%"),
-            BootcampPost.InstituteName.ilike(f"%{keyword}%"),
-            BootcampPost.EducationContent.ilike(f"%{keyword}%")
+            BootcampPo.Title.ilike(f"%{keyword}%"),
+            BootcampPo.InstituteName.ilike(f"%{keyword}%"),
+            BootcampPo.EducationContent.ilike(f"%{keyword}%")
         )
         filters.append(keyword_filter)
 
     if category_id:
-        filters.append(BootcampPost.JobCategoryID == category_id)
+        filters.append(BootcampPo.JobCategoryID == category_id)
 
     if online_offline:
-        filters.append(BootcampPost.OnlineOffline == online_offline)
+        filters.append(BootcampPo.OnlineOffline == online_offline)
 
     if cost_support_type:
-        filters.append(BootcampPost.CostSupportType == cost_support_type)
+        filters.append(BootcampPo.CostSupportType == cost_support_type)
 
     if location:
-        filters.append(BootcampPost.Location.ilike(f"%{location}%"))
+        filters.append(BootcampPo.Location.ilike(f"%{location}%"))
 
     if filters:
         query = query.filter(and_(*filters))
+        print(f'🛠️🛠️ filtered_query: {query}')
 
     # 전체 개수 조회
     total = query.count()
 
     # 페이지네이션 적용
     offset = (page - 1) * size
-    items = query.order_by(BootcampPost.CreatedAt.desc()).offset(offset).limit(size).all()
+    items = query.order_by(BootcampPo.CreatedAt.desc()).offset(offset).limit(size).all()
+
+    # CategoryName 추가
+    result_items = []
+    for item in items:       # Tuple 언패킹
+        item_dict = {
+            "BootcampID": item.BootcampID,
+            "Title": item.Title,
+            "InstituteName": item.InstituteName,
+            "JobCategoryID": item.JobCategoryID,
+            "CategoryName": item.job_category.CategoryName,      # 추가된 값
+
+            "Location": item.Location,
+            "OnlineOffline": item.OnlineOffline,
+            "CostSupportType": item.CostSupportType,
+            "EducationContent": item.EducationContent,
+            "Qualification": item.Qualification,
+            "Benefits": item.Benefits,
+            "StartDate": item.StartDate,
+            "RegistrationDate": item.RegistrationDate,
+            "CloseDate": item.CloseDate,
+            "DetailUrl": item.DetailUrl,
+            "ViewCount": item.ViewCount,
+            "CreatedAt": item.CreatedAt,
+            "UpdatedAt": item.UpdatedAt,
+        }
+        result_items.append(item_dict)
 
     return {
         "total": total,
         "page": page,
         "size": size,
-        "items": items
+        "items": result_items
     }
 
 
-@router.get('/{bootcamp_id}', response_model = BootcampResponse)
+@router.get('/{bootcamp_id}', response_model = BootcampDetailResponse)
 def get_bootcamp_detail(
     bootcamp_id: int,
     db: Session = Depends(get_db)
@@ -166,8 +145,8 @@ def get_bootcamp_detail(
     """
     부트캠프 상세 조회 (조회수 증가)
     """
-    bootcamp = db.query(BootcampPost).filter(
-        BootcampPost.BootcampID == bootcamp_id
+    bootcamp = db.query(BootcampPo).filter(
+        BootcampPo.BootcampID == bootcamp_id
     ).first()
 
     if not bootcamp:
@@ -191,8 +170,8 @@ def update_bootcamp(
     부트캠프 게시글 수정
     """
     # 기존 부트캠프 조회
-    bootcamp = db.query(BootcampPost).filter(
-        BootcampPost.BootcampID == bootcamp_id
+    bootcamp = db.query(BootcampPo).filter(
+        BootcampPo.BootcampID == bootcamp_id
     ).first()
 
     if not bootcamp:
@@ -225,8 +204,8 @@ def delete_bootcamp(
     """
     부트캠프 게시글 삭제
     """
-    bootcamp = db.query(BootcampPost).filter(
-        BootcampPost.BootcampID == bootcamp_id
+    bootcamp = db.query(BootcampPo).filter(
+        BootcampPo.BootcampID == bootcamp_id
     ).first()
 
     if not bootcamp:

@@ -1,6 +1,119 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, and_
+from sqlalchemy.orm import Session
+from typing import List, Optional
 import logging
 
-router = APIRouter(prefix="/search", tags=["검색 기능"])
+from src.database import get_db
+from src import models
+from src.routers.comparison import job_to_dict, bootcamp_to_dict
+
+router = APIRouter(prefix="/search", tags=["검색"])
 
 logger = logging.getLogger(__name__)
+
+
+@router.get('/')
+def search(
+    keyword: Optional[str] = Query(None, description="검색어"),
+    skills: Optional[List[str]] = Query(None, description="기술 스택 필터 (배열)"),
+    source: Optional[str] = Query(None, description="출처 필터: 전체/채용/부트캠프"),
+    career_level_id: Optional[int] = Query(None, description="커리어 레벨 ID"),
+    experience_range_id: Optional[int] = Query(None, description="경력 구간 ID"),
+    limit: int = Query(20, ge=1, le=100, description="최대 반환 개수"),
+    db: Session = Depends(get_db),
+):
+    """
+    검색어와 필터로 채용공고(JobPost)와 부트캠프(BootcampPost)를 조회합니다.
+    """
+    try:
+        keyword_filters = []
+        if keyword:
+            keyword_filters = [
+                models.JobPost.Title.ilike(f"%{keyword}%"),
+                models.JobPost.CompanyName.ilike(f"%{keyword}%"),
+                models.JobPost.MainTasks.ilike(f"%{keyword}%"),
+                models.JobPost.Qualifications.ilike(f"%{keyword}%"),
+                models.JobPost.Preferences.ilike(f"%{keyword}%"),
+                models.JobPost.Benefits.ilike(f"%{keyword}%"),
+            ]
+
+        skill_filters = []
+        if skills:
+            skill_ids = [s.SkillID for s in db.query(models.Skill).filter(models.Skill.SkillName.in_(skills)).all()]
+            if skill_ids:
+                job_ids_with_skills = [
+                    jps.PostID for jps in db.query(models.JobPostSkill).filter(models.JobPostSkill.SkillID.in_(skill_ids)).all()
+                ]
+                if job_ids_with_skills:
+                    skill_filters.append(models.JobPost.PostID.in_(job_ids_with_skills))
+                else:
+                    skill_filters.append(False)
+            else:
+                skill_filters.append(False)
+
+        experience_filters = []
+        if experience_range_id:
+            exp_range = db.query(models.ExperienceRange).filter(models.ExperienceRange.RangeID == experience_range_id).first()
+            if exp_range:
+                if exp_range.MinYears is not None and exp_range.MaxYears is not None:
+                    experience_filters.append(
+                        and_(models.JobPost.MinExperienceYears >= exp_range.MinYears, models.JobPost.MinExperienceYears <= exp_range.MaxYears)
+                    )
+                elif exp_range.MinYears is not None:
+                    experience_filters.append(models.JobPost.MinExperienceYears >= exp_range.MinYears)
+                elif exp_range.MaxYears is not None:
+                    experience_filters.append(models.JobPost.MinExperienceYears <= exp_range.MaxYears)
+
+        jobs_q = db.query(models.JobPost)
+
+        all_filters = []
+        if keyword_filters:
+            all_filters.append(or_(*keyword_filters))
+        if skill_filters:
+            all_filters.extend(skill_filters)
+        if experience_filters:
+            all_filters.extend(experience_filters)
+
+        if all_filters:
+            jobs_q = jobs_q.filter(and_(*all_filters))
+
+        if source == "채용":
+            pass
+        elif source == "부트캠프":
+            jobs_q = jobs_q.filter(False)
+
+        jobs_q = jobs_q.limit(limit)
+        jobs = [job_to_dict(j) for j in jobs_q.all()]
+
+        bootcamp_keyword_filters = []
+        if keyword:
+            bootcamp_keyword_filters = [
+                models.BootcampPost.Title.ilike(f"%{keyword}%"),
+                models.BootcampPost.InstituteName.ilike(f"%{keyword}%"),
+                models.BootcampPost.EducationContent.ilike(f"%{keyword}%"),
+                models.BootcampPost.Qualification.ilike(f"%{keyword}%"),
+                models.BootcampPost.Benefits.ilike(f"%{keyword}%"),
+            ]
+
+        bootcamps_q = db.query(models.BootcampPost)
+
+        bootcamp_filters = []
+        if bootcamp_keyword_filters:
+            bootcamp_filters.append(or_(*bootcamp_keyword_filters))
+
+        if bootcamp_filters:
+            bootcamps_q = bootcamps_q.filter(and_(*bootcamp_filters))
+
+        if source == "부트캠프":
+            pass
+        elif source == "채용":
+            bootcamps_q = bootcamps_q.filter(False)
+
+        bootcamps_q = bootcamps_q.limit(limit)
+        bootcamps = [bootcamp_to_dict(b) for b in bootcamps_q.all()]
+
+        return {"jobs": jobs, "bootcamps": bootcamps}
+    except Exception as e:
+        logger.exception("Search failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")

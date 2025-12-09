@@ -1,52 +1,50 @@
 import { useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { authApi } from "../services/apiService";
 
 export default function CallbackPage() {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const code = params.get("code");
-    const state = params.get("state");
-    const provider = params.get("provider");
-
-    if (!code || !provider) {
-      alert("잘못된 접근입니다.");
-      navigate("/");
-      return;
-    }
-
-    const fetchToken = async () => {
+    const handleCallback = async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/auth/${provider}/callback?code=${code}&state=${state}`,
-          { method: "GET" }
-        );
+        // API를 호출하여 로그인 상태를 미리 확인
+        // 이렇게 하면 백엔드에서 쿠키를 설정한 후 프론트가 상태를 확인할 수 있음
+        const result = await authApi.getCurrentUser();
+        console.log("Callback - Login status:", result);
 
-        if (!res.ok) throw new Error("로그인 실패");
+        if (result.isLoggedIn) {
+          console.log("로그인 성공:", result.user);
+        }
 
-        const data = await res.json();
+        // 신규 회원가입인 경우 프로필 페이지로, 아니면 홈으로 이동
+        const isSignup = searchParams.get('signup') === 'true';
+        const targetPath = isSignup ? '/profile' : '/';
 
-        // ⭐ 여기서 토큰 저장
-        localStorage.setItem("access_token", data.accessToken);
-
-        // 원한다면 리프레시 토큰도 저장
-        // localStorage.setItem("refresh_token", data.refreshToken);
-
-        navigate("/"); // 로그인 완료 → 메인으로 이동
-      } catch (err) {
-        console.error(err);
-        alert("로그인 처리 중 오류 발생");
-        navigate("/");
+        // 짧은 딜레이 후 이동
+        setTimeout(() => {
+          navigate(targetPath, { replace: true });
+        }, 500);
+      } catch (error) {
+        console.error("Callback 처리 중 오류:", error);
+        // 에러가 나도 홈으로 이동
+        navigate("/", { replace: true });
       }
     };
 
-    fetchToken();
-  }, []);
+    handleCallback();
+  }, [navigate, searchParams]);
 
   return (
-    <div style={{ padding: "40px", textAlign: "center" }}>
-      🔄 로그인 처리 중입니다. 잠시만 기다려 주세요...
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full border-4 border-primary-200 border-t-primary-600 animate-spin"></div>
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">로그인 중입니다</h1>
+        <p className="text-slate-600">잠시만 기다려주세요...</p>
+      </div>
     </div>
   );
 }
