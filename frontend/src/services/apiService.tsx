@@ -46,6 +46,7 @@ export const searchApi = {
     careerLevelId?: number;
     experienceRangeId?: number;
     limit?: number;
+    randomOrder?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     
@@ -68,6 +69,9 @@ export const searchApi = {
     }
     if (params.limit) {
       queryParams.append('limit', params.limit.toString());
+    }
+    if (params.randomOrder) {
+      queryParams.append('random_order', 'true');
     }
 
     const url = `${API_BASE_URL}/search?${queryParams.toString()}`;

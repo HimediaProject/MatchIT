@@ -52,14 +52,6 @@ const SearchResultsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyword, source, careerLevelId, experienceRangeId, skills.length, ...skills])
 
-  // 필터 정보 표시
-  const filterInfo = []
-  if (keyword) filterInfo.push(`키워드: ${keyword}`)
-  if (skills.length > 0) filterInfo.push(`기술 스택: ${skills.join(', ')}`)
-  if (source && source !== '전체') filterInfo.push(`항목: ${source}`)
-  if (careerLevelId) filterInfo.push(`커리어 레벨 ID: ${careerLevelId}`)
-  if (experienceRangeId) filterInfo.push(`경력 구간 ID: ${experienceRangeId}`)
-
   const displayedJobs = view === 'jobs' ? jobs : jobs.slice(0, 5)
   const displayedBootcamps = view === 'bootcamps' ? bootcamps : bootcamps.slice(0, 5)
 
@@ -76,16 +68,6 @@ const SearchResultsPage = () => {
     <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">검색 결과</h1>
-        {filterInfo.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {filterInfo.map((info, idx) => (
-              <p key={idx} className="text-sm text-slate-600">{info}</p>
-            ))}
-          </div>
-        )}
-        {filterInfo.length === 0 && (
-          <p className="text-sm text-slate-600">필터를 선택해주세요.</p>
-        )}
       </div>
 
       {loading && <p>검색 중...</p>}
