@@ -34,6 +34,7 @@ async def naver_login():
         f"&client_id={NAVER_CLIENT_ID}"
         f"&redirect_uri={NAVER_REDIRECT_URI}"
         f"&state={state}"
+        f"&auth_type=reprompt"                      # 👈 자동로그인 방지
     )
     return RedirectResponse(url=naver_url)
 
