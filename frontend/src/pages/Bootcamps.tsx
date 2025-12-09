@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
 import { useNavigate } from 'react-router-dom'
 
@@ -12,7 +13,8 @@ type Bootcamp = {
   funding: '국비지원' | '본인부담'
   duration: string
   // level: '입문' | '중급' | '고급'
-  curriculum: string[]
+  curriculum: string  // 커리큘럼 전체 텍스트
+  closeDate: string | null  // 마감일 (필터링용)
 }
 
 // 날짜 차이 계산 (주 단위)
@@ -29,6 +31,23 @@ const calculateDuration = (startDate: string | null, closeDate: string | null): 
   const diffWeeks = Math.ceil(diffDays / 7)
 
   return `${diffWeeks}주`
+}
+
+/**
+ * 마감일이 지났는지 확인
+ * @param closeDate - 오픈일 문자열
+ * @returns true: 마감됨, false: 진행 중
+ */
+const isExpired = (closeDate: string | null): boolean => {
+  if (!closeDate) return false // 마감일 정보 없으면 진행 중으로 간주
+
+  const close = new Date(closeDate)
+  if (isNaN(close.getTime())) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // 시간 부분 제거 (오늘 00:00:00)
+
+  return close < today // 마감일이 오늘보다 이전이면 true
 }
 
 /**
@@ -58,37 +77,41 @@ const mapBackendToFrontend = (item: BootcampItem): Bootcamp => {
     funding: item.CostSupportType === '국비지원' ? '국비지원' : '본인부담',
     duration: calculateDuration(item.StartDate, item.CloseDate),
     // level: '입문',
-    curriculum: item.EducationContent?.split(',').map(s => s.trim()) || [],
+    curriculum: item.EducationContent || '',  // 커리큘럼 텍스트 그대로 사용
+    closeDate: item.CloseDate,  // 마감일 필터링용
   }
 }
 
+// 필터 옵션은 동적으로 생성됩니다 (아래 useMemo 참조)
+
 /**
- * 필터 옵션 (하드코딩)
- *
- * 주의: 이 값들은 실제 DB 데이터와 일치해야 필터가 작동합니다.
- * 만약 모든 항목이 같은 값으로 표시된다면, 아래 두 가지를 확인하세요:
- * 1. DB에 저장된 실제 CategoryName 값
- * 2. mapBackendToFrontend 함수의 매핑 로직
- *
- * 대안: 동적 필터 생성 (useMemo로 bootcamps에서 실제 값 추출)
+ * 텍스트를 지정된 길이로 자르고 "..." 추가
  */
-const fields = [
-  'Backend Developer', 'Frontend Developer', 'Full Stack Developer',
-  'AI/ML Engineer', 'Database Engineer', 'Data Engineer'
-]
-const modes: Bootcamp['mode'][] = ['온라인', '오프라인', '혼합']
-const fundings: Bootcamp['funding'][] = ['국비지원', '본인부담']
-// const levels: Bootcamp['level'][] = ['입문', '중급', '고급']
+const truncateText = (text: string,
+                      maxLength: number): string => {
+  if (!text || text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
+}
 
 const BootcampsPage = () => {
   const [bootcamps, setBootcamps] = useState<Bootcamp[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  const [total, setTotal] = useState(0)
+
+  // ✅ 필터 옵션용 전체 목록 (별도로 관리)
+  const [allFields, setAllFields] = useState<string[]>([])
+  const [allModes, setAllModes] = useState<Bootcamp['mode'][]>([])
+  const [allFundings, setAllFundings] = useState<Bootcamp['funding'][]>([])
 
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set())
   const [selectedModes, setSelectedModes] = useState<Set<Bootcamp['mode']>>(new Set())
   const [selectedFunding, setSelectedFunding] = useState<Set<Bootcamp['funding']>>(new Set())
   // const [selectedLevels, setSelectedLevels] = useState<Set<Bootcamp['level']>>(new Set())
+
+  // 마감된 공고 표시 여부
+  const [showExpired, setShowExpired] = useState(false)
 
   /**
    * 페이지네이션 상태
@@ -106,26 +129,62 @@ const BootcampsPage = () => {
    * 백엔드에서 데이터 가져오기
    *
    * 컴포넌트가 마운트될 때 한 번만 실행됩니다.
-   * 현재는 size: 100으로 설정하여 최대 100개의 부트캠프를 가져옵니다.
+   * size: 100으로 설정하여 최대 100개의 부트캠프를 가져옵니다.
    *
    * 서버 사이드 페이지네이션으로 변경하려면:
    * - useEffect 의존성에 currentPage 추가
    * - API 호출에 page: currentPage 전달
    */
+
+  // ✅ 초기 로딩: 필터 옵션만 가져오기 (한 번만 실행)
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        // 백엔드의 /filter-options API 호출
+        const options = await bootcampApi.getFilterOptions()
+
+        // 전체 필터 옵션 저장
+        setAllFields(options.categories)
+        setAllModes(options.modes.map(m =>
+          m === '혼합형' ? '혼합' : m
+        ) as Bootcamp['mode'][])
+        setAllFundings(options.fundings as Bootcamp['funding'][])
+      } catch (err) {
+        console.error('필터 옵션 로딩 실패: ', err)
+      }
+    }
+    fetchFilterOptions()
+  }, []) // 빈 배열 = 컴포넌트 마운트 시 한 번만 실행
+
+  // ✅ 데이터 가져오기 (필터 적용)
   useEffect(() => {
     const fetchBootcamps = async () => {
       try {
         setLoading(true)
-        const response = await bootcampApi.getBootcamps({ page: 1, size: 100 })
+        const response = await bootcampApi.getBootcamps({ 
+          page: currentPage,          // 현제 페이지 번호전달
+          size: itemsPerPage,         // 페이지당 항목 수 전달
+          show_expired: showExpired,  // 마감일 추가
+          online_offline: selectedModes.size > 0
+            ? Array.from(selectedModes).map(m => m === '혼합' ? '혼합형': m)
+            : undefined,
+          cost_support_type: selectedFunding.size > 0
+            ? Array.from(selectedFunding)
+            : undefined,
+          category_names: selectedFields.size > 0 //추가
+            ? Array.from(selectedFields)
+            : undefined
+        })
         const mapped = response.items.map(mapBackendToFrontend)
         setBootcamps(mapped)
+        setTotal(response.total)  // ✅ 서버 total 저장
         setError(null)
 
-        // 🔍 디버깅: 실제 데이터 확인
-        console.log('📊 첫 3개 부트캠프 데이터:', mapped.slice(0, 3))
-        console.log('📊 실제 field 값들:', [...new Set(mapped.map(b => b.field))])
-        console.log('📊 실제 mode 값들:', [...new Set(mapped.map(b => b.mode))])
-        console.log('📊 실제 funding 값들:', [...new Set(mapped.map(b => b.funding))])
+        // // 🔍 디버깅: 실제 데이터 확인
+        // console.log('📊 첫 3개 부트캠프 데이터:', mapped.slice(0, 3))
+        // console.log('📊 실제 field 값들:', [...new Set(mapped.map(b => b.field))])
+        // console.log('📊 실제 mode 값들:', [...new Set(mapped.map(b => b.mode))])
+        // console.log('📊 실제 funding 값들:', [...new Set(mapped.map(b => b.funding))])
       } catch (err) {
         setError('부트캠프 데이터를 불러오는데 실패했습니다.')
         console.error(err)
@@ -135,30 +194,37 @@ const BootcampsPage = () => {
     }
 
     fetchBootcamps()
-  }, [])
+  }, [currentPage, itemsPerPage, showExpired, selectedModes, selectedFunding, selectedFields]) // ✅ currentPage, itemsPerPage, showExpired가 바뀔 때마다 다시 호출
 
   /**
-   * 🔧 동적 필터 옵션 생성
+   * ❌ 더 이상 사용 안함: 필터 옵션은 allFields, allModes, allFundings 사용
    *
-   * 실제 데이터에서 중복 제거하여 필터 옵션을 생성합니다.
-   * 하드코딩된 필터 대신 이 값들을 사용하면 DB 데이터와 항상 일치합니다.
-   *
-   * 사용법:
-   * - 아래 주석을 해제하고 하드코딩된 fields, modes, fundings를 주석 처리
-   * - 필터 렌더링 부분에서 해당 변수를 사용
+   * 서버에서 별도로 필터 옵션을 가져오므로
+   * 현재 페이지의 bootcamps 데이터로 필터 옵션을 생성할 필요 없음
    */
-  const dynamicFields = useMemo(() => {
-    return Array.from(new Set(bootcamps.map(b => b.field))).sort()
-  }, [bootcamps])
+  // const fields = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.field))).sort()
+  // }, [bootcamps])
+  //
+  // const modes = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.mode)))
+  // }, [bootcamps]) as Bootcamp['mode'][]
+  //
+  // const fundings = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.funding)))
+  // }, [bootcamps]) as Bootcamp['funding'][]
+  // const dynamicFields = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.field))).sort()
+  // }, [bootcamps])
 
-  const dynamicModes = useMemo(() => {
-    return Array.from(new Set(bootcamps.map(b => b.mode)))
-  }, [bootcamps])
+  // const dynamicModes = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.mode)))
+  // }, [bootcamps])
 
-  const dynamicFundings = useMemo(() => {
-    return Array.from(new Set(bootcamps.map(b => b.funding)))
-  }, [bootcamps])
-  const [selectedLevels, setSelectedLevels] = useState<Set<Bootcamp['level']>>(new Set())
+  // const dynamicFundings = useMemo(() => {
+  //   return Array.from(new Set(bootcamps.map(b => b.funding)))
+  // }, [bootcamps])
+  // const [selectedLevels, setSelectedLevels] = useState<Set<Bootcamp['level']>>(new Set())
   const getInitialCompare = () => {
     try {
       if (typeof window === 'undefined') return []
@@ -206,26 +272,22 @@ const BootcampsPage = () => {
   }
 
   /**
-   * 필터링된 부트캠프 목록
+   * ❌ 더 이상 사용 안함: 클라이언트 사이드 필터링
    *
-   * useMemo를 사용하여 필터 조건이 변경될 때만 재계산합니다.
-   *
-   * 필터 로직:
-   * - 필터가 하나도 선택되지 않았으면 모든 항목 표시 (true)
-   * - 필터가 선택되었으면 해당 값을 가진 항목만 표시
-   * - 모든 필터는 AND 조건 (모두 만족해야 함)
-   *
-   * 예: "온라인" + "국비지원" 선택 → 온라인이면서 국비지원인 항목만 표시
+   * 서버 사이드 필터링을 사용하므로 클라이언트에서 따로 필터링할 필요 없음
+   * 서버에 필터 조건을 전달하면 이미 필터링된 결과를 받아옴
    */
-  const filteredBootcamps = useMemo(() => {
-    return bootcamps.filter((boot) => {
-      const fieldMatch = selectedFields.size ? selectedFields.has(boot.field) : true
-      const modeMatch = selectedModes.size ? selectedModes.has(boot.mode) : true
-      const fundingMatch = selectedFunding.size ? selectedFunding.has(boot.funding) : true
-      // const levelMatch = selectedLevels.size ? selectedLevels.has(boot.level) : true
-      return fieldMatch && modeMatch && fundingMatch
-    })
-  }, [bootcamps, selectedFields, selectedFunding, selectedModes])
+  // const filteredBootcamps = useMemo(() => {
+  //   return bootcamps.filter((boot) => {
+  //     const fieldMatch = selectedFields.size ? selectedFields.has(boot.field) : true
+  //     const modeMatch = selectedModes.size ? selectedModes.has(boot.mode) : true
+  //     const fundingMatch = selectedFunding.size ? selectedFunding.has(boot.funding) : true
+  //
+  //     const expiredMatch = showExpired ? true : !isExpired(boot.closeDate)
+  //
+  //     return fieldMatch && modeMatch && fundingMatch && expiredMatch
+  //   })
+  // }, [bootcamps, selectedFields, selectedFunding, selectedModes, showExpired])
 
   /**
    * 필터가 변경되면 첫 페이지로 이동
@@ -252,10 +314,19 @@ const BootcampsPage = () => {
    * currentBootcamps: 현재 페이지에 표시할 부트캠프 배열
    *   - slice(10, 20) → 10번~19번 인덱스의 항목 (총 10개)
    */
-  const totalPages = Math.ceil(filteredBootcamps.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentBootcamps = filteredBootcamps.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(total / itemsPerPage)
+  const currentBootcamps = bootcamps // 🛠️ slice 필요없음
+  /**
+   * 하단 부분은
+   * 서버 연결 없이 페이지네이션 기능을
+   * 검증할 때 사용함
+   */
+  // const totalPages = Math.ceil(filteredBootcamps.length / itemsPerPage) // 클라이언트 페이지네이션
+  // const startIndex = (currentPage - 1) * itemsPerPage // 클라이언트 페이지네이션
+  // const endIndex = startIndex + itemsPerPage // 클라이언트 페이지네이션
+  // const totalPages = Math.ceil(filteredBootcamps.length / itemsPerPage) // 클라이언트 페이지네이션
+  // const currentBootcamps = filteredBootcamps.slice(startIndex, endIndex) // 클라이언트 페이지네이션
+
 
   /**
    * 페이지 번호 배열 생성
@@ -335,7 +406,7 @@ const BootcampsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">분야</h3>
                 <div className="mt-3 space-y-2">
-                  {fields.map((field) => (
+                  {allFields.map((field) => (
                     <label key={field} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
@@ -352,7 +423,7 @@ const BootcampsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">수강 형태</h3>
                 <div className="mt-3 space-y-2">
-                  {modes.map((mode) => (
+                  {allModes.map((mode) => (
                     <label key={mode} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
@@ -369,7 +440,7 @@ const BootcampsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">가격/지원</h3>
                 <div className="mt-3 space-y-2">
-                  {fundings.map((fund) => (
+                  {allFundings.map((fund) => (
                     <label key={fund} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
@@ -382,13 +453,28 @@ const BootcampsPage = () => {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">마감 공고</h3>
+                <div className="mt-3 space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={showExpired}
+                      onChange={(e) => setShowExpired(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    마감된 공고 보기
+                  </label>
+                </div>
+              </div>
             </div>
           </aside>
 
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-slate-800">
-                총 {filteredBootcamps.length}건
+                총 {total}건
                 {totalPages > 0 && <span className="text-slate-500"> (페이지 {currentPage}/{totalPages})</span>}
               </p>
             </div>
@@ -409,20 +495,25 @@ const BootcampsPage = () => {
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.funding}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.duration}</span>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {boot.curriculum.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700"
-                        >
-                          {item}
+                    {boot.curriculum && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {truncateText(boot.curriculum, 50)}
+                        </p>
+                        <span className="text-xs text-slate-600">
+                          <strong>마감일: {(boot.closeDate && boot.closeDate.split('T')[0]) || '상시'}</strong>
                         </span>
-                      ))}
-                    </div>
+                      </div>
+                      
+                    )}
                   </div>
-                  <button className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto">
+                  <Link
+                    to={`/bootcamps/${boot.id}`}
+                    className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto text-center"
+                  >
                     상세 보기
-                  </button>
+                  </Link>
+                  {/* </button> -> 확인 필요. */}
                   <button
                     onClick={() => addToCompare(boot)}
                     className="w-full rounded-x2 border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto"
@@ -431,7 +522,7 @@ const BootcampsPage = () => {
                   </button>
                 </div>
               ))}
-              {!filteredBootcamps.length && (
+              {!bootcamps.length && !loading && (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
                   조건에 맞는 부트캠프가 없습니다. 필터를 조정하거나 초기화해주세요.
                 </div>
