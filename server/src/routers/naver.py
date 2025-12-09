@@ -34,6 +34,7 @@ async def naver_login():
         f"&client_id={NAVER_CLIENT_ID}"
         f"&redirect_uri={NAVER_REDIRECT_URI}"
         f"&state={state}"
+        f"&auth_type=reprompt"                      # 👈 자동로그인 방지
     )
     return RedirectResponse(url=naver_url)
 
@@ -133,7 +134,8 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
 
     # 4. 세션 DB 저장
     try:
-        session_id = uuid.uuid4()
+        session_id = str(uuid.uuid4())
+        expires_in = int(token_json.get("expires_in", 60 * 60 * 6))
         expires_at = datetime.now() + timedelta(seconds=expires_in)
 
         session = UserSession(

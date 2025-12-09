@@ -291,8 +291,8 @@ class UserSession(Base):
 
     SessionID = Column("sessionid", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     UserID = Column("userid", Integer, ForeignKey("users.userid"), nullable=False)
-    AccessToken = Column("accesstoken", String(255), nullable=False)
-    RefreshToken = Column("refreshtoken", String(255))
+    AccessToken = Column("accesstoken", String(1000), nullable=False)
+    RefreshToken = Column("refreshtoken", String(1000))
     ExpiresAt = Column("expiresat", DateTime(timezone=True), nullable=False)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
 

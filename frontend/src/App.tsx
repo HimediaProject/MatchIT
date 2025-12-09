@@ -3,6 +3,7 @@ import Footer from './components/Footer'
 import Header from './components/Header'
 import Chatbot from './components/Chatbot'
 import BootcampsPage from './pages/Bootcamps'
+import BootcampDetailPage from './pages/BootcampDetail'
 import ComparePage from './pages/Compare'
 import HomePage from './pages/Home'
 import JobsPage from './pages/Jobs'
@@ -32,6 +33,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/bootcamps" element={<BootcampsPage />} />
+        <Route path="/bootcamps/:id" element={<BootcampDetailPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/login" element={<LoginPage />} />
