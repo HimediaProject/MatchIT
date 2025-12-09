@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { skillsApi, metaApi } from '../services/apiService'
+import { skillsApi, metaApi, searchApi } from '../services/apiService'
 
 // 아이콘 SVG 컴포넌트 (의존성 제거를 위해 인라인 정의)
 const SearchIcon = () => (
@@ -118,28 +118,87 @@ const HomePage = () => {
     { title: '풀스택 포지션', company: '커머스 스케일업', tag: 'Next.js · Node', type: '채용' },
   ]
   
-  const recommendations: Recommendation[] = [
-    {
-      title: '초보 Python 개발자에게 인기 있는 채용 포지션',
-      description: '웹 크롤링/ETL 경험이 있으면 우대, Django·FastAPI 기반 서비스 운영 팀.',
-      tags: ['백엔드', 'Python', 'Django'],
-    },
-    {
-      title: '데이터 분석 입문자를 위한 국비 부트캠프',
-      description: '기초 파이썬부터 SQL, Tableau 대시보드까지 12주 완주 커리큘럼.',
-      tags: ['데이터', 'SQL', '시각화'],
-    },
-    {
-      title: 'AI 서비스 PoC 경험을 쌓을 수 있는 스타트업 포지션',
-      description: 'LLM API 연동, RAG 파이프라인 구축 경험자를 우대하는 초기팀.',
-      tags: ['AI', 'LLM', 'Vector DB'],
-    },
-    {
-      title: '클라우드 기반 백엔드 부트캠프',
-      description: 'AWS 기반 CI/CD와 마이크로서비스 아키텍처를 실습 중심으로 학습.',
-      tags: ['백엔드', 'AWS', 'DevOps'],
-    },
-  ]
+  // 추천 결과 상태
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true)
+
+  // DB에서 랜덤 채용공고와 부트캠프공고 가져오기
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setLoadingRecommendations(true)
+        
+        // 채용공고 2개 가져오기
+        const jobsResponse = await searchApi.searchWithFilters({
+          source: '채용',
+          limit: 2,
+          randomOrder: true,
+        })
+        
+        // 부트캠프공고 2개 가져오기
+        const bootcampsResponse = await searchApi.searchWithFilters({
+          source: '부트캠프',
+          limit: 2,
+          randomOrder: true,
+        })
+
+        const jobs = jobsResponse.jobs || []
+        const bootcamps = bootcampsResponse.bootcamps || []
+
+        // 채용공고를 Recommendation 형태로 변환
+        const jobRecommendations: Recommendation[] = jobs.slice(0, 2).map((job: any) => ({
+          title: job.title || '채용공고',
+          description: job.main_tasks 
+            ? (job.main_tasks.length > 100 ? job.main_tasks.slice(0, 100) + '...' : job.main_tasks)
+            : `${job.company_name || ''}에서 ${job.title || ''} 포지션을 모집 중입니다.`,
+          tags: job.skills && job.skills.length > 0 
+            ? job.skills.slice(0, 3) 
+            : ['채용', job.job_category || 'IT'].filter(Boolean),
+        }))
+
+        // 부트캠프공고를 Recommendation 형태로 변환
+        const bootcampRecommendations: Recommendation[] = bootcamps.slice(0, 2).map((bootcamp: any) => ({
+          title: bootcamp.title || '부트캠프',
+          description: bootcamp.education_content
+            ? (bootcamp.education_content.length > 100 ? bootcamp.education_content.slice(0, 100) + '...' : bootcamp.education_content)
+            : `${bootcamp.institute_name || ''}에서 제공하는 ${bootcamp.title || ''} 과정입니다.`,
+          tags: ['부트캠프', bootcamp.location || '온라인', bootcamp.cost_support_type || '국비'].filter(Boolean),
+        }))
+
+        // 상단 2개는 채용공고, 하단 2개는 부트캠프공고로 합치기
+        setRecommendations([...jobRecommendations, ...bootcampRecommendations])
+      } catch (error) {
+        console.error('Failed to fetch recommendations:', error)
+        // 에러 발생 시 기본값 설정
+        setRecommendations([
+          {
+            title: '초보 Python 개발자에게 인기 있는 채용 포지션',
+            description: '웹 크롤링/ETL 경험이 있으면 우대, Django·FastAPI 기반 서비스 운영 팀.',
+            tags: ['백엔드', 'Python', 'Django'],
+          },
+          {
+            title: 'AI 서비스 PoC 경험을 쌓을 수 있는 스타트업 포지션',
+            description: 'LLM API 연동, RAG 파이프라인 구축 경험자를 우대하는 초기팀.',
+            tags: ['AI', 'LLM', 'Vector DB'],
+          },
+          {
+            title: '데이터 분석 입문자를 위한 국비 부트캠프',
+            description: '기초 파이썬부터 SQL, Tableau 대시보드까지 12주 완주 커리큘럼.',
+            tags: ['데이터', 'SQL', '시각화'],
+          },
+          {
+            title: '클라우드 기반 백엔드 부트캠프',
+            description: 'AWS 기반 CI/CD와 마이크로서비스 아키텍처를 실습 중심으로 학습.',
+            tags: ['백엔드', 'AWS', 'DevOps'],
+          },
+        ])
+      } finally {
+        setLoadingRecommendations(false)
+      }
+    }
+
+    fetchRecommendations()
+  }, [])
 
   const toggleStack = (stack: string) => {
     if (selectedStacks.includes(stack)) {
@@ -172,7 +231,7 @@ const HomePage = () => {
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                to="/"
+                to="/login"
                 className="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:shadow-lg hover:shadow-primary-200"
               >
                 지금 바로 추천 받기
@@ -182,6 +241,12 @@ const HomePage = () => {
                 className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:text-primary-700"
               >
                 채용공고 둘러보기
+              </Link>
+              <Link
+                to="/bootcamps"
+                className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:text-primary-700"
+              >
+                부트캠프 둘러보기
               </Link>
             </div>
 
@@ -236,18 +301,6 @@ const HomePage = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-6 flex items-center justify-between rounded-2xl border border-dashed border-primary-200 bg-primary-50/60 p-4">
-                <div>
-                  <p className="text-sm font-semibold text-primary-800">오른쪽 영역은 Illustration/Chart 자리</p>
-                  <p className="text-xs text-primary-700">
-                    지원 현황, 성장 곡선 등 원하는 그래프나 이미지로 교체하세요.
-                  </p>
-                </div>
-                <div className="hidden h-16 w-16 items-center justify-center rounded-2xl border border-primary-200 text-xs font-semibold text-primary-700 md:flex">
-                  Placeholder
-                </div>
               </div>
             </div>
           </div>
@@ -505,10 +558,10 @@ const HomePage = () => {
         <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-primary-700">추천 결과 미리보기</p>
-              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">채용/부트캠프 큐레이션</h2>
+              <p className="text-sm font-semibold text-primary-700">인기 공고 미리보기</p>
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">채용과 부트캠프 인기 공고</h2>
               <p className="mt-2 text-sm text-slate-600">
-                입력한 스택과 커리어 단계에 맞춰 생성된 추천 리스트 예시입니다.
+                인기있는 채용공고와 부트캠프를 한 번에 확인해보세요.
               </p>
             </div>
             <Link
@@ -520,30 +573,55 @@ const HomePage = () => {
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2">
-            {recommendations.map((rec) => (
-              <div
-                key={rec.title}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-slate-900">{rec.title}</h3>
-                  <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-                    추천
-                  </span>
+            {loadingRecommendations ? (
+              <>
+                <div className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div>
                 </div>
-                <p className="text-sm text-slate-600">{rec.description}</p>
-                <div className="flex flex-wrap gap-2">
-                  {rec.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200"
-                    >
-                      {tag}
+                <div className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div>
+                </div>
+                <div className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div>
+                </div>
+                <div className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div>
+                </div>
+              </>
+            ) : (
+              recommendations.map((rec, index) => (
+                <div
+                  key={`${rec.title}-${index}`}
+                  className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="line-clamp-2 flex-1 text-lg font-bold text-slate-900">{rec.title}</h3>
+                    <span className="shrink-0 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+                      {index < 2 ? '채용' : '부트캠프'}
                     </span>
-                  ))}
+                  </div>
+                  <p className="line-clamp-3 flex-1 text-sm text-slate-600">{rec.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {rec.tags.map((tag, tagIndex) => (
+                      <span
+                        key={`${tag}-${tagIndex}`}
+                        className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>
