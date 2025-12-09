@@ -129,7 +129,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     # 4. [세션 DB 저장] UserSessions 테이블에 세션 정보 저장
     try:
-        session_id = uuid.uuid4()
+        session_id = str(uuid.uuid4())
         expires_at = datetime.now() + timedelta(seconds=expires_in)
         
         user_session = UserSession(

@@ -16,8 +16,7 @@ export const authApi = {
         return { isLoggedIn: false, user: null }
       }
 
-      const data = await response.json()
-      return data
+      return response.json()
     } catch (error) {
       console.error('getCurrentUser failed:', error)
       return { isLoggedIn: false, user: null }
@@ -36,10 +35,11 @@ export const searchApi = {
   async searchWithFilters(params: {
     keyword?: string
     skills?: string[]
-    source?: 'all' | 'jobs' | 'bootcamps'
+    source?: '전체' | '채용' | '부트캠프'
     careerLevelId?: number
     experienceRangeId?: number
     limit?: number
+    randomOrder?: boolean
   }) {
     const queryParams = new URLSearchParams()
 
@@ -47,12 +47,13 @@ export const searchApi = {
     if (params.skills && params.skills.length > 0) {
       params.skills.forEach((skill) => queryParams.append('skills', skill))
     }
-    if (params.source && params.source !== 'all') {
-      queryParams.append('source', params.source === 'jobs' ? '채용' : '부트캠프')
+    if (params.source && params.source !== '전체') {
+      queryParams.append('source', params.source)
     }
     if (params.careerLevelId) queryParams.append('career_level_id', params.careerLevelId.toString())
     if (params.experienceRangeId) queryParams.append('experience_range_id', params.experienceRangeId.toString())
     if (params.limit) queryParams.append('limit', params.limit.toString())
+    if (params.randomOrder) queryParams.append('random_order', 'true')
 
     const url = `${API_BASE_URL}/search?${queryParams.toString()}`
     const res = await fetch(url)
