@@ -558,10 +558,10 @@ const HomePage = () => {
         <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-primary-700">추천 결과 미리보기</p>
-              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">채용/부트캠프 큐레이션</h2>
+              <p className="text-sm font-semibold text-primary-700">인기 공고 미리보기</p>
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">채용과 부트캠프 인기 공고</h2>
               <p className="mt-2 text-sm text-slate-600">
-                입력한 스택과 커리어 단계에 맞춰 생성된 추천 리스트 예시입니다.
+                인기있는 채용공고와 부트캠프를 한 번에 확인해보세요.
               </p>
             </div>
             <Link
