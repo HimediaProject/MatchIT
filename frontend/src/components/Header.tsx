@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { authApi } from '../services/apiService'
 
 type NavItem = {
   label: string
@@ -13,37 +14,79 @@ const navItems: NavItem[] = [
   { label: '프로필', to: '/profile' },
 ]
 
-// Cookie helper used to check login state
-const getCookie = (name: string): string | null => {
-  if (typeof document === 'undefined') return null
-  const value = `; ${document.cookie}`
-  const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) return parts.pop()?.split(';').shift() ?? null
-  return null
-}
+const LOGOUT_KEYS = [
+  'isLogin',
+  'isLoggedIn',
+  'isNewUser',
+  'access_token',
+  'userName',
+  'userEmail',
+  'kakao_access_token',
+  'naver_access_token',
+  'google_access_token',
+]
+
+const COOKIE_NAMES = ['session_id', 'user_id', 'is_login', 'kakao_access_token', 'naver_access_token', 'google_access_token']
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  useEffect(() => {
-    const checkLoginStatus = () => {
-      const isLoggedInLocal = localStorage.getItem('isLoggedIn') === 'true'
-      const token = getCookie('kakao_access_token')
-      setIsLoggedIn(isLoggedInLocal || !!token)
+  const checkLoginStatus = useCallback(async () => {
+    try {
+      const result = await authApi.getCurrentUser()
+      setIsLoggedIn(result.isLoggedIn === true)
+    } catch (error) {
+      console.error('Error checking login status:', error)
+      setIsLoggedIn(false)
     }
-
-    checkLoginStatus()
-    const interval = setInterval(checkLoginStatus, 1000)
-    return () => clearInterval(interval)
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userName')
-    localStorage.removeItem('userEmail')
-    document.cookie = 'kakao_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-    document.cookie = 'kakao_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-    setIsLoggedIn(false)
+  useEffect(() => {
+    checkLoginStatus()
+    const interval = setInterval(checkLoginStatus, 5000)
+    return () => clearInterval(interval)
+  }, [checkLoginStatus])
+
+  const handleLogout = async () => {
+    try {
+      LOGOUT_KEYS.forEach((key) => {
+        try {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+        } catch (err) {
+          console.warn('Failed to clear key', key, err)
+        }
+      })
+
+      try {
+        const dbs = await window.indexedDB.databases?.()
+        if (dbs) dbs.forEach((db) => db.name && indexedDB.deleteDatabase(db.name))
+      } catch (err) {
+        console.warn('IndexedDB cleanup failed', err)
+      }
+
+      COOKIE_NAMES.forEach((name) => {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        document.cookie = `${name}=; max-age=0; path=/;`
+      })
+
+      try {
+        await fetch(`${API_BASE_URL}/auth/kakao/logout`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        })
+      } catch (err) {
+        console.warn('Logout request failed', err)
+      }
+    } finally {
+      setIsLoggedIn(false)
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 200)
+    }
   }
 
   return (
