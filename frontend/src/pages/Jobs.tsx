@@ -1,80 +1,33 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { fetchJobList, type JobPost } from '../api/jobposts'
 
-type Job = {
-  id: string
-  company: string
-  position: string
-  category: string
-  skills: string[]
-  location: string
-  salary: string
-  experience: '신입' | '1~3년' | '3~5년' | '5년+'
-}
-
-const jobCategories = ['백엔드', '프론트엔드', '데이터', 'AI', '모바일']
+const jobCategories = ['개발', '데이터', '디자인', 'AI', '프로덕트']
 const jobStacks = ['Python', 'React', 'TypeScript', 'SQL', 'Java', 'Node.js']
-const experienceFilters: Job['experience'][] = ['신입', '1~3년', '3~5년', '5년+']
-
-const jobsSeed: Job[] = [
-  {
-    id: 'job-1',
-    company: '핀테크 스타트업',
-    position: '백엔드 엔지니어',
-    category: '백엔드',
-    skills: ['Python', 'Django', 'SQL'],
-    location: '서울 · 송파',
-    salary: '연 4,500만~6,000만원',
-    experience: '1~3년',
-  },
-  {
-    id: 'job-2',
-    company: '커머스 스케일업',
-    position: '프론트엔드 엔지니어',
-    category: '프론트엔드',
-    skills: ['React', 'TypeScript', 'Node.js'],
-    location: '서울 · 강남',
-    salary: '연 5,000만~7,000만원',
-    experience: '3~5년',
-  },
-  {
-    id: 'job-3',
-    company: '데이터 플랫폼사',
-    position: '데이터 분석가',
-    category: '데이터',
-    skills: ['Python', 'SQL', 'Tableau'],
-    location: '전국 · 리모트',
-    salary: '연 4,000만~5,500만원',
-    experience: '신입',
-  },
-  {
-    id: 'job-4',
-    company: 'AI 리서치랩',
-    position: '머신러닝 엔지니어',
-    category: 'AI',
-    skills: ['Python', 'PyTorch', 'LLM'],
-    location: '서울 · 성수',
-    salary: '연 6,000만~8,500만원',
-    experience: '5년+',
-  },
-]
+const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
 
 const JobsPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
-  const [selectedExperience, setSelectedExperience] = useState<Job['experience'] | ''>('')
+  const [selectedExperience, setSelectedExperience] = useState<string>('')
+
   const [sort, setSort] = useState<'latest' | 'deadline' | 'salary'>('latest')
+
+  const [page, setPage] = useState<number>(1)
+  const size = 10
+
   const getInitialCompare = () => {
     try {
       if (typeof window === 'undefined') return []
       const raw = localStorage.getItem('compare_jobs')
-      return raw ? (JSON.parse(raw) as Job[]) : []
+      return raw ? (JSON.parse(raw) as JobPost[]) : []
     } catch {
       return []
     }
   }
 
-  const [compareList, setCompareList] = useState<Job[]>(getInitialCompare)
+  const [compareList, setCompareList] = useState<JobPost[]>(getInitialCompare)
 
   useEffect(() => {
     try {
@@ -84,25 +37,22 @@ const JobsPage = () => {
 
   const navigate = useNavigate()
 
-  const addToCompare = (job: Job) => {
-    setCompareList((prev) => {
-      if (prev.find((j) => j.id === job.id)) {
-        window.alert('이미 비교함에 담긴 공고입니다.')
-        return prev
-      }
-      if (prev.length >= 3) {
-        window.alert('비교함은 최대 3개까지 담을 수 있습니다.')
-        return prev
-      }
-      return [...prev, job]
-    })
-  }
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['jobList', page, sort],
+    queryFn: () =>
+      fetchJobList({
+        page,
+        size,
+        sort,
+      }),
+    keepPreviousData: true,
+  })
 
-  const removeFromCompare = (id: string) => {
-    setCompareList((prev) => prev.filter((j) => j.id !== id))
-  }
-
-  const clearCompare = () => setCompareList([])
+  const jobs = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / size))
+  const chunkStart = Math.floor((page - 1) / 5) * 5 + 1
+  const chunkEnd = Math.min(chunkStart + 4, totalPages)
 
   const toggleSet = (value: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
     setter((prev) => {
@@ -112,36 +62,107 @@ const JobsPage = () => {
     })
   }
 
-  const filteredJobs = useMemo(() => {
-    const sorted = [...jobsSeed].sort((a, b) => {
-      if (sort === 'salary') return b.salary.localeCompare(a.salary)
-      return a.id.localeCompare(b.id)
+  const addToCompare = (job: JobPost) => {
+    setCompareList((prev) => {
+      if (prev.find((j) => j.PostID === job.PostID)) {
+        window.alert('이미 비교 목록에 있는 채용입니다.')
+        return prev
+      }
+      if (prev.length >= 3) {
+        window.alert('최대 3개까지만 비교할 수 있습니다.')
+        return prev
+      }
+      return [...prev, job]
     })
+  }
 
-    return sorted.filter((job) => {
-      const categoryMatch = selectedCategories.size ? selectedCategories.has(job.category) : true
-      const stackMatch = selectedStacks.size ? job.skills.some((skill) => selectedStacks.has(skill)) : true
-      const expMatch = selectedExperience ? job.experience === selectedExperience : true
+  const removeFromCompare = (id: number) => {
+    setCompareList((prev) => prev.filter((j) => j.PostID !== id))
+  }
+
+  const clearCompare = () => setCompareList([])
+
+  const parseDateValue = (value?: string | null) => {
+    if (!value) return null
+    const ts = Date.parse(value)
+    return Number.isNaN(ts) ? null : ts
+  }
+
+  const parseSalaryValue = (salary?: string | null) => {
+    if (!salary) return null
+    const matches = salary.match(/\d+/g)
+    if (!matches) return null
+    const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n))
+    if (!nums.length) return null
+    return Math.max(...nums)
+  }
+
+  const compareWithNulls = (a: number | null, b: number | null, direction: 'asc' | 'desc') => {
+    if (a === null && b === null) return 0
+    if (a === null) return 1
+    if (b === null) return -1
+    return direction === 'asc' ? a - b : b - a
+  }
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      const categoryMatch = selectedCategories.size
+        ? selectedCategories.has(job.JobCategoryID?.toString() ?? '')
+        : true
+
+      const stackMatch = selectedStacks.size ? job.Skills.some((s) => selectedStacks.has(s)) : true
+
+      const expMatch = selectedExperience ? job.ExperienceRequirement === selectedExperience : true
+
       return categoryMatch && stackMatch && expMatch
     })
-  }, [selectedCategories, selectedExperience, selectedStacks, sort])
+  }, [jobs, selectedCategories, selectedStacks, selectedExperience])
+
+  const sortedJobs = useMemo(() => {
+    const list = [...filteredJobs]
+    list.sort((a, b) => {
+      if (sort === 'latest') {
+        const aTs = parseDateValue(a.PostedDate) ?? parseDateValue(a.CreatedAt)
+        const bTs = parseDateValue(b.PostedDate) ?? parseDateValue(b.CreatedAt)
+        return compareWithNulls(aTs, bTs, 'desc')
+      }
+
+      if (sort === 'deadline') {
+        const aDeadline = parseDateValue(a.CloseDate)
+        const bDeadline = parseDateValue(b.CloseDate)
+        return compareWithNulls(aDeadline, bDeadline, 'asc')
+      }
+
+      const aSalary = parseSalaryValue(a.Salary)
+      const bSalary = parseSalaryValue(b.Salary)
+      return compareWithNulls(aSalary, bSalary, 'desc')
+    })
+    return list
+  }, [filteredJobs, sort])
+
+  if (isLoading) {
+    return <div className="flex justify-center py-10">채용을 불러오는 중입니다...</div>
+  }
+
+  if (isError) {
+    return <div className="py-10 text-red-500">API 오류: {(error as any)?.message}</div>
+  }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-primary-700">채용 리스트</p>
-          <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">맞춤 채용공고 모아보기</h1>
-          <p className="text-sm text-slate-600">
-            필터를 조합해 원하는 포지션을 빠르게 찾으세요. 추후 API 연동으로 실제 데이터가 노출됩니다.
-          </p>
+          <p className="text-sm font-semibold text-primary-700">실시간 채용 목록</p>
+          <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">맞춤 수집된 테크 채용</h1>
+          <p className="text-sm text-slate-600">빠른 쿼리는 곧 FastAPI /jobs 엔드포인트와 연결될 예정입니다.</p>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[260px_1fr]">
+          {/* 필터 */}
           <aside className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-soft">
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">직무 카테고리</h3>
+                <h3 className="text-sm font-semibold text-slate-900">분야</h3>
                 <div className="mt-3 space-y-2">
                   {jobCategories.map((cat) => (
                     <label key={cat} className="flex items-center gap-2 text-sm text-slate-700">
@@ -149,7 +170,7 @@ const JobsPage = () => {
                         type="checkbox"
                         checked={selectedCategories.has(cat)}
                         onChange={() => toggleSet(cat, setSelectedCategories)}
-                        className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 rounded border-slate-300 text-primary-600"
                       />
                       {cat}
                     </label>
@@ -158,7 +179,7 @@ const JobsPage = () => {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">기술 스택</h3>
+                <h3 className="text-sm font-semibold text-slate-900">스택</h3>
                 <div className="mt-3 space-y-2">
                   {jobStacks.map((stack) => (
                     <label key={stack} className="flex items-center gap-2 text-sm text-slate-700">
@@ -166,7 +187,7 @@ const JobsPage = () => {
                         type="checkbox"
                         checked={selectedStacks.has(stack)}
                         onChange={() => toggleSet(stack, setSelectedStacks)}
-                        className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 rounded border-slate-300 text-primary-600"
                       />
                       {stack}
                     </label>
@@ -185,14 +206,14 @@ const JobsPage = () => {
                         value={exp}
                         checked={selectedExperience === exp}
                         onChange={() => setSelectedExperience(exp)}
-                        className="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 border-slate-300 text-primary-600"
                       />
                       {exp}
                     </label>
                   ))}
                   <button
                     onClick={() => setSelectedExperience('')}
-                    className="mt-2 text-xs font-semibold text-primary-700 underline underline-offset-2"
+                    className="mt-2 text-xs font-semibold text-primary-700 underline"
                   >
                     경력 필터 초기화
                   </button>
@@ -201,42 +222,42 @@ const JobsPage = () => {
             </div>
           </aside>
 
+          {/* 목록 */}
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-slate-800">
-                총 {filteredJobs.length}건 · 정렬
-              </p>
-              <div className="flex items-center gap-2 text-sm text-slate-700">
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as typeof sort)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                >
-                  <option value="latest">최신순</option>
-                  <option value="deadline">마감임박</option>
-                  <option value="salary">연봉 높은 순</option>
-                </select>
-              </div>
+              <p className="text-sm font-semibold text-slate-800">결과 {filteredJobs.length}건</p>
+
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="latest">최신순</option>
+                <option value="deadline">마감 임박순</option>
+                <option value="salary">연봉 높은순</option>
+              </select>
             </div>
 
             <div className="space-y-4">
-              {filteredJobs.map((job) => (
+              {sortedJobs.map((job) => (
                 <div
-                  key={job.id}
+                  key={job.PostID}
                   className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
                 >
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-primary-700">{job.company}</p>
-                    <h3 className="text-lg font-bold text-slate-900">{job.position}</h3>
+                    <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
+                    <h3 className="text-lg font-bold text-slate-900">{job.Title}</h3>
+
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-                      <span className="rounded-full bg-slate-100 px-3 py-1">{job.category}</span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1">{job.location}</span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1">{job.salary}</span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1">{job.experience}</span>
-                      
+                      <span className="rounded-full bg-slate-100 px-3 py-1">{job.Location}</span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1">
+                        {job.ExperienceRequirement ?? '경력 무관'}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1">조회수 {job.ViewCount}</span>
                     </div>
+
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {job.skills.map((skill) => (
+                      {job.Skills.map((skill) => (
                         <span
                           key={skill}
                           className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700"
@@ -246,55 +267,118 @@ const JobsPage = () => {
                       ))}
                     </div>
                   </div>
-                  <button className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto">
-                    상세 보기
-                  </button>
-                  <button
-                    onClick={() => addToCompare(job)}
-                    className="w-full rounded-x2 border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto"
-                  >
-                    {compareList.find((j) => j.id === job.id) ? '담겼음' : '비교함 담기'}
-                  </button>
+
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <button
+                      onClick={() => navigate(`/jobs/${job.PostID}`)}
+                      className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
+                    >
+                      상세보기
+                    </button>
+
+                    <button
+                      onClick={() => addToCompare(job)}
+                      className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
+                    >
+                      {compareList.find((j) => j.PostID === job.PostID) ? '추가됨' : '비교 담기'}
+                    </button>
+                  </div>
                 </div>
               ))}
+
               {!filteredJobs.length && (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-                  조건에 맞는 공고가 없습니다. 필터를 조정하거나 초기화해주세요.
+                  조건에 맞는 채용이 없습니다. 필터를 조정해 다시 확인해주세요.
                 </div>
               )}
             </div>
+
+            {/* 고급 페이지네이션: 1~5 / 6~10 단위 */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={page === 1}
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
+                  >
+                    이전
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: chunkEnd - chunkStart + 1 }, (_, idx) => chunkStart + idx).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`h-9 w-9 rounded-full text-sm font-semibold ${
+                          p === page
+                            ? 'bg-primary-600 text-white shadow-soft'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-200 hover:text-primary-700'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
+                  >
+                    다음
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <button
+                    disabled={chunkStart === 1}
+                    onClick={() => setPage((prev) => Math.max(1, prev - 5))}
+                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
+                  >
+                    ◀ 1~5
+                  </button>
+                  <span className="text-slate-500">|</span>
+                  <button
+                    disabled={chunkEnd === totalPages}
+                    onClick={() => setPage((prev) => Math.min(totalPages, chunkStart + 5))}
+                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
+                  >
+                    6~10 ▶
+                  </button>
+                  <span className="text-slate-500">총 {totalPages} 페이지</span>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>
 
+      {/* 비교함 */}
       {compareList.length > 0 && (
-        <aside className="fixed right-6 top-24 w-80 max-h-[70vh] overflow-auto bg-white border border-slate-100 rounded-2xl p-4 shadow-lg z-50">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-slate-900">비교함 ({compareList.length}/3)</h4>
-            <button
-              onClick={clearCompare}
-              className="text-xs font-semibold text-red-600 hover:underline"
-            >
-              전체삭제
+        <aside className="fixed right-6 top-24 z-50 w-80 max-h-[70vh] overflow-auto rounded-2xl border border-slate-100 bg-white p-4 shadow-lg">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-slate-900">비교 ({compareList.length}/3)</h4>
+            <button onClick={clearCompare} className="text-xs text-red-600 underline">
+              전체 삭제
             </button>
           </div>
 
           <div className="space-y-3">
             {compareList.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-2 p-2 border rounded-lg">
+              <div key={item.PostID} className="flex items-start justify-between gap-2 rounded-lg border p-2">
                 <div>
-                  <p className="text-xs font-semibold text-primary-700">{item.company}</p>
-                  <p className="text-sm font-bold text-slate-900">{item.position}</p>
-                  <p className="text-xs text-slate-600">{item.salary}</p>
+                  <p className="text-xs font-semibold text-primary-700">{item.CompanyName}</p>
+                  <p className="text-sm font-bold text-slate-900">{item.Title}</p>
+                  <p className="text-xs text-slate-600">조회수 {item.ViewCount}</p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={() => removeFromCompare(item.id)}
-                    className="text-xs font-semibold text-primary-700 hover:underline"
-                  >
-                    삭제
-                  </button>
-                </div>
+
+                <button
+                  onClick={() => removeFromCompare(item.PostID)}
+                  className="text-xs font-semibold text-primary-700 underline"
+                >
+                  삭제
+                </button>
               </div>
             ))}
           </div>
@@ -302,17 +386,16 @@ const JobsPage = () => {
           <div className="mt-3 flex justify-end">
             <button
               onClick={() => {
-                const ids = compareList.map((j) => j.id).join(',')
+                const ids = compareList.map((j) => j.PostID).join(',')
                 navigate(`/compare?mode=jobs&ids=${encodeURIComponent(ids)}`)
               }}
-              className="text-sm font-semibold text-white bg-primary-600 px-3 py-2 rounded-md hover:bg-primary-700"
+              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700"
             >
               비교하기
             </button>
           </div>
         </aside>
       )}
-
     </div>
   )
 }

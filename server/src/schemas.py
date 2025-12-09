@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy import Column, Enum as SQLEnum
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from typing import List, Dict, Tuple, Union, Literal, Optional
 
 '''
@@ -44,6 +44,17 @@ class Cost_support_type(str, Enum):
     PAY_K = '국비지원'
     PAY_SELF = '본인부담'
 
+
+##################################################################################
+# Chatbot
+##################################################################################
+class ChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+
+class ChatResponse(BaseModel):
+    response: str
+    status: str = 'success'
 
 ##################################################################################
 # === kakao api login ===
@@ -167,6 +178,87 @@ class JobPost(BaseModel):
     created_at: datetime = Field(default_factory = datetime.now)
     updated_at: datetime = Field(default_factory = datetime.now)
 
+class JobPostCreate(BaseModel): 
+    PlatformID: int 
+    Title: str = Field(max_length=255)
+    CompanyName: str = Field(max_length=255)
+    JobCategoryID: int
+    EmploymentType: Optional[str] = Field(default=None, max_length=50)
+    ExperienceRequirement: str = Field(max_length=10)
+    MinExperienceYears: Optional[int] = 0 
+    EducationRequirement: Optional[str] = Field(default=None, max_length=50)
+    Location: Optional[str] = Field(default=None, max_length=255)
+    MainTasks: Optional[str] = None 
+    Qualifications: Optional[str] = None 
+    Preferences: Optional[str] = None 
+    Benefits: Optional[str] = None 
+    Process: Optional[str] = None 
+    Salary: Optional[str] = Field(default=None, max_length=100)
+    PostedDate: Optional[date] = None 
+    CloseDate: Optional[date] = None 
+    Url: Optional[str] = None 
+    IsActive: bool = True
+    SkillIDs: Optional[List[int]] = None 
+
+
+class JobPostUpdate(BaseModel):
+    PlatformID: Optional[int] = None 
+    Title: Optional[str] = Field(default=None, max_length=255)
+    CompanyName: Optional[str] = Field(default=None, max_length=255)
+    JobCategoryID: Optional[int] = None
+    EmploymentType: Optional[str] = Field(default=None, max_length=50)
+    ExperienceRequirement: Optional[str] = Field(default=None, max_length=10)
+    MinExperienceYears: Optional[int] = None
+    EducationRequirement: Optional[str] = Field(default=None, max_length=50)
+    Location: Optional[str] = Field(default=None, max_length=255)
+    MainTasks: Optional[str] = None 
+    Qualifications: Optional[str] = None
+    Preferences: Optional[str] = None
+    Benefits: Optional[str] = None
+    Process: Optional[str] = None
+    Salary: Optional[str] = Field(default=None, max_length=100)
+    PostedDate: Optional[date] = None
+    CloseDate: Optional[date] = None
+    Url: Optional[str] = None
+    IsActive: Optional[bool] = None
+    SkillIDs: Optional[List[int]] = None
+
+
+class JobPostResponse(BaseModel):
+    PostID: int
+    PlatformID: int
+    Title: str
+    CompanyName: str
+    JobCategoryID: int
+    EmploymentType: Optional[str]
+    ExperienceRequirement: str
+    MinExperienceYears: int
+    EducationRequirement: Optional[str]
+    Location: Optional[str]
+    MainTasks: Optional[str]
+    Qualifications: Optional[str] 
+    Preferences: Optional[str]
+    Benefits: Optional[str]
+    Process: Optional[str]
+    Salary: Optional[str]
+    PostedDate: Optional[date]
+    CloseDate: Optional[date]
+    ViewCount: int
+    Url: Optional[str]
+    IsActive: bool
+    CreatedAt: datetime
+    UpdatedAt: datetime
+    Skills: List[str] = [] 
+
+    class Config:
+        from_attributes = True
+
+
+class PaginatedJobPostResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[JobPostResponse]
 class BootcampPost(BaseModel):
     '''
     endpoint:

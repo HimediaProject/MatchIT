@@ -21,9 +21,13 @@ type ComparedBootcamp = {
   title: string
   period: string
   schedule: string
-  time: string
   mode: string
   location: string
+  costSupportType: string
+  educationContent: string
+  qualification: string
+  benefits: string
+  detailUrl?: string
 }
 
 const formatDate = (d?: string | null) => {
@@ -84,9 +88,13 @@ const ComparePage = () => {
       title: b.title || b.Title || '',
       period: reg || close ? `${formatDate(reg)} ~ ${formatDate(close)}` : '',
       schedule: start ? formatDate(start) : '',
-      time: b.time || '',
       mode: b.online_offline || b.OnlineOffline || '',
       location: b.location || b.Location || '',
+      costSupportType: b.cost_support_type || b.CostSupportType || '',
+      educationContent: b.education_content || b.EducationContent || '',
+      qualification: b.qualification || b.Qualification || '',
+      benefits: b.benefits || b.Benefits || '',
+      detailUrl: b.detail_url || b.DetailUrl || '',
     }
   }
 
@@ -132,6 +140,14 @@ const ComparePage = () => {
   // 항목 삭제 핸들러: 로컬 상태에서 제거
   const handleRemove = (id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id))
+  }
+
+  const handleApply = (camp: ComparedBootcamp) => {
+    if (camp.detailUrl) {
+      window.open(camp.detailUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    alert('지원 링크가 제공되지 않았습니다.')
   }
 
   return (
@@ -217,10 +233,11 @@ const ComparePage = () => {
                           </div>
 
                           <div className="flex gap-2 mt-auto">
-                            <button className="flex-1 rounded-lg border border-primary-600 py-2.5 text-sm font-bold text-primary-600 transition hover:bg-primary-50">
-                              자세히 보기
-                            </button>
-                            <button className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700">
+                            <button
+                              onClick={() => !isJob && handleApply(camp)}
+                              className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isJob}
+                            >
                               교육 신청
                             </button>
                           </div>
@@ -254,36 +271,53 @@ const ComparePage = () => {
                   {!isJob && (
                     <>
                       <div>
-                        <span className="mb-1 block text-xs text-slate-500">모집일정</span>
+                        <span className="mb-1 block text-xs text-slate-500">교육·모집일정</span>
                         <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.period}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">교육일정</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.schedule}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">수업시간</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                          {camp.time}
+                          {camp.schedule || '-'} {camp.period || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">수업방식</span>
                         <p className="text-sm font-bold text-slate-900">
-                          {camp.mode}
+                          {camp.mode || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육장소</span>
-                         {/* JSON 문자열 등 파싱이 필요할 수 있으나 단순 표시 */}
                         <p className="text-sm font-bold text-slate-900 break-keep">
-                          {camp.location.replace(/["{}]/g, '').replace('district:', '')}
+                          {camp.location || '-'}
                         </p>
                       </div>
+                      <div>
+                        <span className="mb-1 block text-xs text-slate-500">비용지원유형</span>
+                        <p className="text-sm font-bold text-slate-900">
+                          {camp.costSupportType || '-'}
+                        </p>
+                      </div>
+                      {camp.educationContent && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">교육내용</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.educationContent}
+                          </p>
+                        </div>
+                      )}
+                      {camp.qualification && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">자격요건</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.qualification}
+                          </p>
+                        </div>
+                      )}
+                      {camp.benefits && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">혜택</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {camp.benefits}
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
 

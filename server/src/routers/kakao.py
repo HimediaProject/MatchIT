@@ -23,7 +23,7 @@ router = APIRouter(prefix='/auth/kakao', tags=['카카오 소셜로그인 기능
 
 @router.get('/login')
 async def kakao_login():
-    """카카오 로그인 페이지로 리다이렉트"""
+    """카카오 로그인 페이지로 이동"""
     kakao_auth_url = (
         f"https://kauth.kakao.com/oauth/authorize"
         f"?response_type=code"
@@ -43,7 +43,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
         "client_id": KAKAO_CLIENT_ID,
         "redirect_uri": KAKAO_REDIRECT_URI,
         "client_secret": KAKAO_CLIENT_SECRET,
-        "code": code
+        "code": code,
     }
 
     async with httpx.AsyncClient() as client:
@@ -55,7 +55,10 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     expires_in = token_json.get('expires_in', 60*60*6)
 
     if not access_token:
-        return JSONResponse(status_code=400, content={'error': '토큰 발급 실패', 'details': token_json})
+        return JSONResponse(
+            status_code=400,
+            content={'error': '토큰 발급 실패', 'details': token_json},
+        )
 
     # 2. 사용자 정보 가져오기
     user_info_url = "https://kapi.kakao.com/v2/user/me"
@@ -71,7 +74,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     kakao_nickname = user_json.get('properties', {}).get('nickname', 'Unknown')
     kakao_gender = kakao_account.get('gender')
 
-    # 3. [요구사항: DB 저장] 회원가입 및 로그인 처리
+    # 3. [DB 저장] 회원가입 및 로그인 처리
     try:
         # 3-1. 소셜 계정 확인
         oauth_account = db.query(SocialLogin)\
@@ -124,9 +127,9 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
         print(f"[KAKAO_CALLBACK] DB 처리 실패: {e}")
         return JSONResponse(status_code=500, content={'error': 'DB 처리 실패', 'details': str(e)})
 
-    # 4. [요구사항: 세션 DB 저장] UserSessions 테이블에 세션 정보 저장
+    # 4. [세션 DB 저장] UserSessions 테이블에 세션 정보 저장
     try:
-        session_id = uuid.uuid4()
+        session_id = str(uuid.uuid4())
         expires_at = datetime.now() + timedelta(seconds=expires_in)
         
         user_session = UserSession(
@@ -233,9 +236,15 @@ async def get_current_user(
         except (ValueError, TypeError):
             return {'isLoggedIn': False, 'user': None}
         
-        # 1. DB에서 세션 확인 (유효한 세션인지 확인)
+        # 1. session_id를 UUID로 변환하여 DB에서 세션 확인
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except Exception:
+            print(f"[GET_CURRENT_USER] session_id UUID 변환 실패: {session_id}")
+            return {'isLoggedIn': False, 'user': None}
+
         session = db.query(UserSession).filter(
-            UserSession.SessionID == session_id,
+            UserSession.SessionID == session_uuid,
             UserSession.UserID == user_id_int
         ).first()
         
@@ -354,8 +363,14 @@ async def kakao_logout(
     db_error = False
     if session_id:
         try:
-            # 세션 ID 검증 및 삭제
-            session_to_delete = db.query(UserSession).filter(UserSession.SessionID == session_id).first()
+            # 세션 ID는 쿠키에서 문자열로 넘어오므로 UUID로 변환하여 삭제합니다.
+            try:
+                sid = uuid.UUID(session_id)
+                session_to_delete = db.query(UserSession).filter(UserSession.SessionID == sid).first()
+            except Exception:
+                # 변환 실패 시 문자열로도 시도
+                session_to_delete = db.query(UserSession).filter(UserSession.SessionID == session_id).first()
+
             if session_to_delete:
                 db.delete(session_to_delete)
                 db.commit()
@@ -368,23 +383,15 @@ async def kakao_logout(
     if user_id:
         try:
             # 소셜 로그인 계정 unlink 처리
-            oauth_accounts = db.query(SocialLogin)\
-                .filter(SocialLogin.UserID == int(user_id))\
-                .all()
+            oauth_accounts = db.query(SocialLogin).filter(SocialLogin.UserID == int(user_id)).all()
             for account in oauth_accounts:
                 account.UnlinkedAt = datetime.now()
                 print(f"[LOGOUT] 소셜로그인 unlink 처리: {account.Provider}")
             db.commit()
         except Exception as e:
             print(f"[LOGOUT] 소셜로그인 unlink 실패: {e}")
-            pass  # 로그아웃은 DB 에러가 나도 사용자 입장에선 진행되어야 함
-            for account in oauth_accounts:
-                account.UnlinkedAt = datetime.now()
-                print(f"[LOGOUT] 소셜로그인 unlink 처리: {account.Provider}")
-            db.commit()
-        except Exception as e:
-            print(f"[LOGOUT] 소셜로그인 unlink 실패: {e}")
-            pass  # 로그아웃은 DB 에러가 나도 사용자 입장에선 진행되어야 함
+            db.rollback()
+            # 로그아웃은 DB 에러가 나도 사용자 입장에선 진행되어야 함
 
     # JSON 요청 (대부분 AJAX) -> JSONResponse
     if 'application/json' in accept_header or request.headers.get('x-requested-with') == 'XMLHttpRequest':
