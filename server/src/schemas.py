@@ -46,6 +46,17 @@ class Cost_support_type(str, Enum):
 
 
 ##################################################################################
+# Chatbot
+##################################################################################
+class ChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+
+class ChatResponse(BaseModel):
+    response: str
+    status: str = 'success'
+
+##################################################################################
 # === kakao api login ===
 ##################################################################################
 # === 1. kakao login requier ===
