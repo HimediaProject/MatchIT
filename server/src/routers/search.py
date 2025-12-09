@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
@@ -21,6 +21,7 @@ def search(
 	career_level_id: Optional[int] = Query(None, description="커리어 레벨 ID"),
 	experience_range_id: Optional[int] = Query(None, description="경력 구간 ID"),
 	limit: int = Query(20, ge=1, le=100, description="최대 반환 개수"),
+	random_order: bool = Query(False, description="랜덤 정렬 여부"),
 	db: Session = Depends(get_db),
 ):
 	"""
@@ -118,6 +119,12 @@ def search(
 			# JobPost는 빈 리스트로
 			jobs_q = jobs_q.filter(False)
 		
+		# 랜덤 정렬 적용
+		if random_order:
+			# PostgreSQL/SQLite의 경우 func.random(), MySQL의 경우 func.rand() 사용
+			# 대부분의 DB에서 func.random()을 지원하므로 사용
+			jobs_q = jobs_q.order_by(func.random())
+		
 		jobs_q = jobs_q.limit(limit)
 		jobs = [job_to_dict(j) for j in jobs_q.all()]
 
@@ -132,11 +139,29 @@ def search(
 				models.BootcampPost.Benefits.ilike(f"%{keyword}%"),
 			]
 
+		# 부트캠프 기술 스택 필터
+		bootcamp_skill_filters = []
+		if skills and len(skills) > 0:
+			# 각 기술스택이 부트캠프의 텍스트 필드에 포함되어 있는지 확인
+			# 모든 선택된 기술스택이 포함되어야 함 (AND 조건)
+			for skill in skills:
+				skill_filter = or_(
+					models.BootcampPost.Title.ilike(f"%{skill}%"),
+					models.BootcampPost.InstituteName.ilike(f"%{skill}%"),
+					models.BootcampPost.EducationContent.ilike(f"%{skill}%"),
+					models.BootcampPost.Qualification.ilike(f"%{skill}%"),
+					models.BootcampPost.Benefits.ilike(f"%{skill}%"),
+				)
+				bootcamp_skill_filters.append(skill_filter)
+
 		bootcamps_q = db.query(models.BootcampPost)
 		
 		bootcamp_filters = []
 		if bootcamp_keyword_filters:
 			bootcamp_filters.append(or_(*bootcamp_keyword_filters))
+		if bootcamp_skill_filters:
+			# 모든 기술스택이 포함되어야 함 (AND 조건)
+			bootcamp_filters.extend(bootcamp_skill_filters)
 		
 		if bootcamp_filters:
 			bootcamps_q = bootcamps_q.filter(and_(*bootcamp_filters))
@@ -148,6 +173,11 @@ def search(
 		elif source == "채용":
 			# BootcampPost는 빈 리스트로
 			bootcamps_q = bootcamps_q.filter(False)
+		
+		# 랜덤 정렬 적용
+		if random_order:
+			# PostgreSQL/SQLite의 경우 func.random(), MySQL의 경우 func.rand() 사용
+			bootcamps_q = bootcamps_q.order_by(func.random())
 		
 		bootcamps_q = bootcamps_q.limit(limit)
 		bootcamps = [bootcamp_to_dict(b) for b in bootcamps_q.all()]
