@@ -1,18 +1,24 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchJobList, type JobPost } from '../api/jobposts'
+import { fetchCategories, fetchJobList, fetchSkills, type JobPost } from '../api/jobposts'
 
-const jobCategories = ['개발', '데이터', '디자인', 'AI', '프로덕트']
-const jobStacks = ['Python', 'React', 'TypeScript', 'SQL', 'Java', 'Node.js']
 const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
 
+// 텍스트 미리보기용 유틸
+const truncateText = (text?: string | null, maxLength: number = 80) => {
+  if (!text) return ''
+  const t = text.trim()
+  if (t.length <= maxLength) return t
+  return t.slice(0, maxLength) + '...'
+}
+
 const JobsPage = () => {
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
+  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set())
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
   const [selectedExperience, setSelectedExperience] = useState<string>('')
 
-  const [sort, setSort] = useState<'latest' | 'deadline' | 'salary'>('latest')
+  const [sort, setSort] = useState<'created' | 'deadline' | 'views'>('created')
 
   const [page, setPage] = useState<number>(1)
   const size = 10
@@ -37,13 +43,62 @@ const JobsPage = () => {
 
   const navigate = useNavigate()
 
+  const { data: categories } = useQuery({
+    queryKey: ['jobCategories'],
+    queryFn: fetchCategories,
+  })
+
+  const { data: skills } = useQuery({
+    queryKey: ['jobSkills'],
+    queryFn: fetchSkills,
+  })
+
+  const skillList = Array.isArray(skills) ? skills : []
+
+  const categoryOptions = useMemo(
+    () => categories?.map((c) => ({ id: c.CategoryID, name: c.CategoryName })) ?? [],
+    [categories],
+  )
+
+  const categoryIds = useMemo(
+    () => Array.from(selectedCategories).sort((a, b) => a - b),
+    [selectedCategories],
+  )
+
+  const experienceParams = useMemo(() => {
+    switch (selectedExperience) {
+      case experienceFilters[0]:
+        return { experience_requirement: '신입', experience_min: 0, experience_max: 0 }
+      case experienceFilters[1]:
+        return { experience_requirement: '경력', experience_min: 1, experience_max: 3 }
+      case experienceFilters[2]:
+        return { experience_requirement: '경력', experience_min: 3, experience_max: 5 }
+      case experienceFilters[3]:
+        return { experience_requirement: '경력', experience_min: 5, experience_max: null }
+      default:
+        return { experience_requirement: undefined, experience_min: undefined, experience_max: undefined }
+    }
+  }, [selectedExperience])
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['jobList', page, sort],
+    queryKey: [
+      'jobList',
+      page,
+      sort,
+      categoryIds,
+      experienceParams.experience_requirement,
+      experienceParams.experience_min,
+      experienceParams.experience_max,
+    ],
     queryFn: () =>
       fetchJobList({
         page,
         size,
         sort,
+        category_ids: categoryIds.length ? categoryIds : undefined,
+        experience_requirement: experienceParams.experience_requirement,
+        experience_min: experienceParams.experience_min,
+        experience_max: experienceParams.experience_max,
       }),
     keepPreviousData: true,
   })
@@ -51,15 +106,49 @@ const JobsPage = () => {
   const jobs = data?.items ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / size))
-  const chunkStart = Math.floor((page - 1) / 5) * 5 + 1
-  const chunkEnd = Math.min(chunkStart + 4, totalPages)
 
-  const toggleSet = (value: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+  // Bootcamps.tsx와 동일한 페이지 번호 계산 (ellipsis 스타일)
+  const getPageNumbers = () => {
+    const pages: number[] = []
+    const maxVisible = 5
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i)
+        pages.push(-1 as unknown as number) // ... 표시용
+        pages.push(totalPages)
+      } else if (page >= totalPages - 2) {
+        pages.push(1)
+        pages.push(-1 as unknown as number)
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
+      } else {
+        pages.push(1)
+        pages.push(-1 as unknown as number)
+        pages.push(page - 1)
+        pages.push(page)
+        pages.push(page + 1)
+        pages.push(-1 as unknown as number)
+        pages.push(totalPages)
+      }
+    }
+    return pages
+  }
+
+  const toggleSet = <T,>(value: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
     setter((prev) => {
       const next = new Set(prev)
       next.has(value) ? next.delete(value) : next.add(value)
       return next
     })
+  }
+
+  const resetAllFilters = () => {
+    setSelectedCategories(new Set())
+    setSelectedStacks(new Set())
+    setSelectedExperience('')
+    setPage(1)
   }
 
   const addToCompare = (job: JobPost) => {
@@ -106,22 +195,40 @@ const JobsPage = () => {
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
-      const categoryMatch = selectedCategories.size
-        ? selectedCategories.has(job.JobCategoryID?.toString() ?? '')
+      const categoryMatch = selectedCategories.size ? selectedCategories.has(job.JobCategoryID) : true
+
+      const stackMatch = selectedStacks.size
+        ? job.Skills.some((s) => selectedStacks.has(s))
         : true
 
-      const stackMatch = selectedStacks.size ? job.Skills.some((s) => selectedStacks.has(s)) : true
-
-      const expMatch = selectedExperience ? job.ExperienceRequirement === selectedExperience : true
+      const { experience_requirement, experience_min, experience_max } = experienceParams
+      const expMatch = selectedExperience
+        ? (() => {
+            if (experience_requirement === '신입') {
+              return job.ExperienceRequirement === '신입'
+            }
+            const meetsRequirement = job.ExperienceRequirement === '경력'
+            const minYears = job.MinExperienceYears
+            const minOk =
+              experience_min === undefined || experience_min === null || minYears === null || minYears === undefined
+                ? true
+                : minYears >= experience_min
+            const maxOk =
+              experience_max === undefined || experience_max === null || minYears === null || minYears === undefined
+                ? true
+                : minYears <= experience_max
+            return meetsRequirement && minOk && maxOk
+          })()
+        : true
 
       return categoryMatch && stackMatch && expMatch
     })
-  }, [jobs, selectedCategories, selectedStacks, selectedExperience])
+  }, [jobs, selectedCategories, selectedStacks, selectedExperience, experienceParams])
 
   const sortedJobs = useMemo(() => {
     const list = [...filteredJobs]
     list.sort((a, b) => {
-      if (sort === 'latest') {
+      if (sort === 'created') {
         const aTs = parseDateValue(a.PostedDate) ?? parseDateValue(a.CreatedAt)
         const bTs = parseDateValue(b.PostedDate) ?? parseDateValue(b.CreatedAt)
         return compareWithNulls(aTs, bTs, 'desc')
@@ -133,9 +240,9 @@ const JobsPage = () => {
         return compareWithNulls(aDeadline, bDeadline, 'asc')
       }
 
-      const aSalary = parseSalaryValue(a.Salary)
-      const bSalary = parseSalaryValue(b.Salary)
-      return compareWithNulls(aSalary, bSalary, 'desc')
+      const aViews = a.ViewCount ?? null
+      const bViews = b.ViewCount ?? null
+      return compareWithNulls(aViews, bViews, 'desc')
     })
     return list
   }, [filteredJobs, sort])
@@ -164,32 +271,15 @@ const JobsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">분야</h3>
                 <div className="mt-3 space-y-2">
-                  {jobCategories.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 text-sm text-slate-700">
+                  {categoryOptions.map((cat) => (
+                    <label key={cat.id} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
-                        checked={selectedCategories.has(cat)}
-                        onChange={() => toggleSet(cat, setSelectedCategories)}
+                        checked={selectedCategories.has(cat.id)}
+                        onChange={() => toggleSet(cat.id, setSelectedCategories)}
                         className="h-4 w-4 rounded border-slate-300 text-primary-600"
                       />
-                      {cat}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">스택</h3>
-                <div className="mt-3 space-y-2">
-                  {jobStacks.map((stack) => (
-                    <label key={stack} className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedStacks.has(stack)}
-                        onChange={() => toggleSet(stack, setSelectedStacks)}
-                        className="h-4 w-4 rounded border-slate-300 text-primary-600"
-                      />
-                      {stack}
+                      {cat.name}
                     </label>
                   ))}
                 </div>
@@ -212,10 +302,10 @@ const JobsPage = () => {
                     </label>
                   ))}
                   <button
-                    onClick={() => setSelectedExperience('')}
+                    onClick={resetAllFilters}
                     className="mt-2 text-xs font-semibold text-primary-700 underline"
                   >
-                    경력 필터 초기화
+                    필터 전체 초기화
                   </button>
                 </div>
               </div>
@@ -225,16 +315,17 @@ const JobsPage = () => {
           {/* 목록 */}
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-slate-800">결과 {filteredJobs.length}건</p>
-
+              <p className="text-sm font-semibold text-slate-800">
+                총 {total}건
+              </p>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as any)}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
-                <option value="latest">최신순</option>
-                <option value="deadline">마감 임박순</option>
-                <option value="salary">연봉 높은순</option>
+                <option value="created">최신 등록순</option>
+                <option value="deadline">마감일</option>
+                <option value="views">조회수</option>
               </select>
             </div>
 
@@ -246,38 +337,42 @@ const JobsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
-                    <h3 className="text-lg font-bold text-slate-900">{job.Title}</h3>
+                    <h3 onClick={() => navigate(`/jobs/${job.PostID}`)} className="text-lg font-bold text-slate-900 cursor-pointer hover:underline">
+                      {job.Title}
+                    </h3>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                       <span className="rounded-full bg-slate-100 px-3 py-1">{job.Location}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">
                         {job.ExperienceRequirement ?? '경력 무관'}
                       </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1">조회수 {job.ViewCount}</span>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {job.Skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700"
-                        >
-                          {skill}
-                        </span>
+                      {(job.Skills ?? []).map((skill: string) => (
+                        <span key={skill} className="rounded-full bg-slate-100 px-3 py-1">{skill}</span>
                       ))}
                     </div>
+                    {(
+                      job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process
+                    ) && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {truncateText(
+                            job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process,
+                            80,
+                          )}
+                        </p>
+                        <span className="text-xs text-slate-600">
+                          <strong>마감일: {(job.CloseDate && job.CloseDate.split('T')[0]) || '상시'}</strong>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
                     <button
-                      onClick={() => navigate(`/jobs/${job.PostID}`)}
-                      className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
-                    >
-                      상세보기
-                    </button>
-
-                    <button
-                      onClick={() => addToCompare(job)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCompare(job)
+                      }}
                       className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
                     >
                       {compareList.find((j) => j.PostID === job.PostID) ? '추가됨' : '비교 담기'}
@@ -293,61 +388,47 @@ const JobsPage = () => {
               )}
             </div>
 
-            {/* 고급 페이지네이션: 1~5 / 6~10 단위 */}
+            {/* 페이지네이션 (Bootcamps.tsx 스타일) */}
             {totalPages > 1 && (
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    이전
-                  </button>
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                >
+                  이전
+                </button>
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: chunkEnd - chunkStart + 1 }, (_, idx) => chunkStart + idx).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`h-9 w-9 rounded-full text-sm font-semibold ${
-                          p === page
-                            ? 'bg-primary-600 text-white shadow-soft'
-                            : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-200 hover:text-primary-700'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+                {getPageNumbers().map((pageNum, idx) => {
+                  if (pageNum === ( -1 as unknown as number)) {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                        ...
+                      </span>
+                    )
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`min-w-[40px] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                        page === pageNum
+                          ? 'border-primary-600 bg-primary-600 text-white'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
 
-                  <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    다음
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <button
-                    disabled={chunkStart === 1}
-                    onClick={() => setPage((prev) => Math.max(1, prev - 5))}
-                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    ◀ 1~5
-                  </button>
-                  <span className="text-slate-500">|</span>
-                  <button
-                    disabled={chunkEnd === totalPages}
-                    onClick={() => setPage((prev) => Math.min(totalPages, chunkStart + 5))}
-                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    6~10 ▶
-                  </button>
-                  <span className="text-slate-500">총 {totalPages} 페이지</span>
-                </div>
+                <button
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                >
+                  다음
+                </button>
               </div>
             )}
           </section>
@@ -358,9 +439,9 @@ const JobsPage = () => {
       {compareList.length > 0 && (
         <aside className="fixed right-6 top-24 z-50 w-80 max-h-[70vh] overflow-auto rounded-2xl border border-slate-100 bg-white p-4 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">비교 ({compareList.length}/3)</h4>
-            <button onClick={clearCompare} className="text-xs text-red-600 underline">
-              전체 삭제
+            <h4 className="text-sm font-semibold text-slate-900">비교함 ({compareList.length}/3)</h4>
+            <button onClick={clearCompare} className="text-xs font-semibold text-red-600 hover:underline">
+              전체삭제
             </button>
           </div>
 
@@ -370,12 +451,11 @@ const JobsPage = () => {
                 <div>
                   <p className="text-xs font-semibold text-primary-700">{item.CompanyName}</p>
                   <p className="text-sm font-bold text-slate-900">{item.Title}</p>
-                  <p className="text-xs text-slate-600">조회수 {item.ViewCount}</p>
                 </div>
 
                 <button
                   onClick={() => removeFromCompare(item.PostID)}
-                  className="text-xs font-semibold text-primary-700 underline"
+                  className="whitespace-nowrap text-xs font-semibold text-primary-700 hover:underline flex-shrink-0"
                 >
                   삭제
                 </button>
