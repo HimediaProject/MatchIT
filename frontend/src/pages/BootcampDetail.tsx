@@ -22,16 +22,6 @@ const formatDate = (dateString: string | null): string => {
 
 /**
  * 부트캠프 상세 페이지
- *
- * URL: /bootcamps/:id
- *
- * DB에서 제공하는 모든 정보를 섹션별로 표시:
- * - 기본 정보 (제목, 기관, 분야, 수강 형태, 비용)
- * - 일정 정보 (시작일, 마감일, 등록일)
- * - 커리큘럼
- * - 자격요건
- * - 혜택
- * - 원본 링크
  */
 const BootcampDetailPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -118,33 +108,63 @@ const BootcampDetailPage = () => {
             </span>
           </div>
 
-          <p className="text-lg font-semibold text-primary-700">
+          <p className="text-sm font-semibold text-primary-700">
             {bootcamp.InstituteName}
           </p>
 
-          <h1 className="text-3xl font-bold text-slate-900">
+          <h1 className="mt-1 text-3xl font-bold text-slate-900">
             {bootcamp.Title}
           </h1>
-        </div>
 
-        {/* 기본 정보 카드 */}
-        <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
-          <h2 className="mb-4 text-lg font-bold text-slate-900">기본 정보</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-semibold text-slate-700 mb-1">수강 형태</p>
-              <p className="text-sm text-slate-600">{modeDisplay}</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700 mb-1">비용 지원</p>
-              <p className="text-sm text-slate-600">{bootcamp.CostSupportType}</p>
-            </div>
-            {bootcamp.Location && (
+          {/* 기본 정보 카드 */}
+          <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">기본 정보</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold text-slate-700 mb-1">위치</p>
-                <p className="text-sm text-slate-600">{bootcamp.Location}</p>
+                <p className="text-sm font-semibold text-slate-700 mb-1">수강 형태</p>
+                <p className="text-sm text-slate-600">{modeDisplay}</p>
               </div>
-            )}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">비용 지원</p>
+                <p className="text-sm text-slate-600">{bootcamp.CostSupportType}</p>
+              </div>
+              {bootcamp.Location && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 mb-1">위치</p>
+                  <p className="text-sm text-slate-600">{bootcamp.Location}</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex items-center gap-3">
+              {/* 스크랩 버튼 */}
+              <button 
+                type="button"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+                aria-label="스크랩"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </button>
+
+              {/* 공유하기 버튼 */}
+              <button 
+                type="button"
+                className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
+              >
+                공유하기
+              </button>
+
+              {/* 지원하기 버튼 */}
+              <a
+                href={bootcamp.DetailUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-12 flex-1 items-center justify-center rounded-xl bg-primary-600 text-base font-bold text-white shadow-sm transition hover:bg-primary-700"
+              >
+                지원하기
+              </a>
+            </div>
           </div>
         </div>
 
@@ -179,7 +199,6 @@ const BootcampDetailPage = () => {
                 }
                 {!isCurriculumExpanded && bootcamp.EducationContent.length > CURRICULUM_PREVIEW_LENGTH && '...'}
               </p>
-
               {bootcamp.EducationContent.length > CURRICULUM_PREVIEW_LENGTH && (
                 <button
                   onClick={() => setIsCurriculumExpanded(!isCurriculumExpanded)}
@@ -229,42 +248,6 @@ const BootcampDetailPage = () => {
             </div>
           </div>
         )}
-
-        {/* 원본 링크 및 액션 버튼 */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {bootcamp.DetailUrl && (
-            <a
-              href={bootcamp.DetailUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-700"
-            >
-              원본 공고 보기
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          )}
-
-          <Link
-            to="/bootcamps"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            목록으로 돌아가기
-          </Link>
-        </div>
-
-        {/* 메타 정보 */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-            <span>
-              게시일: {formatDate(bootcamp.CreatedAt)}
-            </span>
-            <span>
-              최종 수정일: {formatDate(bootcamp.UpdatedAt)}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   )
