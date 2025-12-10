@@ -1,10 +1,11 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 import time
 import logging
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import jwt_login, google, kakao, naver, comparison, users, users_test, bootcamper, search, skills, meta, jobposts
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts
 
 
 app = FastAPI(title="MatchIT Backend")
