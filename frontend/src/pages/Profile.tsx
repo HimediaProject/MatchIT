@@ -38,9 +38,9 @@ const ProfilePage = () => {
   const [isSkillSearchOpen, setIsSkillSearchOpen] = useState(false)
   const [skillSearchQuery, setSkillSearchQuery] = useState('')
 
-  // 희망직무: DB의 DesiredJobs 예시 기반 기본값
-  const [allWantedJobs, setAllWantedJobs] = useState<string[]>(['백엔드 개발자', '프론트엔드 개발자', '데이터 엔지니어'])
-  const [loadingWantedJobs, setLoadingWantedJobs] = useState(false)
+  // 희망직무: DB의 DesiredJobs에서 동적으로 로드
+  const [allWantedJobs, setAllWantedJobs] = useState<string[]>([])
+  const [loadingWantedJobs, setLoadingWantedJobs] = useState(true)
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [isJobSearchOpen, setIsJobSearchOpen] = useState(false)
   const [jobSearchQuery, setJobSearchQuery] = useState('')
@@ -128,22 +128,32 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const [cls, ers] = await Promise.all([
+        const [cls, ers, jobs] = await Promise.all([
           metaApi.getCareerLevels().catch((e) => {
-            console.error(e)
-            return []
+            console.error('Failed to fetch career levels:', e)
+            return { careerlevels: [] }
           }),
           metaApi.getExperienceRanges().catch((e) => {
-            console.error(e)
-            return []
+            console.error('Failed to fetch experience ranges:', e)
+            return { experienceranges: [] }
+          }),
+          metaApi.getDesiredJobs().catch((e) => {
+            console.error('Failed to fetch desired jobs:', e)
+            return { desiredjobs: [] }
           }),
         ])
 
-        const careerList = Array.isArray(cls) ? cls : cls?.careerlevels || []
-        const expList = Array.isArray(ers) ? ers : ers?.experienceranges || []
+        // 응답 데이터 정규화
+        const careerList = Array.isArray(cls) ? cls : (cls?.careerlevels || [])
+        const expList = Array.isArray(ers) ? ers : (ers?.experienceranges || [])
+        const jobList = Array.isArray(jobs) ? jobs : (jobs?.desiredjobs || [])
 
         setCareerLevels(careerList)
         setExperienceRanges(expList)
+        
+        // 희망직무를 name만 추출하여 배열로 설정
+        const jobNames = jobList.map((j: any) => j.name || j.JobName || '')
+        setAllWantedJobs(jobNames)
 
         if (careerList.length > 0 && selectedCareerLevelId === null) {
           const firstId = careerList[0]?.id ?? careerList[0]?.CareerLevelID ?? null

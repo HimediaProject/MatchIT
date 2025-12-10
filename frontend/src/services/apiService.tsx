@@ -92,4 +92,11 @@ export const metaApi = {
     if (!res.ok) throw new Error(`Get experience ranges failed: ${res.status}`)
     return res.json()
   },
+
+  async getDesiredJobs() {
+    const url = `${API_BASE_URL}/desiredjobs`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Get desired jobs failed: ${res.status}`)
+    return res.json()
+  },
 }
