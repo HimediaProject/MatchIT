@@ -76,8 +76,15 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     user_json = user_res.json()
     kakao_id = user_json.get("id")
     kakao_account = user_json.get("kakao_account", {})
+    profile = kakao_account.get("profile", {})
+
+    kakao_nickname = (
+        profile.get("nickname")
+        or user_json.get("properties", {}).get("nickname")
+        or "Unknown"
+    )
+
     kakao_email = kakao_account.get("email")
-    kakao_nickname = user_json.get("properties", {}).get("name", "Unknown")
     kakao_gender = kakao_account.get("gender")
 
     # 3. 회원가입 / 로그인 처리
