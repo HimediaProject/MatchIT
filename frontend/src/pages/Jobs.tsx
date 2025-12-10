@@ -358,9 +358,9 @@ const JobsPage = () => {
       {compareList.length > 0 && (
         <aside className="fixed right-6 top-24 z-50 w-80 max-h-[70vh] overflow-auto rounded-2xl border border-slate-100 bg-white p-4 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">비교 ({compareList.length}/3)</h4>
-            <button onClick={clearCompare} className="text-xs text-red-600 underline">
-              전체 삭제
+            <h4 className="text-sm font-semibold text-slate-900">비교함 ({compareList.length}/3)</h4>
+            <button onClick={clearCompare} className="text-xs font-semibold text-red-600 hover:underline">
+              전체삭제
             </button>
           </div>
 
@@ -375,7 +375,7 @@ const JobsPage = () => {
 
                 <button
                   onClick={() => removeFromCompare(item.PostID)}
-                  className="text-xs font-semibold text-primary-700 underline"
+                  className="whitespace-nowrap text-xs font-semibold text-primary-700 hover:underline flex-shrink-0"
                 >
                   삭제
                 </button>
