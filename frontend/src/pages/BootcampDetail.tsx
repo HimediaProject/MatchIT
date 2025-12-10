@@ -113,21 +113,18 @@ const BootcampDetailPage = () => {
         {/* 헤더 섹션 */}
         <div className="mb-8 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-              {bootcamp.CategoryName}
-            </span>
             <span className="text-sm text-slate-500">
               조회수 {bootcamp.ViewCount.toLocaleString()}
             </span>
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">
-            {bootcamp.Title}
-          </h1>
-
-          <p className="text-lg text-slate-600">
+          <p className="text-lg font-semibold text-primary-700">
             {bootcamp.InstituteName}
           </p>
+
+          <h1 className="text-3xl font-bold text-slate-900">
+            {bootcamp.Title}
+          </h1>
         </div>
 
         {/* 기본 정보 카드 */}
