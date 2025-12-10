@@ -1,18 +1,16 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchJobList, type JobPost } from '../api/jobposts'
+import { fetchCategories, fetchJobList, fetchSkills, type JobPost } from '../api/jobposts'
 
-const jobCategories = ['개발', '데이터', '디자인', 'AI', '프로덕트']
-const jobStacks = ['Python', 'React', 'TypeScript', 'SQL', 'Java', 'Node.js']
 const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
 
 const JobsPage = () => {
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
+  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set())
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
   const [selectedExperience, setSelectedExperience] = useState<string>('')
 
-  const [sort, setSort] = useState<'latest' | 'deadline' | 'salary'>('latest')
+  const [sort, setSort] = useState<'created' | 'deadline' | 'views'>('created')
 
   const [page, setPage] = useState<number>(1)
   const size = 10
@@ -37,13 +35,62 @@ const JobsPage = () => {
 
   const navigate = useNavigate()
 
+  const { data: categories } = useQuery({
+    queryKey: ['jobCategories'],
+    queryFn: fetchCategories,
+  })
+
+  const { data: skills } = useQuery({
+    queryKey: ['jobSkills'],
+    queryFn: fetchSkills,
+  })
+
+  const skillList = Array.isArray(skills) ? skills : []
+
+  const categoryOptions = useMemo(
+    () => categories?.map((c) => ({ id: c.CategoryID, name: c.CategoryName })) ?? [],
+    [categories],
+  )
+
+  const categoryIds = useMemo(
+    () => Array.from(selectedCategories).sort((a, b) => a - b),
+    [selectedCategories],
+  )
+
+  const experienceParams = useMemo(() => {
+    switch (selectedExperience) {
+      case experienceFilters[0]:
+        return { experience_requirement: '신입', experience_min: 0, experience_max: 0 }
+      case experienceFilters[1]:
+        return { experience_requirement: '경력', experience_min: 1, experience_max: 3 }
+      case experienceFilters[2]:
+        return { experience_requirement: '경력', experience_min: 3, experience_max: 5 }
+      case experienceFilters[3]:
+        return { experience_requirement: '경력', experience_min: 5, experience_max: null }
+      default:
+        return { experience_requirement: undefined, experience_min: undefined, experience_max: undefined }
+    }
+  }, [selectedExperience])
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['jobList', page, sort],
+    queryKey: [
+      'jobList',
+      page,
+      sort,
+      categoryIds,
+      experienceParams.experience_requirement,
+      experienceParams.experience_min,
+      experienceParams.experience_max,
+    ],
     queryFn: () =>
       fetchJobList({
         page,
         size,
         sort,
+        category_ids: categoryIds.length ? categoryIds : undefined,
+        experience_requirement: experienceParams.experience_requirement,
+        experience_min: experienceParams.experience_min,
+        experience_max: experienceParams.experience_max,
       }),
     keepPreviousData: true,
   })
@@ -54,7 +101,7 @@ const JobsPage = () => {
   const chunkStart = Math.floor((page - 1) / 5) * 5 + 1
   const chunkEnd = Math.min(chunkStart + 4, totalPages)
 
-  const toggleSet = (value: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+  const toggleSet = <T,>(value: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
     setter((prev) => {
       const next = new Set(prev)
       next.has(value) ? next.delete(value) : next.add(value)
@@ -106,22 +153,40 @@ const JobsPage = () => {
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
-      const categoryMatch = selectedCategories.size
-        ? selectedCategories.has(job.JobCategoryID?.toString() ?? '')
+      const categoryMatch = selectedCategories.size ? selectedCategories.has(job.JobCategoryID) : true
+
+      const stackMatch = selectedStacks.size
+        ? job.Skills.some((s) => selectedStacks.has(s))
         : true
 
-      const stackMatch = selectedStacks.size ? job.Skills.some((s) => selectedStacks.has(s)) : true
-
-      const expMatch = selectedExperience ? job.ExperienceRequirement === selectedExperience : true
+      const { experience_requirement, experience_min, experience_max } = experienceParams
+      const expMatch = selectedExperience
+        ? (() => {
+            if (experience_requirement === '신입') {
+              return job.ExperienceRequirement === '신입'
+            }
+            const meetsRequirement = job.ExperienceRequirement === '경력'
+            const minYears = job.MinExperienceYears
+            const minOk =
+              experience_min === undefined || experience_min === null || minYears === null || minYears === undefined
+                ? true
+                : minYears >= experience_min
+            const maxOk =
+              experience_max === undefined || experience_max === null || minYears === null || minYears === undefined
+                ? true
+                : minYears <= experience_max
+            return meetsRequirement && minOk && maxOk
+          })()
+        : true
 
       return categoryMatch && stackMatch && expMatch
     })
-  }, [jobs, selectedCategories, selectedStacks, selectedExperience])
+  }, [jobs, selectedCategories, selectedStacks, selectedExperience, experienceParams])
 
   const sortedJobs = useMemo(() => {
     const list = [...filteredJobs]
     list.sort((a, b) => {
-      if (sort === 'latest') {
+      if (sort === 'created') {
         const aTs = parseDateValue(a.PostedDate) ?? parseDateValue(a.CreatedAt)
         const bTs = parseDateValue(b.PostedDate) ?? parseDateValue(b.CreatedAt)
         return compareWithNulls(aTs, bTs, 'desc')
@@ -133,9 +198,9 @@ const JobsPage = () => {
         return compareWithNulls(aDeadline, bDeadline, 'asc')
       }
 
-      const aSalary = parseSalaryValue(a.Salary)
-      const bSalary = parseSalaryValue(b.Salary)
-      return compareWithNulls(aSalary, bSalary, 'desc')
+      const aViews = a.ViewCount ?? null
+      const bViews = b.ViewCount ?? null
+      return compareWithNulls(aViews, bViews, 'desc')
     })
     return list
   }, [filteredJobs, sort])
@@ -164,15 +229,15 @@ const JobsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">분야</h3>
                 <div className="mt-3 space-y-2">
-                  {jobCategories.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 text-sm text-slate-700">
+                  {categoryOptions.map((cat) => (
+                    <label key={cat.id} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
-                        checked={selectedCategories.has(cat)}
-                        onChange={() => toggleSet(cat, setSelectedCategories)}
+                        checked={selectedCategories.has(cat.id)}
+                        onChange={() => toggleSet(cat.id, setSelectedCategories)}
                         className="h-4 w-4 rounded border-slate-300 text-primary-600"
                       />
-                      {cat}
+                      {cat.name}
                     </label>
                   ))}
                 </div>
@@ -181,15 +246,15 @@ const JobsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">스택</h3>
                 <div className="mt-3 space-y-2">
-                  {jobStacks.map((stack) => (
-                    <label key={stack} className="flex items-center gap-2 text-sm text-slate-700">
+                  {skillList.map((skill) => (
+                    <label key={skill} className="flex items-center gap-2 text-sm text-slate-700">
                       <input
                         type="checkbox"
-                        checked={selectedStacks.has(stack)}
-                        onChange={() => toggleSet(stack, setSelectedStacks)}
+                        checked={selectedStacks.has(skill)}
+                        onChange={() => toggleSet(skill, setSelectedStacks)}
                         className="h-4 w-4 rounded border-slate-300 text-primary-600"
                       />
-                      {stack}
+                      {skill}
                     </label>
                   ))}
                 </div>
@@ -232,9 +297,9 @@ const JobsPage = () => {
                 onChange={(e) => setSort(e.target.value as any)}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
-                <option value="latest">최신순</option>
-                <option value="deadline">마감 임박순</option>
-                <option value="salary">연봉 높은순</option>
+                <option value="created">최신 등록순</option>
+                <option value="deadline">마감일</option>
+                <option value="views">조회수</option>
               </select>
             </div>
 
@@ -246,7 +311,12 @@ const JobsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
-                    <h3 className="text-lg font-bold text-slate-900">{job.Title}</h3>
+                    <h3
+                      onClick={() => navigate(`/jobs/${job.PostID}`)}
+                      className="text-lg font-bold text-slate-900 cursor-pointer hover:underline"
+                    >
+                      {job.Title}
+                    </h3>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                       <span className="rounded-full bg-slate-100 px-3 py-1">{job.Location}</span>
@@ -270,14 +340,10 @@ const JobsPage = () => {
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
                     <button
-                      onClick={() => navigate(`/jobs/${job.PostID}`)}
-                      className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
-                    >
-                      상세보기
-                    </button>
-
-                    <button
-                      onClick={() => addToCompare(job)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCompare(job)
+                      }}
                       className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
                     >
                       {compareList.find((j) => j.PostID === job.PostID) ? '추가됨' : '비교 담기'}
