@@ -4,9 +4,7 @@ import time
 import logging
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-
-from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts
-
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -36,6 +34,7 @@ app.include_router(jobposts.router)
 app.include_router(search.router)
 app.include_router(skills.router)
 app.include_router(meta.router)
+app.include_router(job_categories.router)
 
 logger = logging.getLogger(__name__)
 
