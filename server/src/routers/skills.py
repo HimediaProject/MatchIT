@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import logging
 
@@ -17,7 +18,7 @@ def get_all_skills(
     try:
         skills = db.query(models.Skill).all()
         results = [s.SkillName for s in skills]
-        return {"skills": results}
+        return JSONResponse(content={"skills": results}, media_type="application/json; charset=utf-8")
     except Exception as e:
         logger.exception("get_all_skills failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")

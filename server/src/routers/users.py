@@ -234,6 +234,18 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     return read_profile(user.UserID, db)
 
 
+@router.patch("/me", response_model=ProfileOut)
+def update_my_profile(data: ProfileUpdate, db: Session = Depends(get_db), request: Request = None):
+    """현재 로그인한 사용자의 프로필 업데이트"""
+    # 세션 또는 쿠키에서 사용자 ID 추출
+    # authApi.getCurrentUser()와 동일한 로직으로 user_id 가져옴
+    if not hasattr(request, 'session') or 'user_id' not in request.session:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    
+    user_id = request.session.get('user_id')
+    return update_profile(user_id, data, db)
+
+
 @router.get("/{user_id}/scraps", response_model=List[UserScrapGet])
 def read_userscrap(user_id: int, db: Session = Depends(get_db)):
     scraps = get_user_scrap(db, user_id)
