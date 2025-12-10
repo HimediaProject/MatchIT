@@ -14,6 +14,14 @@ type ComparedJob = {
   education: string
   salary: string
   deadlines: string
+  url?: string
+  employmentType?: string
+  mainTasks?: string
+  qualifications?: string
+  preferences?: string
+  benefits?: string
+  process?: string
+  skills?: string[]
 }
 type ComparedBootcamp = {
   id: string
@@ -75,6 +83,14 @@ const ComparePage = () => {
       education: j.education_requirement || j.EducationRequirement || '',
       salary: j.salary || j.Salary || '',
       deadlines: j.close_date ? formatDate(j.close_date) : j.posted_date ? formatDate(j.posted_date) : '',
+      url: j.url || j.Url || '',
+      employmentType: j.employment_type || j.EmploymentType || '',
+      mainTasks: j.main_tasks || j.MainTasks || '',
+      qualifications: j.qualifications || j.Qualifications || '',
+      preferences: j.preferences || j.Preferences || '',
+      benefits: j.benefits || j.Benefits || '',
+      process: j.process || j.Process || '',
+      skills: j.skills || [],
     }
   }
 
@@ -142,12 +158,23 @@ const ComparePage = () => {
     setItems((prev) => prev.filter((it) => it.id !== id))
   }
 
-  const handleApply = (camp: ComparedBootcamp) => {
-    if (camp.detailUrl) {
-      window.open(camp.detailUrl, '_blank', 'noopener,noreferrer')
-      return
+  const handleApply = (item: ComparedJob | ComparedBootcamp) => {
+    const isJob = mode === 'jobs'
+    if (isJob) {
+      const job = item as ComparedJob
+      if (job.url) {
+        window.open(job.url, '_blank', 'noopener,noreferrer')
+        return
+      }
+      alert('지원 링크가 제공되지 않았습니다.')
+    } else {
+      const camp = item as ComparedBootcamp
+      if (camp.detailUrl) {
+        window.open(camp.detailUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+      alert('지원 링크가 제공되지 않았습니다.')
     }
-    alert('지원 링크가 제공되지 않았습니다.')
   }
 
   return (
@@ -159,30 +186,6 @@ const ComparePage = () => {
           <h1 className="text-3xl font-bold text-slate-900 mb-6">
             {mode === 'jobs' ? '채용공고 비교해 볼까요?' : '부트캠퍼 비교해 볼까요?'}
           </h1>
-          
-        {/* 탭 전환 버튼 */}
-        <div className="flex items-center gap-3">
-          <button
-          onClick={() => setMode('jobs')}
-          className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-          mode === 'jobs'
-          ? 'bg-primary-600 text-white shadow-md'
-          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-        }`}
-          >
-              채용 비교
-            </button>
-            <button
-              onClick={() => setMode('bootcamps')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                mode === 'bootcamps'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              부트캠프 비교
-            </button>
-          </div>
         </div>
 
               {/* 메인 콘텐츠 영역: 선택된 항목이 없을 때 */}
@@ -220,25 +223,19 @@ const ComparePage = () => {
 
                           <div className="mb-6">
                             <p className="mb-2 text-xs font-medium text-slate-500">
-                              {isJob ? job.provider : camp.provider}
+                              {isJob ? job.company : camp.provider}
                             </p>
                             <h3 className="line-clamp-2 min-h-[3.5rem] text-lg font-bold leading-snug text-slate-900">
                               {isJob ? job.title : camp.title}
                             </h3>
-                            {isJob && (
-                              <p className="mt-1 text-sm font-semibold text-primary-600">
-                                {job.company}
-                              </p>
-                            )}
                           </div>
 
                           <div className="flex gap-2 mt-auto">
                             <button
-                              onClick={() => !isJob && handleApply(camp)}
-                              className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isJob}
+                              onClick={() => handleApply(item)}
+                              className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700"
                             >
-                              교육 신청
+                              지원하기
                             </button>
                           </div>
                         </div>
@@ -326,24 +323,89 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">마감일</span>
-                        <p className="text-sm font-bold text-slate-900">{job.deadlines}</p>
+                        <p className="text-sm font-bold text-slate-900">{job.deadlines || '-'}</p>
                       </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">연봉</span>
-                        <p className="text-sm font-bold text-slate-900">{job.salary}</p>
-                      </div>
+                      {job.salary && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">연봉</span>
+                          <p className="text-sm font-bold text-slate-900">{job.salary}</p>
+                        </div>
+                      )}
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">근무지</span>
-                        <p className="text-sm font-bold text-slate-900">{job.location}</p>
+                        <p className="text-sm font-bold text-slate-900">{job.location || '-'}</p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">경력요건</span>
-                        <p className="text-sm font-bold text-slate-900">{job.experience}</p>
+                        <p className="text-sm font-bold text-slate-900">{job.experience || '-'}</p>
                       </div>
-                      <div>
-                        <span className="mb-1 block text-xs text-slate-500">학력</span>
-                        <p className="text-sm font-bold text-slate-900">{job.education}</p>
-                      </div>
+                      {job.education && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">학력</span>
+                          <p className="text-sm font-bold text-slate-900">{job.education}</p>
+                        </div>
+                      )}
+                      {job.employmentType && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">고용형태</span>
+                          <p className="text-sm font-bold text-slate-900">{job.employmentType}</p>
+                        </div>
+                      )}
+                      {job.skills && job.skills.length > 0 && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">스킬</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {job.skills.map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {job.mainTasks && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">주요업무</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {job.mainTasks}
+                          </p>
+                        </div>
+                      )}
+                      {job.qualifications && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">자격요건</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {job.qualifications}
+                          </p>
+                        </div>
+                      )}
+                      {job.preferences && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">우대사항</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {job.preferences}
+                          </p>
+                        </div>
+                      )}
+                      {job.benefits && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">혜택</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {job.benefits}
+                          </p>
+                        </div>
+                      )}
+                      {job.process && (
+                        <div>
+                          <span className="mb-1 block text-xs text-slate-500">채용절차</span>
+                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                            {job.process}
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                   

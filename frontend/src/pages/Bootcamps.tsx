@@ -594,7 +594,7 @@ const BootcampsPage = () => {
                               <div className="flex flex-col items-end gap-2">
                                 <button
                                   onClick={() => removeFromCompare(item.id)}
-                                  className="text-xs font-semibold text-primary-700 hover:underline"
+                                  className="whitespace-nowrap text-xs font-semibold text-primary-700 hover:underline flex-shrink-0"
                                 >
                                   삭제
                                 </button>

@@ -135,12 +135,6 @@ const Header = () => {
               로그인
             </Link>
           )}
-          <Link
-            to="/"
-            className="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:shadow-lg hover:shadow-primary-200"
-          >
-            추천 받기
-          </Link>
         </div>
       </div>
     </header>
