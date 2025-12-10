@@ -5,6 +5,14 @@ import { fetchCategories, fetchJobList, fetchSkills, type JobPost } from '../api
 
 const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
 
+// 텍스트 미리보기용 유틸
+const truncateText = (text?: string | null, maxLength: number = 80) => {
+  if (!text) return ''
+  const t = text.trim()
+  if (t.length <= maxLength) return t
+  return t.slice(0, maxLength) + '...'
+}
+
 const JobsPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set())
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
@@ -98,8 +106,35 @@ const JobsPage = () => {
   const jobs = data?.items ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / size))
-  const chunkStart = Math.floor((page - 1) / 5) * 5 + 1
-  const chunkEnd = Math.min(chunkStart + 4, totalPages)
+
+  // Bootcamps.tsx와 동일한 페이지 번호 계산 (ellipsis 스타일)
+  const getPageNumbers = () => {
+    const pages: number[] = []
+    const maxVisible = 5
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i)
+        pages.push(-1 as unknown as number) // ... 표시용
+        pages.push(totalPages)
+      } else if (page >= totalPages - 2) {
+        pages.push(1)
+        pages.push(-1 as unknown as number)
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
+      } else {
+        pages.push(1)
+        pages.push(-1 as unknown as number)
+        pages.push(page - 1)
+        pages.push(page)
+        pages.push(page + 1)
+        pages.push(-1 as unknown as number)
+        pages.push(totalPages)
+      }
+    }
+    return pages
+  }
 
   const toggleSet = <T,>(value: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
     setter((prev) => {
@@ -107,6 +142,13 @@ const JobsPage = () => {
       next.has(value) ? next.delete(value) : next.add(value)
       return next
     })
+  }
+
+  const resetAllFilters = () => {
+    setSelectedCategories(new Set())
+    setSelectedStacks(new Set())
+    setSelectedExperience('')
+    setPage(1)
   }
 
   const addToCompare = (job: JobPost) => {
@@ -244,23 +286,6 @@ const JobsPage = () => {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">스택</h3>
-                <div className="mt-3 space-y-2">
-                  {skillList.map((skill) => (
-                    <label key={skill} className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedStacks.has(skill)}
-                        onChange={() => toggleSet(skill, setSelectedStacks)}
-                        className="h-4 w-4 rounded border-slate-300 text-primary-600"
-                      />
-                      {skill}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
                 <h3 className="text-sm font-semibold text-slate-900">경력</h3>
                 <div className="mt-3 space-y-2">
                   {experienceFilters.map((exp) => (
@@ -277,10 +302,10 @@ const JobsPage = () => {
                     </label>
                   ))}
                   <button
-                    onClick={() => setSelectedExperience('')}
+                    onClick={resetAllFilters}
                     className="mt-2 text-xs font-semibold text-primary-700 underline"
                   >
-                    경력 필터 초기화
+                    필터 전체 초기화
                   </button>
                 </div>
               </div>
@@ -290,8 +315,9 @@ const JobsPage = () => {
           {/* 목록 */}
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-slate-800">결과 {filteredJobs.length}건</p>
-
+              <p className="text-sm font-semibold text-slate-800">
+                총 {total}건
+              </p>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as any)}
@@ -311,10 +337,7 @@ const JobsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
-                    <h3
-                      onClick={() => navigate(`/jobs/${job.PostID}`)}
-                      className="text-lg font-bold text-slate-900 cursor-pointer hover:underline"
-                    >
+                    <h3 onClick={() => navigate(`/jobs/${job.PostID}`)} className="text-lg font-bold text-slate-900 cursor-pointer hover:underline">
                       {job.Title}
                     </h3>
 
@@ -323,19 +346,25 @@ const JobsPage = () => {
                       <span className="rounded-full bg-slate-100 px-3 py-1">
                         {job.ExperienceRequirement ?? '경력 무관'}
                       </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1">조회수 {job.ViewCount}</span>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {job.Skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700"
-                        >
-                          {skill}
-                        </span>
+                      {(job.Skills ?? []).map((skill: string) => (
+                        <span key={skill} className="rounded-full bg-slate-100 px-3 py-1">{skill}</span>
                       ))}
                     </div>
+                    {(
+                      job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process
+                    ) && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {truncateText(
+                            job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process,
+                            80,
+                          )}
+                        </p>
+                        <span className="text-xs text-slate-600">
+                          <strong>마감일: {(job.CloseDate && job.CloseDate.split('T')[0]) || '상시'}</strong>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
@@ -359,61 +388,47 @@ const JobsPage = () => {
               )}
             </div>
 
-            {/* 고급 페이지네이션: 1~5 / 6~10 단위 */}
+            {/* 페이지네이션 (Bootcamps.tsx 스타일) */}
             {totalPages > 1 && (
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    이전
-                  </button>
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                >
+                  이전
+                </button>
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: chunkEnd - chunkStart + 1 }, (_, idx) => chunkStart + idx).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`h-9 w-9 rounded-full text-sm font-semibold ${
-                          p === page
-                            ? 'bg-primary-600 text-white shadow-soft'
-                            : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-200 hover:text-primary-700'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+                {getPageNumbers().map((pageNum, idx) => {
+                  if (pageNum === ( -1 as unknown as number)) {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                        ...
+                      </span>
+                    )
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`min-w-[40px] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                        page === pageNum
+                          ? 'border-primary-600 bg-primary-600 text-white'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
 
-                  <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    다음
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <button
-                    disabled={chunkStart === 1}
-                    onClick={() => setPage((prev) => Math.max(1, prev - 5))}
-                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    ◀ 1~5
-                  </button>
-                  <span className="text-slate-500">|</span>
-                  <button
-                    disabled={chunkEnd === totalPages}
-                    onClick={() => setPage((prev) => Math.min(totalPages, chunkStart + 5))}
-                    className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    6~10 ▶
-                  </button>
-                  <span className="text-slate-500">총 {totalPages} 페이지</span>
-                </div>
+                <button
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                >
+                  다음
+                </button>
               </div>
             )}
           </section>
@@ -436,7 +451,6 @@ const JobsPage = () => {
                 <div>
                   <p className="text-xs font-semibold text-primary-700">{item.CompanyName}</p>
                   <p className="text-sm font-bold text-slate-900">{item.Title}</p>
-                  <p className="text-xs text-slate-600">조회수 {item.ViewCount}</p>
                 </div>
 
                 <button

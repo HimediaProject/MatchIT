@@ -39,6 +39,7 @@ export const bootcampApi = {
         page?: number
         size?: number
         show_expired?: boolean  // 마감일 추가
+        sort?: 'created' | 'deadline' | 'views'  // 정렬 기준 추가
         keyword?: string
         category_id?: number
         category_names?: string[]
