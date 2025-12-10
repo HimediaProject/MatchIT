@@ -1,5 +1,5 @@
 import React from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchJobDetail, type JobPost } from '../api/jobposts'
 
@@ -57,24 +57,35 @@ const JobDetail: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      {/* 뒤로 가기 */}
+        <div className="mb-6">
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            채용공고 목록으로
+          </Link>
+        </div>
 
-      {/* 뒤로가기 버튼 */}
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-6 text-sm text-primary-600 hover:underline"
-      >
-        ← 목록으로 돌아가기
-      </button>
+      {/* 헤더 섹션 */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500">
+              조회수 {job.ViewCount.toLocaleString()}
+            </span>
+          </div>
 
-      {/* 회사명 */}
-      <p className="text-sm font-semibold text-primary-700">
-        {job.CompanyName}
-      </p>
+          <p className="text-sm font-semibold text-primary-700">
+            {job.CompanyName}
+          </p>
 
-      {/* 공고 제목 */}
-      <h1 className="mt-1 text-3xl font-bold text-slate-900">
-        {job.Title}
-      </h1>
+          <h1 className="mt-1 text-3xl font-bold text-slate-900">
+            {job.Title}
+          </h1>
+        </div>
 
       {/* 위치, 경력, 고용 형태 정보 */}
       <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-600">
