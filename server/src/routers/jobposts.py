@@ -81,9 +81,9 @@ def get_job_posts(
     location: Optional[str] = Query(None, description="지역 필터"),
     experience_requirement: Optional[str] = Query(None, description="경력 조건 필터 (신입/경력)"),
     sort: str = Query(
-        "latest",
-        pattern="^(latest|deadline|salary)$",
-        description="전체 조회 순서(latest: 최신순, deadline: 마감 임박순, salary: 연봉 높은순)",
+        "created",
+        pattern="^(created|deadline|views)$",
+        description="정렬 방식 (created: 최신 등록순, deadline: 마감일 오름차순, views: 조회수)",
     ),
     db: Session = Depends(get_db),
 ):
@@ -115,16 +115,10 @@ def get_job_posts(
 
     if sort == "deadline":
         order_clause = JobPost.CloseDate.asc().nulls_last()
-    elif sort == "salary":
-        cleaned_salary = func.regexp_replace(JobPost.Salary, r"[^0-9]+", " ", "g")
-        salary_array = func.string_to_array(cleaned_salary, " ")
-        order_clause = (
-            select(func.max(cast(func.unnest(salary_array), Integer)))
-            .correlate(JobPost)
-            .scalar_subquery()
-            .desc()
-            .nullslast()
-        )
+    elif sort == "views":
+        order_clause = JobPost.ViewCount.desc().nulls_last()
+    elif sort == "created":
+        order_clause = JobPost.CreatedAt.desc().nulls_last()
     else:
         order_clause = JobPost.CreatedAt.desc().nulls_last()
 

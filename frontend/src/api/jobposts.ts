@@ -40,9 +40,13 @@ export interface JobListParams {
   size?: number
   keyword?: string
   category_id?: number
+  category_ids?: number[]
+  skill_ids?: number[]
   location?: string
   experience_requirement?: string
-  sort?: 'latest' | 'deadline' | 'salary'
+  experience_min?: number | null
+  experience_max?: number | null
+  sort?: 'created' | 'deadline' | 'views'
 }
 
 export async function fetchJobList(
@@ -53,8 +57,12 @@ export async function fetchJobList(
     size = 10,
     keyword,
     category_id,
+    category_ids,
+    skill_ids,
     location,
     experience_requirement,
+    experience_min,
+    experience_max,
     sort,
   } = params
 
@@ -63,8 +71,12 @@ export async function fetchJobList(
     size,
     keyword,
     category_id,
+    category_ids,
+    skill_ids,
     location,
     experience_requirement,
+    experience_min,
+    experience_max,
     sort,
   })
 
@@ -76,4 +88,26 @@ export async function fetchJobDetail(
 ): Promise<JobPost> {
   const response = await apiClient.get<JobPost>(`/jobs/${jobId}/`)
   return response
+}
+
+export interface JobCategory {
+  CategoryID: number
+  CategoryName: string
+}
+
+export async function fetchSkills(): Promise<string[]> {
+  const res = await apiClient.get<{ skills?: string[] } | string[]>('/skills/')
+  if (Array.isArray(res)) {
+    return res as string[]
+  }
+  if (Array.isArray(res?.skills)) {
+    return res.skills
+  }
+  return []
+}
+
+export async function fetchCategories(): Promise<JobCategory[]> {
+  const res = await apiClient.get<{ categories?: JobCategory[] } | JobCategory[]>('/jobcategories/')
+  if (Array.isArray(res)) return res
+  return res?.categories ?? []
 }
