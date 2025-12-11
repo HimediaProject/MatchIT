@@ -269,32 +269,32 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육·모집일정</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
+                        <p className="text-sm text-black text-slate-600 leading-relaxed">
                           {camp.schedule || '-'} {camp.period || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">수업방식</span>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm text-black text-slate-600">
                           {camp.mode || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육장소</span>
-                        <p className="text-sm font-bold text-slate-900 break-keep">
+                        <p className="text-sm text-black text-slate-600 break-keep">
                           {camp.location || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">비용지원유형</span>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm text-black text-slate-600">
                           {camp.costSupportType || '-'}
                         </p>
                       </div>
                       {camp.educationContent && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">교육내용</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.educationContent}
                           </p>
                         </div>
@@ -302,7 +302,7 @@ const ComparePage = () => {
                       {camp.qualification && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">자격요건</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.qualification}
                           </p>
                         </div>
@@ -310,7 +310,7 @@ const ComparePage = () => {
                       {camp.benefits && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">혜택</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.benefits}
                           </p>
                         </div>
@@ -323,32 +323,32 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">마감일</span>
-                        <p className="text-sm font-bold text-slate-900">{job.deadlines || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.deadlines || '-'}</p>
                       </div>
                       {job.salary && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">연봉</span>
-                          <p className="text-sm font-bold text-slate-900">{job.salary}</p>
+                          <p className="text-sm text-black text-slate-600">{job.salary}</p>
                         </div>
                       )}
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">근무지</span>
-                        <p className="text-sm font-bold text-slate-900">{job.location || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.location || '-'}</p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">경력요건</span>
-                        <p className="text-sm font-bold text-slate-900">{job.experience || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.experience || '-'}</p>
                       </div>
                       {job.education && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">학력</span>
-                          <p className="text-sm font-bold text-slate-900">{job.education}</p>
+                          <p className="text-sm text-black text-slate-600">{job.education}</p>
                         </div>
                       )}
                       {job.employmentType && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">고용형태</span>
-                          <p className="text-sm font-bold text-slate-900">{job.employmentType}</p>
+                          <p className="text-sm text-black text-slate-600">{job.employmentType}</p>
                         </div>
                       )}
                       {job.skills && job.skills.length > 0 && (
@@ -358,7 +358,7 @@ const ComparePage = () => {
                             {job.skills.map((skill, idx) => (
                               <span
                                 key={idx}
-                                className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700"
+                                className="rounded-full bg-primary-50 px-2 py-0.5 text-sm text-black text-slate-600"
                               >
                                 {skill}
                               </span>
@@ -369,7 +369,7 @@ const ComparePage = () => {
                       {job.mainTasks && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">주요업무</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.mainTasks}
                           </p>
                         </div>
@@ -377,7 +377,7 @@ const ComparePage = () => {
                       {job.qualifications && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">자격요건</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.qualifications}
                           </p>
                         </div>
@@ -385,7 +385,7 @@ const ComparePage = () => {
                       {job.preferences && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">우대사항</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.preferences}
                           </p>
                         </div>
@@ -393,7 +393,7 @@ const ComparePage = () => {
                       {job.benefits && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">혜택</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.benefits}
                           </p>
                         </div>
@@ -401,7 +401,7 @@ const ComparePage = () => {
                       {job.process && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">채용절차</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.process}
                           </p>
                         </div>
