@@ -23,7 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade():
     # CareerLevels 더미 데이터
     op.execute("""
-    INSERT INTO CareerLevels (CareerName) VALUES
+    INSERT INTO careerlevels (careername) VALUES
     ('학생'),
     ('신입'),
     ('경력');
@@ -31,7 +31,7 @@ def upgrade():
 
     # Users 더미 데이터
     op.execute("""
-    INSERT INTO Users (Name, Email, CareerLevelID) VALUES
+    INSERT INTO users (name, email, careerlevelid) VALUES
     ('홍길동', 'hong@example.com', 1),
     ('김철수', 'kim@example.com', 2),
     ('박영희', 'park@example.com', 2);
@@ -39,7 +39,7 @@ def upgrade():
 
     # Skills 더미 데이터
     op.execute("""
-    INSERT INTO Skills (SkillName) VALUES
+    INSERT INTO skills (skillname) VALUES
     ('Python'),
     ('JavaScript'),
     ('SQL');
@@ -47,7 +47,7 @@ def upgrade():
 
     # DesiredJobs 더미 데이터
     op.execute("""
-    INSERT INTO DesiredJobs (JobName) VALUES
+    INSERT INTO desiredjobs (jobname) VALUES
     ('백엔드 개발자'),
     ('프론트엔드 개발자'),
     ('데이터 엔지니어');
@@ -55,7 +55,7 @@ def upgrade():
 
     # Platforms 더미 데이터
     op.execute("""
-    INSERT INTO Platforms (PlatformName) VALUES
+    INSERT INTO platforms (platformname) VALUES
     ('Saramin'),
     ('JobKorea'),
     ('Wanted');
@@ -63,15 +63,24 @@ def upgrade():
 
     # JobCategories 더미 데이터 (최상위 3개)
     op.execute("""
-    INSERT INTO JobCategories (CategoryName, Depth) VALUES
+    INSERT INTO jobcategories (categoryname, depth) VALUES
     ('개발', 1),
     ('디자인', 1),
     ('마케팅', 1);
     """)
 
+    # ExperienceRanges 더미 데이터
+    op.execute("""
+    INSERT INTO experienceranges (rangename, minyears, maxyears) VALUES
+    ('1년 미만', 0, 1),
+    ('1~3년', 1, 3),
+    ('3~5년', 3, 5),
+    ('5년 이상', 5, NULL);
+    """)
+
     # SocialLogins 더미 데이터 (UserID와 FK 맞춰서)
     op.execute("""
-    INSERT INTO SocialLogins (UserID, Provider, ProviderUserID) VALUES
+    INSERT INTO sociallogins (userid, provider, provideruserid) VALUES
     (1, 'Kakao', 'kakao_001'),
     (2, 'Naver', 'naver_002'),
     (3, 'Google', 'google_003');
@@ -79,7 +88,7 @@ def upgrade():
 
     # UserDesiredJobs 더미 데이터
     op.execute("""
-    INSERT INTO UserDesiredJobs (UserID, DesiredJobID) VALUES
+    INSERT INTO userdesiredjobs (userid, desiredjobid) VALUES
     (1, 1),
     (2, 2),
     (3, 3);
@@ -87,7 +96,7 @@ def upgrade():
 
     # UserSkills 더미 데이터
     op.execute("""
-    INSERT INTO UserSkills (UserID, SkillID) VALUES
+    INSERT INTO userskills (userid, skillid) VALUES
     (1, 1),
     (2, 2),
     (3, 3);
@@ -95,7 +104,7 @@ def upgrade():
 
     # UserNotificationSettings 더미 데이터
     op.execute("""
-    INSERT INTO UserNotificationSettings (UserID, NotificationType, IsEnabled, NotificationTime) VALUES
+    INSERT INTO usernotificationsettings (userid, notificationtype, isenabled, notificationtime) VALUES
     (1, '채용 알림', TRUE, '09:00'),
     (2, '맞춤형 정보', FALSE, '12:00'),
     (3, '이벤트 소식', TRUE, '18:00');
@@ -103,9 +112,9 @@ def upgrade():
 
     # JobPosts 더미 데이터
     op.execute("""
-    INSERT INTO JobPosts (PlatformID, Title, CompanyName, JobCategoryID, EmploymentType,
-        ExperienceRequirement, MinExperienceYears, EducationRequirement, Location, MainTasks,
-        Qualifications, Preferences, Benefits, Process, Salary, PostedDate, CloseDate, IsActive) VALUES
+    INSERT INTO jobposts (platformid, title, companyname, jobcategoryid, employmenttype,
+        experiencerequirement, minexperienceyears, educationrequirement, location, maintasks,
+        qualifications, preferences, benefits, process, salary, posteddate, closedate, isactive) VALUES
     (1, '백엔드 개발자 모집', 'A회사', 1, '정규직', '경력', 3, '학사 이상', '서울', '서버 개발 및 운영',
      'Java 경험자', '원격근무 가능', '연봉 5000만원', '서류 -> 면접', '5000만원 이상', '2025-11-01', '2025-12-01', TRUE),
     (2, '프론트엔드 개발자 채용', 'B회사', 1, '계약직', '신입', 0, '학사 이상', '부산', '웹 프론트 개발',
@@ -116,7 +125,7 @@ def upgrade():
 
     # JobPostSkills 더미 데이터
     op.execute("""
-    INSERT INTO JobPostSkills (PostID, SkillID) VALUES
+    INSERT INTO jobpostskills (postid, skillid) VALUES
     (1, 2),
     (2, 2),
     (3, 1);
@@ -124,8 +133,8 @@ def upgrade():
 
     # BootcampPosts 더미 데이터
     op.execute("""
-    INSERT INTO BootcampPosts (Title, InstituteName, JobCategoryID, Location, OnlineOffline, CostSupportType,
-        EducationContent, Qualification, Benefits, StartDate, RegistrationDate, CloseDate, DetailUrl) VALUES
+    INSERT INTO bootcampposts (title, institutename, jobcategoryid, location, onlineoffline, costsupporttype,
+        educationcontent, qualification, benefits, startdate, registrationdate, closedate, detailurl) VALUES
     ('파이썬 부트캠프', '코드스쿨', 1, '서울', '온라인', '국비지원', 'Python 기본, 데이터 분석', '없음', '수료증 발급',
      '2025-12-01', '2025-11-01', '2025-11-25', 'http://bootcamp1.example.com'),
     ('리액트 부트캠프', '프론트캠프', 1, '부산', '오프라인', '본인부담', 'React 기초부터 심화', '고등학교 졸업 이상', '취업 연계',
@@ -136,35 +145,27 @@ def upgrade():
 
     # UserScraps 더미 데이터
     op.execute("""
-    INSERT INTO UserScraps (UserID, PostType, JobPostID, BootcampPostID) VALUES
+    INSERT INTO userscraps (userid, posttype, jobpostid, bootcamppostid) VALUES
     (1, 'Job', 1, NULL),
     (2, 'Job', 2, NULL),
     (3, 'Bootcamp', NULL, 3);
     """)
 
-    # ExperienceRanges 더미 데이터
-    op.execute("""
-    INSERT INTO ExperienceRanges (RangeName, MinYears, MaxYears) VALUES
-    ('1년 미만', 0, 1),
-    ('1~3년', 1, 3),
-    ('3~5년', 3, 5),
-    ('5년 이상', 5, NULL);
-    """)
-
 
 def downgrade():
     # 더미 데이터 삭제 (역순으로)
-    op.execute("DELETE FROM UserScraps;")
-    op.execute("DELETE FROM BootcampPosts;")
-    op.execute("DELETE FROM JobPostSkills;")
-    op.execute("DELETE FROM JobPosts;")
-    op.execute("DELETE FROM UserNotificationSettings;")
-    op.execute("DELETE FROM UserSkills;")
-    op.execute("DELETE FROM UserDesiredJobs;")
-    op.execute("DELETE FROM SocialLogins;")
-    op.execute("DELETE FROM JobCategories;")
-    op.execute("DELETE FROM Platforms;")
-    op.execute("DELETE FROM DesiredJobs;")
-    op.execute("DELETE FROM Skills;")
-    op.execute("DELETE FROM Users;")
-    op.execute("DELETE FROM CareerLevels;")
+    op.execute("DELETE FROM userscraps;")
+    op.execute("DELETE FROM bootcampposts;")
+    op.execute("DELETE FROM jobpostskills;")
+    op.execute("DELETE FROM jobposts;")
+    op.execute("DELETE FROM usernotificationsettings;")
+    op.execute("DELETE FROM userskills;")
+    op.execute("DELETE FROM userdesiredjobs;")
+    op.execute("DELETE FROM sociallogins;")
+    op.execute("DELETE FROM jobcategories;")
+    op.execute("DELETE FROM platforms;")
+    op.execute("DELETE FROM desiredjobs;")
+    op.execute("DELETE FROM skills;")
+    op.execute("DELETE FROM users;")
+    op.execute("DELETE FROM careerlevels;")
+    op.execute("DELETE FROM experienceranges;")

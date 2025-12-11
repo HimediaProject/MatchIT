@@ -54,6 +54,23 @@ const JobDetail = () => {
     )
   }
 
+  // 최근 열람 공고 로컬 저장 (최신 3개 유지)
+  useEffect(() => {
+    try {
+      const key = 'recentViews'
+      const raw = localStorage.getItem(key)
+      const arr: string[] = raw ? JSON.parse(raw) : []
+      const title = job.Title || `${job.CompanyName} ${job.Title}`
+      // remove existing
+      const filtered = arr.filter((t) => t !== title)
+      filtered.unshift(title)
+      const limited = filtered.slice(0, 3)
+      localStorage.setItem(key, JSON.stringify(limited))
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [job])
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-4xl px-4 py-12 md:px-6">
