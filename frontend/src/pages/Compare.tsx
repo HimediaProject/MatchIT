@@ -49,6 +49,12 @@ const formatDate = (d?: string | null) => {
   }
 }
 
+// 채용공고 텍스트를 불릿/하이픈 기준으로 분리하는 유틸 함수
+const splitTextByBullets = (text?: string | null) => {
+  if (!text) return null
+  return text.split(/[-•*\u2022]/).filter((item) => item.trim())
+}
+
 const ComparePage = () => {
   const [mode, setMode] = useState<'jobs' | 'bootcamps'>('bootcamps')
   const [items, setItems] = useState<Array<ComparedJob | ComparedBootcamp>>([])
@@ -177,9 +183,37 @@ const ComparePage = () => {
     }
   }
 
+  // 상세 정보 섹션의 동일 항목(예: 주요업무, 자격요건 등) 높이를 동적으로 맞추기 위한 효과
+  useEffect(() => {
+    if (!items || items.length === 0) return
+
+    const fieldsToSync =
+      mode === 'jobs'
+        ? ['job-mainTasks', 'job-qualifications', 'job-preferences', 'job-benefits', 'job-process']
+        : ['camp-educationContent', 'camp-qualification', 'camp-benefits']
+
+    fieldsToSync.forEach((field) => {
+      const nodes = Array.from(
+        document.querySelectorAll<HTMLElement>(`[data-field="${field}"]`)
+      )
+
+      // 기존 minHeight 초기화
+      nodes.forEach((node) => {
+        node.style.minHeight = ''
+      })
+
+      if (nodes.length === 0) return
+
+      const maxHeight = Math.max(...nodes.map((node) => node.offsetHeight))
+      nodes.forEach((node) => {
+        node.style.minHeight = `${maxHeight}px`
+      })
+    })
+  }, [items, mode])
+
   return (
     <div className="bg-white min-h-screen">
-    <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         
         {/* 헤더 섹션 */}
         <div className="mb-10">
@@ -269,48 +303,48 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육·모집일정</span>
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
+                        <p className="text-sm text-black text-slate-600 leading-relaxed">
                           {camp.schedule || '-'} {camp.period || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">수업방식</span>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm text-black text-slate-600">
                           {camp.mode || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">교육장소</span>
-                        <p className="text-sm font-bold text-slate-900 break-keep">
+                        <p className="text-sm text-black text-slate-600 break-keep">
                           {camp.location || '-'}
                         </p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">비용지원유형</span>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm text-black text-slate-600">
                           {camp.costSupportType || '-'}
                         </p>
                       </div>
                       {camp.educationContent && (
-                        <div>
+                        <div data-field="camp-educationContent">
                           <span className="mb-1 block text-xs text-slate-500">교육내용</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.educationContent}
                           </p>
                         </div>
                       )}
                       {camp.qualification && (
-                        <div>
+                        <div data-field="camp-qualification">
                           <span className="mb-1 block text-xs text-slate-500">자격요건</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.qualification}
                           </p>
                         </div>
                       )}
                       {camp.benefits && (
-                        <div>
+                        <div data-field="camp-benefits">
                           <span className="mb-1 block text-xs text-slate-500">혜택</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-black text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {camp.benefits}
                           </p>
                         </div>
@@ -323,32 +357,32 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">마감일</span>
-                        <p className="text-sm font-bold text-slate-900">{job.deadlines || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.deadlines || '-'}</p>
                       </div>
                       {job.salary && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">연봉</span>
-                          <p className="text-sm font-bold text-slate-900">{job.salary}</p>
+                          <p className="text-sm text-black text-slate-600">{job.salary}</p>
                         </div>
                       )}
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">근무지</span>
-                        <p className="text-sm font-bold text-slate-900">{job.location || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.location || '-'}</p>
                       </div>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">경력요건</span>
-                        <p className="text-sm font-bold text-slate-900">{job.experience || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">{job.experience || '-'}</p>
                       </div>
                       {job.education && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">학력</span>
-                          <p className="text-sm font-bold text-slate-900">{job.education}</p>
+                          <p className="text-sm text-black text-slate-600">{job.education}</p>
                         </div>
                       )}
                       {job.employmentType && (
                         <div>
                           <span className="mb-1 block text-xs text-slate-500">고용형태</span>
-                          <p className="text-sm font-bold text-slate-900">{job.employmentType}</p>
+                          <p className="text-sm text-black text-slate-600">{job.employmentType}</p>
                         </div>
                       )}
                       {job.skills && job.skills.length > 0 && (
@@ -358,7 +392,7 @@ const ComparePage = () => {
                             {job.skills.map((skill, idx) => (
                               <span
                                 key={idx}
-                                className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700"
+                                className="rounded-full bg-primary-50 px-2 py-0.5 text-sm text-black text-slate-600"
                               >
                                 {skill}
                               </span>
@@ -367,43 +401,63 @@ const ComparePage = () => {
                         </div>
                       )}
                       {job.mainTasks && (
-                        <div>
+                        <div data-field="job-mainTasks">
                           <span className="mb-1 block text-xs text-slate-500">주요업무</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                            {job.mainTasks}
-                          </p>
+                          <div className="space-y-1 text-sm text-black text-slate-600 leading-relaxed">
+                            {splitTextByBullets(job.mainTasks)?.map((item, index) => (
+                              <div key={index} className="break-keep">
+                                {item.trim()}
+                              </div>
+                            )) || '-'}
+                          </div>
                         </div>
                       )}
                       {job.qualifications && (
-                        <div>
+                        <div data-field="job-qualifications">
                           <span className="mb-1 block text-xs text-slate-500">자격요건</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                            {job.qualifications}
-                          </p>
+                          <div className="space-y-1 text-sm text-black text-slate-600 leading-relaxed">
+                            {splitTextByBullets(job.qualifications)?.map((item, index) => (
+                              <div key={index} className="break-keep">
+                                {item.trim()}
+                              </div>
+                            )) || '-'}
+                          </div>
                         </div>
                       )}
                       {job.preferences && (
-                        <div>
+                        <div data-field="job-preferences">
                           <span className="mb-1 block text-xs text-slate-500">우대사항</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                            {job.preferences}
-                          </p>
+                          <div className="space-y-1 text-sm text-black text-slate-600 leading-relaxed">
+                            {splitTextByBullets(job.preferences)?.map((item, index) => (
+                              <div key={index} className="break-keep">
+                                {item.trim()}
+                              </div>
+                            )) || '-'}
+                          </div>
                         </div>
                       )}
                       {job.benefits && (
-                        <div>
+                        <div data-field="job-benefits">
                           <span className="mb-1 block text-xs text-slate-500">혜택</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                            {job.benefits}
-                          </p>
+                          <div className="space-y-1 text-sm text-black text-slate-600 leading-relaxed">
+                            {splitTextByBullets(job.benefits)?.map((item, index) => (
+                              <div key={index} className="break-keep">
+                                {item.trim()}
+                              </div>
+                            )) || '-'}
+                          </div>
                         </div>
                       )}
                       {job.process && (
-                        <div>
+                        <div data-field="job-process">
                           <span className="mb-1 block text-xs text-slate-500">채용절차</span>
-                          <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                            {job.process}
-                          </p>
+                          <div className="space-y-1 text-sm text-black text-slate-600 leading-relaxed">
+                            {splitTextByBullets(job.process)?.map((item, index) => (
+                              <div key={index} className="break-keep">
+                                {item.trim()}
+                              </div>
+                            )) || '-'}
+                          </div>
                         </div>
                       )}
                     </>

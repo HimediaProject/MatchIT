@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchJobDetail, type JobPost } from '../api/jobposts'
 
-const JobDetail: React.FC = () => {
+const JobDetail = () => {
   const { jobId } = useParams()
 
   const navigate = useNavigate()
@@ -73,126 +72,191 @@ const JobDetail: React.FC = () => {
   }, [job])
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-
-      {/* 뒤로가기 버튼 */}
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-6 text-sm text-primary-600 hover:underline"
-      >
-        ← 목록으로 돌아가기
-      </button>
-
-      {/* 회사명 */}
-      <p className="text-sm font-semibold text-primary-700">
-        {job.CompanyName}
-      </p>
-
-      {/* 공고 제목 */}
-      <h1 className="mt-1 text-3xl font-bold text-slate-900">
-        {job.Title}
-      </h1>
-
-      {/* 위치, 경력, 고용 형태 정보 */}
-      <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-600">
-        <span>{job.Location ?? '지역 정보 없음'}</span>
-        <span>·</span>
-        <span>{job.ExperienceRequirement ?? '경력 정보 없음'}</span>
-        {job.EmploymentType && (
-          <>
-            <span>·</span>
-            <span>{job.EmploymentType}</span>
-          </>
-        )}
-      </div>
-
-      {/* 스킬 태그 */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {job.Skills.length > 0 ? (
-          job.Skills.map((skill) => (
-            <span
-              key={skill}
-              className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700"
-            >
-              {skill}
-            </span>
-          ))
-        ) : (
-          <span className="text-xs text-slate-400">스킬 정보 없음</span>
-        )}
-      </div>
-
-      {/* 본문 정보 섹션들 */}
-      <div className="mt-10 space-y-6">
-
-        {/* 주요 업무 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">주요 업무</h2>
-          <p className="whitespace-pre-line text-sm text-slate-700">
-            {job.MainTasks ?? '주요 업무 정보 없음'}
-          </p>
-        </section>
-
-        {/* 자격 요건 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">자격 요건</h2>
-          <p className="whitespace-pre-line text-sm text-slate-700">
-            {job.Qualifications ?? '자격 요건 정보 없음'}
-          </p>
-        </section>
-
-        {/* 우대 사항 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">우대 사항</h2>
-          <p className="whitespace-pre-line text-sm text-slate-700">
-            {job.Preferences ?? '우대 사항 정보 없음'}
-          </p>
-        </section>
-
-        {/* 복지 / 혜택 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">복지 / 혜택</h2>
-          <p className="whitespace-pre-line text-sm text-slate-700">
-            {job.Benefits ?? '복지 / 혜택 정보 없음'}
-          </p>
-        </section>
-
-      </div>
-
-      {/* 게시일 / 마감일 / 원문 링크 */}
-      <div className="mt-10 flex flex-wrap items-center justify-between text-xs text-slate-500">
-
-        <div className="space-x-3">
-          <span>
-            게시일:{' '}
-            {job.PostedDate
-              ? new Date(job.PostedDate).toLocaleDateString()
-              : '정보 없음'}
-          </span>
-
-          <span>
-            마감일:{' '}
-            {job.CloseDate
-              ? new Date(job.CloseDate).toLocaleDateString()
-              : '정보 없음'}
-          </span>
+    <div className="bg-white">
+      <div className="mx-auto max-w-4xl px-4 py-12 md:px-6">
+        {/* 뒤로 가기 */}
+        <div className="mb-6">
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            채용공고 목록으로
+          </Link>
         </div>
 
-        {job.Url && (
-          <a
-            href={job.Url}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full border border-primary-500 px-3 py-1 text-xs font-semibold text-primary-600 hover:bg-primary-50"
-          >
-            원본 공고 보기
-          </a>
-        )}
+        {/* 헤더 섹션 */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500">
+              조회수 {job.ViewCount.toLocaleString()}
+            </span>
+          </div>
 
+          <p className="text-sm font-semibold text-primary-700">
+            {job.CompanyName}
+          </p>
+
+          <h1 className="mt-1 text-3xl font-bold text-slate-900">
+            {job.Title}
+          </h1>
+        </div>
+
+        {/* 기본 정보 카드 */}
+        <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">기본 정보</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {job.Location && (
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">근무지역</p>
+                <p className="text-sm text-slate-600">{job.Location}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-slate-700 mb-1">경력</p>
+              <p className="text-sm text-slate-600">{job.ExperienceRequirement ?? '경력 무관'}</p>
+            </div>
+            {job.EmploymentType && (
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">고용 형태</p>
+                <p className="text-sm text-slate-600">{job.EmploymentType}</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 flex items-center gap-3">
+            {/* 스크랩 버튼 */}
+            <button 
+              type="button"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+              aria-label="스크랩"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+
+            {/* 공유하기 버튼 */}
+            <button 
+              type="button"
+              className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
+            >
+              공유하기
+            </button>
+
+            {/* 지원하기 버튼 */}
+            <a
+              href={job.Url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-primary-600 text-base font-bold text-white shadow-sm transition hover:bg-primary-700"
+            >
+              지원하기
+            </a>
+          </div>
+        </div>
+
+        {/* 스킬 태그 */}
+        <div className="mb-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">기술 스택</h2>
+          <div className="flex flex-wrap gap-2">
+            {job.Skills.length > 0 ? (
+              job.Skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-sm font-semibold text-primary-700"
+                >
+                  {skill}
+                </span>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">기술 스택 정보가 없습니다.</p>
+            )}
+          </div>
+        </div>
+
+        {/* 본문 정보 섹션들 */}
+        <div className="space-y-6">
+          {/* 주요 업무 */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">주요 업무</h2>
+            <div className="prose prose-sm max-w-none">
+              {job.MainTasks ? (
+                <div className="space-y-2 text-sm text-slate-600 leading-relaxed">
+                  {job.MainTasks.split(/[-•*\u2022]/)
+                    .filter(item => item.trim())
+                    .map((item, index) => (
+                      <div key={index} className="break-keep">
+                        {item.trim()}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">주요 업무 정보가 없습니다.</p>
+              )}
+            </div>
+          </div>
+
+          {/* 자격 요건 */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">자격 요건</h2>
+            <div className="prose prose-sm max-w-none">
+              {job.Qualifications ? (
+                <div className="space-y-2 text-sm text-slate-600 leading-relaxed">
+                  {job.Qualifications.split(/[-•*\u2022]/)
+                    .filter(item => item.trim())
+                    .map((item, index) => (
+                      <div key={index} className="break-keep">
+                        {item.trim()}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">자격 요건 정보가 없습니다.</p>
+              )}
+            </div>
+          </div>
+
+          {/* 우대 사항 */}
+          {job.Preferences && (
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+              <h2 className="mb-4 text-lg font-bold text-slate-900">우대 사항</h2>
+              <div className="prose prose-sm max-w-none">
+                <div className="space-y-2 text-sm text-slate-600 leading-relaxed">
+                  {job.Preferences.split(/[-•*\u2022]/)
+                    .filter(item => item.trim())
+                    .map((item, index) => (
+                      <div key={index} className="break-keep">
+                        {item.trim()}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 복지 / 혜택 */}
+          {job.Benefits && (
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+              <h2 className="mb-4 text-lg font-bold text-slate-900">복지 / 혜택</h2>
+              <div className="prose prose-sm max-w-none">
+                <div className="space-y-2 text-sm text-slate-600 leading-relaxed">
+                  {job.Benefits.split(/[-•*\u2022]/)
+                    .filter(item => item.trim())
+                    .map((item, index) => (
+                      <div key={index} className="break-keep">
+                        {item.trim()}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 }
-
 
 export default JobDetail
