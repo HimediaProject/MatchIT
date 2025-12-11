@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authApi, skillsApi, metaApi } from '../services/apiService'
+import { authApi, skillsApi, metaApi, usersApi } from '../services/apiService'
 
 type RecommendationCard = {
   title: string
@@ -30,6 +30,7 @@ const ProfilePage = () => {
   const [experienceRanges, setExperienceRanges] = useState<any[]>([])
   const [selectedCareerLevelId, setSelectedCareerLevelId] = useState<number | null>(null)
   const [selectedExperienceRangeId, setSelectedExperienceRangeId] = useState<number | null>(null)
+  const [fetchedCareerName, setFetchedCareerName] = useState<string | null>(null)
 
   // DB-driven skills & wanted jobs (드롭다운 + 검색)
   const [allSkills, setAllSkills] = useState<string[]>([])
@@ -55,32 +56,34 @@ const ProfilePage = () => {
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
+      // 최근 열람 공고를 저장 전에 읽기
+      let recentViewsToSave: string[] = []
+      try {
+        const raw = localStorage.getItem('recentViews')
+        if (raw) {
+          recentViewsToSave = JSON.parse(raw)
+        }
+      } catch (e) {
+        // ignore
+      }
+
       const profileData = {
         name,
         email,
-        careerLevelId: selectedCareerLevelId,
-        experienceRangeId: selectedExperienceRangeId,
+        career_level: selectedCareerLevelId,
+        experience_range: selectedExperienceRangeId,
         skills: selectedStacks,
-        wantedJobs: selectedInterests,
+        desired_jobs: selectedInterests,
+        recentViews: recentViewsToSave,
       }
 
-      // 백엔드 API 호출 (예: PATCH /users/me)
-      const response = await fetch('http://localhost:8000/users/me', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileData),
-      })
-
-      if (!response.ok) {
-        throw new Error(`저장 실패: ${response.status}`)
-      }
-
-      // 성공 시에는 기존의 성공/오류 배너 대신 UI는 변경하지 않음
-      // (알림에는 유저에게 유의미한 공고/정보/이벤트를 노출하도록 별도 로직이 필요)
+      console.log('프로필 저장 요청:', profileData)
+      const result = await usersApi.updateMyProfile(profileData)
+      console.log('프로필 저장 완료:', result)
+      alert('프로필이 저장되었습니다.')
     } catch (error) {
       console.error('Profile save error:', error)
-      // 저장 실패 시에도 기존처럼 배너를 띄우지 않음 — 필요하면 별도 UI로 처리
+      alert('프로필 저장에 실패했습니다: ' + String(error))
     } finally {
       setIsSaving(false)
     }
@@ -123,6 +126,21 @@ const ProfilePage = () => {
     }
     fetchSkills()
   }, [])
+
+  // 메타(커리어 레벨)가 로드된 이후에, 서버에서 받은 career name을 ID로 매핑
+  useEffect(() => {
+    if (fetchedCareerName && careerLevels.length > 0) {
+      const careerLevel = careerLevels.find((c: any) => {
+        const name = c.name || c.CareerName || c.careername
+        return name === fetchedCareerName
+      })
+      if (careerLevel) {
+        const id = careerLevel.id || careerLevel.CareerLevelID || careerLevel.careerlevelid
+        setSelectedCareerLevelId(id)
+      }
+      setFetchedCareerName(null)
+    }
+  }, [careerLevels, fetchedCareerName])
 
   // DB-driven career levels & experience ranges 로드
   useEffect(() => {
@@ -194,21 +212,83 @@ const ProfilePage = () => {
         const res = await authApi.getCurrentUser()
         if (!mounted) return
         if (!res || res.isLoggedIn !== true) {
-          // 로그인 필요
           navigate('/login', { replace: true })
           return
         }
 
-        // 사용자 정보 바인딩 (있으면 채워줌)
-        const user = res.user || {}
-        if (user.name) setName(user.name)
-        if (user.email) setEmail(user.email)
-        if (user.careerLevelId) setSelectedCareerLevelId(user.careerLevelId)
-        if (user.experienceRangeId) setSelectedExperienceRangeId(user.experienceRangeId)
-        if (Array.isArray(user.skills) && user.skills.length > 0) setSelectedStacks(user.skills)
-        if (Array.isArray(user.wantedJobs) && user.wantedJobs.length > 0) setSelectedInterests(user.wantedJobs)
-        if (Array.isArray(user.scraps)) setScraps(user.scraps)
-        if (Array.isArray(user.recentViews)) setRecentViews(user.recentViews)
+        // 로그인했으면 GET /users/me로 전체 프로필 데이터 로드
+        try {
+          const profileData = await usersApi.getMyProfile()
+          if (profileData) {
+            if (profileData.name) setName(profileData.name)
+            if (profileData.email) setEmail(profileData.email)
+
+            // 커리어 레벨: 서버는 이름(career_level)을 반환하므로 메타에서 ID를 찾아 설정
+            if (profileData.career_level) {
+              const careerLevel = careerLevels.find((c: any) => {
+                const name = c.name || c.CareerName || c.careername
+                return name === profileData.career_level
+              })
+              if (careerLevel) {
+                const id = careerLevel.id || careerLevel.CareerLevelID || careerLevel.careerlevelid
+                setSelectedCareerLevelId(id)
+              }
+              else {
+                // 메타데이터가 아직 로드되지 않은 경우, 나중에 매핑하기 위해 이름을 저장
+                setFetchedCareerName(profileData.career_level)
+              }
+            }
+
+            if (Array.isArray(profileData.skills) && profileData.skills.length > 0) {
+              setSelectedStacks(profileData.skills)
+            }
+            if (Array.isArray(profileData.desired_jobs) && profileData.desired_jobs.length > 0) {
+              setSelectedInterests(profileData.desired_jobs)
+            }
+            if (Array.isArray(profileData.recentViews) && profileData.recentViews.length > 0) {
+              setRecentViews(profileData.recentViews)
+            } else {
+              // 서버에 recentViews가 없으면 로컬스토리지에서 불러와서 사용
+              try {
+                const raw = localStorage.getItem('recentViews')
+                if (raw) {
+                  const arr = JSON.parse(raw)
+                  if (Array.isArray(arr) && arr.length > 0) setRecentViews(arr.slice(0, 3))
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+
+            // 스크랩/알림을 별도 API로 가져오기 (서버의 /users/{user_id}/...)
+            try {
+              const userId = profileData.user_id || profileData.id || null
+              if (userId) {
+                const scrapsRes = await usersApi.getScraps(userId)
+                // scrapsRes는 job_post / bootcamp_post 포함 객체 배열
+                const scrapLabels = (scrapsRes || []).map((s: any) => {
+                  if (s.job_post) return s.job_post.title || s.job_post.Title || ''
+                  if (s.bootcamp_post) return s.bootcamp_post.title || s.bootcamp_post.Title || ''
+                  return s.post_type || ''
+                }).filter(Boolean)
+                setScraps(scrapLabels)
+
+                const notiRes = await usersApi.getNotifications(userId)
+                const mappedNoti = (notiRes || []).map((n: any, i: number) => ({
+                  id: Date.now() + i,
+                  category: n.notification_type || '맞춤형 정보',
+                  text: n.notification_type || '설정 알림',
+                  timestamp: n.notificationtime || '',
+                }))
+                setNotifications(mappedNoti)
+              }
+            } catch (e) {
+              console.error('Failed to fetch scraps/notifications:', e)
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch my profile:', e)
+        }
       } catch (e) {
         console.error('Profile: auth check failed', e)
         navigate('/login', { replace: true })
@@ -319,12 +399,12 @@ const ProfilePage = () => {
                     {selectedInterests.map((job) => (
                       <span
                         key={job}
-                        className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 ring-1 ring-inset ring-primary-200"
+                        className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-inset ring-slate-200"
                       >
                         {job}
                         <button
                           onClick={() => toggleWantedJob(job)}
-                          className="ml-2 text-primary-400 hover:text-primary-600"
+                          className="ml-2 text-slate-400 hover:text-slate-600"
                         >
                           ×
                         </button>
