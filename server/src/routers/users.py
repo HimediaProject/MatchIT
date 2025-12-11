@@ -15,6 +15,7 @@ from fastapi import Depends as _Depends
 import logging
 
 logger = logging.getLogger(__name__)
+from src.schemas import UserScrapPost
 
 
 router = APIRouter(prefix="/users", tags=['유저 프로필 기능'])
@@ -360,6 +361,79 @@ def read_userscrap(user_id: int, db: Session = Depends(get_db)):
             )
         )
     return result
+
+
+@router.post("/me/scraps", response_model=Dict[str, Any])
+def create_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 스크랩 추가 (Job 또는 Bootcamp)."""
+    try:
+        if data.post_type.value.lower() == 'job':
+            # 이미 존재하는지 확인
+            existing = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Job',
+                models.UserScrap.JobPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_scrapped"}
+
+            scrap = models.UserScrap(
+                UserID=current_user.UserID,
+                PostType='Job',
+                JobPostID=data.target_id,
+            )
+        else:
+            existing = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Bootcamp',
+                models.UserScrap.BootcampPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_scrapped"}
+
+            scrap = models.UserScrap(
+                UserID=current_user.UserID,
+                PostType='Bootcamp',
+                BootcampPostID=data.target_id,
+            )
+
+        db.add(scrap)
+        db.commit()
+        db.refresh(scrap)
+        return {"status": "ok", "scrap_id": scrap.ScrapID}
+    except Exception as e:
+        db.rollback()
+        logger.exception("스크랩 생성 실패")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/me/scraps", response_model=Dict[str, Any])
+def delete_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 스크랩 삭제"""
+    try:
+        if data.post_type.value.lower() == 'job':
+            scrap = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Job',
+                models.UserScrap.JobPostID == data.target_id,
+            ).first()
+        else:
+            scrap = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Bootcamp',
+                models.UserScrap.BootcampPostID == data.target_id,
+            ).first()
+
+        if not scrap:
+            return {"status": "ok", "message": "not_found"}
+
+        db.delete(scrap)
+        db.commit()
+        return {"status": "ok", "message": "deleted"}
+    except Exception as e:
+        db.rollback()
+        logger.exception("스크랩 삭제 실패")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{user_id}/notifications", response_model=List[UserNotifications])

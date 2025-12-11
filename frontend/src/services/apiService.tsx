@@ -131,6 +131,37 @@ export const usersApi = {
     return res.json()
   },
 
+  async getMyScraps() {
+    const url = `${API_BASE_URL}/users/me/scraps`
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error(`Get my scraps failed: ${res.status}`)
+    return res.json()
+  },
+
+  async addMyScrap(postType: 'Job' | 'Bootcamp', targetId: number) {
+    const url = `${API_BASE_URL}/users/me/scraps`
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ post_type: postType, target_id: targetId }),
+    })
+    if (!res.ok) throw new Error(`Add scrap failed: ${res.status}`)
+    return res.json()
+  },
+
+  async removeMyScrap(postType: 'Job' | 'Bootcamp', targetId: number) {
+    const url = `${API_BASE_URL}/users/me/scraps`
+    const res = await fetch(url, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ post_type: postType, target_id: targetId }),
+    })
+    if (!res.ok) throw new Error(`Remove scrap failed: ${res.status}`)
+    return res.json()
+  },
+
   async getNotifications(userId: number) {
     const url = `${API_BASE_URL}/users/${userId}/notifications`
     const res = await fetch(url, { credentials: 'include' })
