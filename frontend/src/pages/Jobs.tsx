@@ -247,6 +247,43 @@ const JobsPage = () => {
     return list
   }, [filteredJobs, sort])
 
+  // 현재 유저의 스크랩된 공고 ID 목록 로드
+  const [scrappedJobIds, setScrappedJobIds] = useState<number[]>([])
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await (await import('../services/apiService')).usersApi.getMyScraps()
+        if (!mounted) return
+        // res is array of scrap objects with job_post or bootcamp_post
+        const ids = (res || [])
+          .map((s: any) => s.job_post ? s.job_post.id || s.job_post.PostID : null)
+          .filter(Boolean)
+        setScrappedJobIds(ids)
+      } catch (e) {
+        // 인증되지 않은 경우 등 무시
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  const toggleScrap = async (job: any) => {
+    try {
+      const api = (await import('../services/apiService')).usersApi
+      const isScrapped = scrappedJobIds.includes(job.PostID)
+      if (isScrapped) {
+        await api.removeMyScrap('Job', job.PostID)
+        setScrappedJobIds((prev) => prev.filter((id) => id !== job.PostID))
+      } else {
+        await api.addMyScrap('Job', job.PostID)
+        setScrappedJobIds((prev) => [...prev, job.PostID])
+      }
+    } catch (e) {
+      console.error('스크랩 토글 실패', e)
+      window.alert('스크랩 처리에 실패했습니다.')
+    }
+  }
+
   if (isLoading) {
     return <div className="flex justify-center py-10">채용을 불러오는 중입니다...</div>
   }
@@ -368,6 +405,16 @@ const JobsPage = () => {
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleScrap(job)
+                      }}
+                      className={`w-full rounded-xl px-4 py-2 text-sm font-semibold md:w-[140px] md:justify-center ${scrappedJobIds.includes(job.PostID) ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'border border-primary-200 text-primary-700 hover:bg-primary-50'}`}
+                    >
+                      {scrappedJobIds.includes(job.PostID) ? '스크랩됨' : '스크랩'}
+                    </button>
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
