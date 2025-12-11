@@ -260,8 +260,8 @@ const JobsPage = () => {
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-primary-700">실시간 채용 목록</p>
-          <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">맞춤 수집된 테크 채용</h1>
-          <p className="text-sm text-slate-600">빠른 쿼리는 곧 FastAPI /jobs 엔드포인트와 연결될 예정입니다.</p>
+          <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">내게 맞는 채용공고 찾아보기</h1>
+          <p className="text-sm text-slate-600">기술 스택과 경력에 맞춰 전국의 핫한 테크 채용 공고를 한 번에 확인하세요.</p>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[260px_1fr]">
