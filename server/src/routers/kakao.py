@@ -1,6 +1,7 @@
 import os
 import httpx
 import uuid
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Cookie, Response, Request
@@ -11,6 +12,8 @@ from typing import Optional
 
 from src.database import get_db
 from src.models import User, SocialLogin, UserSession
+
+logger = logging.getLogger(__name__)
 
 ENV_PATH = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -147,6 +150,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     except Exception as e:
         db.rollback()
+        logger.exception("DB 처리 중 예외 발생")
         return JSONResponse(
             status_code=500,
             content={"error": "DB 처리 실패", "details": str(e)},
@@ -168,6 +172,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
         db.commit()
     except Exception as e:
         db.rollback()
+        logger.exception("세션 저장 중 예외 발생")
         return JSONResponse(
             status_code=500,
             content={"error": "세션 저장 실패", "details": str(e)},
