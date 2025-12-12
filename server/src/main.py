@@ -1,9 +1,10 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 import time
 import logging
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import jwt_login, kakao, comparison, users, users_test, bootcamper, search, skills, meta
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -11,25 +12,29 @@ app = FastAPI(title="MatchIT Backend")
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://frontend:3000"
+    "http://frontend:3000",
+    "http://0.0.0.0:3000"
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(jwt_login.router)
+app.include_router(google.router)
 app.include_router(kakao.router)
+app.include_router(naver.router)
 app.include_router(comparison.router)
 app.include_router(users.router)
-app.include_router(users_test.router)
 app.include_router(bootcamper.router)
+app.include_router(jobposts.router)
 app.include_router(search.router)
 app.include_router(skills.router)
 app.include_router(meta.router)
+app.include_router(job_categories.router)
 
 logger = logging.getLogger(__name__)
 

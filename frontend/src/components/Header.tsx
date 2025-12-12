@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, NavLink } from 'react-router-dom'
 import { authApi } from '../services/apiService'
 
 type NavItem = {
@@ -11,18 +11,31 @@ const navItems: NavItem[] = [
   { label: '홈', to: '/' },
   { label: '채용', to: '/jobs' },
   { label: '부트캠프', to: '/bootcamps' },
-  { label: '내 프로필', to: '/profile' },
+  { label: '프로필', to: '/profile' },
 ]
+
+const LOGOUT_KEYS = [
+  'isLogin',
+  'isLoggedIn',
+  'isNewUser',
+  'access_token',
+  'userName',
+  'userEmail',
+  'kakao_access_token',
+  'naver_access_token',
+  'google_access_token',
+]
+
+const COOKIE_NAMES = ['session_id', 'user_id', 'is_login', 'kakao_access_token', 'naver_access_token', 'google_access_token']
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const navigate = useNavigate()
 
-  // API를 통해 로그인 상태 확인
   const checkLoginStatus = useCallback(async () => {
     try {
       const result = await authApi.getCurrentUser()
-      console.log('Login status from API:', result)
       setIsLoggedIn(result.isLoggedIn === true)
     } catch (error) {
       console.error('Error checking login status:', error)
@@ -30,40 +43,49 @@ const Header = () => {
     }
   }, [])
 
-  // 마운트 시 + 정기적으로 확인
   useEffect(() => {
     checkLoginStatus()
-
-    // 2초마다 확인 (빠른 반응성)
-    const interval = setInterval(checkLoginStatus, 2000)
-
-    return () => {
-      clearInterval(interval)
-    }
+    const interval = setInterval(checkLoginStatus, 5000)
+    return () => clearInterval(interval)
   }, [checkLoginStatus])
 
   const handleLogout = async () => {
     try {
-      // AJAX로 로그아웃 요청을 보내면 서버가 쿠키를 삭제하고 JSON을 반환합니다.
-      const resp = await fetch('http://localhost:8000/auth/kakao/logout', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Accept': 'application/json' },
+      LOGOUT_KEYS.forEach((key) => {
+        try {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+        } catch (err) {
+          console.warn('Failed to clear key', key, err)
+        }
       })
 
-      if (resp.ok) {
-        try { localStorage.removeItem('isLogin') } catch (e) {}
-        setIsLoggedIn(false)
-        navigate('/')
-        return
+      try {
+        const dbs = await window.indexedDB.databases?.()
+        if (dbs) dbs.forEach((db) => db.name && indexedDB.deleteDatabase(db.name))
+      } catch (err) {
+        console.warn('IndexedDB cleanup failed', err)
       }
 
-      // 실패하면 폴백으로 직접 이동
-      window.location.href = 'http://localhost:8000/auth/kakao/logout'
-    } catch (error) {
-      console.error('Logout error:', error)
-      // 네트워크 에러 등인 경우에도 직접 이동하여 서버에서 처리하게 함
-      window.location.href = 'http://localhost:8000/auth/kakao/logout'
+      COOKIE_NAMES.forEach((name) => {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        document.cookie = `${name}=; max-age=0; path=/;`
+      })
+
+      try {
+        await fetch(`${API_BASE_URL}/auth/kakao/logout`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        })
+      } catch (err) {
+        console.warn('Logout request failed', err)
+      }
+    } finally {
+      setIsLoggedIn(false)
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 200)
     }
   }
 
@@ -75,8 +97,8 @@ const Header = () => {
             IT
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-primary-700">MatchIt</p>
-            <p className="text-xs text-slate-500">맞춤 채용/부트캠프 추천</p>
+            <p className="text-sm font-semibold text-primary-700">MatchIT</p>
+            <p className="text-xs text-slate-500">맞춤 채용 · 부트캠프 추천</p>
           </div>
         </Link>
 
@@ -113,12 +135,6 @@ const Header = () => {
               로그인
             </Link>
           )}
-          <Link
-            to="/"
-            className="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:shadow-lg hover:shadow-primary-200"
-          >
-            지금 바로 추천 받기
-          </Link>
         </div>
       </div>
     </header>

@@ -91,6 +91,9 @@ docker compose run --rm server alembic revision --autogenerate -m "create table"
 # Upgrade (적용): 
 docker compose run --rm server sh -c "cd src && alembic upgrade head"
 
+# py파일 Upgrade (적용): 
+docker compose run --rm server sh -c "cd data && python 8_import_preprocessed_to_db.py"
+
 # Upgrade 특정 버전: 
 docker compose run --rm server alembic upgrade +1 또는 alembic upgrade xxxx
 

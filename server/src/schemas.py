@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy import Column, Enum as SQLEnum
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from typing import List, Dict, Tuple, Union, Literal, Optional
 
 '''
@@ -44,6 +44,17 @@ class Cost_support_type(str, Enum):
     PAY_K = '국비지원'
     PAY_SELF = '본인부담'
 
+
+##################################################################################
+# Chatbot
+##################################################################################
+class ChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+
+class ChatResponse(BaseModel):
+    response: str
+    status: str = 'success'
 
 ##################################################################################
 # === kakao api login ===
@@ -141,29 +152,113 @@ class JobPost(BaseModel):
     description:
         관리자가 새로운 구직공고 정보를 등록.
         구직공고명, 회사명, 카테고리, 상세 내용 등을 포함하여 생성.
+
+    주의:
+        실데이터에는 일부 필드가 NULL/빈값일 수 있으므로 Optional로 허용한다.
     '''
     provider: Provider_job
-    title: str = Field(max_length = 500)
-    company_name: str = Field(max_length = 500)
-    job_category: str = Field(max_length = 500)
-    employment_type: str = Field(max_length = 500)
-    experience_requirement: str
+    title: Optional[str] = Field(None, max_length = 500)
+    company_name: Optional[str] = Field(None, max_length = 500)
+    job_category: Optional[str] = Field(None, max_length = 500)
+    employment_type: Optional[str] = Field(None, max_length = 500)
+    experience_requirement: Optional[str] = None
     education_requirement: Optional[str] = None
-    location: str
+    location: Optional[str] = None
     main_tasks: Optional[str] = Field(None, max_length = 10000)
     qualifications: Optional[str] = Field(None, max_length = 10000)
     preferences: Optional[str] = Field(None, max_length = 10000)
     benefits: Optional[str] = Field(None, max_length = 10000)
     process: Optional[str] = Field(None, max_length = 10000)
-    salary: str
+    salary: Optional[str] = None
     posted_date: Optional[datetime] = None
-    close_date: datetime
-    # DB may not always include a valid URL; allow None
-    url: Optional[HttpUrl] = None
-    is_active: bool
+    close_date: Optional[datetime] = None
+    # 실데이터에 스킴 없는 문자열이 존재할 수 있어 문자열로 완화
+    url: Optional[str] = None
+    is_active: Optional[bool] = True
     created_at: datetime = Field(default_factory = datetime.now)
     updated_at: datetime = Field(default_factory = datetime.now)
 
+class JobPostCreate(BaseModel): 
+    PlatformID: int 
+    Title: str = Field(max_length=255)
+    CompanyName: str = Field(max_length=255)
+    JobCategoryID: int
+    EmploymentType: Optional[str] = Field(default=None, max_length=50)
+    ExperienceRequirement: str = Field(max_length=10)
+    MinExperienceYears: Optional[int] = 0 
+    EducationRequirement: Optional[str] = Field(default=None, max_length=50)
+    Location: Optional[str] = Field(default=None, max_length=255)
+    MainTasks: Optional[str] = None 
+    Qualifications: Optional[str] = None 
+    Preferences: Optional[str] = None 
+    Benefits: Optional[str] = None 
+    Process: Optional[str] = None 
+    Salary: Optional[str] = Field(default=None, max_length=100)
+    PostedDate: Optional[date] = None 
+    CloseDate: Optional[date] = None 
+    Url: Optional[str] = None 
+    IsActive: bool = True
+    SkillIDs: Optional[List[int]] = None 
+
+
+class JobPostUpdate(BaseModel):
+    PlatformID: Optional[int] = None 
+    Title: Optional[str] = Field(default=None, max_length=255)
+    CompanyName: Optional[str] = Field(default=None, max_length=255)
+    JobCategoryID: Optional[int] = None
+    EmploymentType: Optional[str] = Field(default=None, max_length=50)
+    ExperienceRequirement: Optional[str] = Field(default=None, max_length=10)
+    MinExperienceYears: Optional[int] = None
+    EducationRequirement: Optional[str] = Field(default=None, max_length=50)
+    Location: Optional[str] = Field(default=None, max_length=255)
+    MainTasks: Optional[str] = None 
+    Qualifications: Optional[str] = None
+    Preferences: Optional[str] = None
+    Benefits: Optional[str] = None
+    Process: Optional[str] = None
+    Salary: Optional[str] = Field(default=None, max_length=100)
+    PostedDate: Optional[date] = None
+    CloseDate: Optional[date] = None
+    Url: Optional[str] = None
+    IsActive: Optional[bool] = None
+    SkillIDs: Optional[List[int]] = None
+
+
+class JobPostResponse(BaseModel):
+    PostID: int
+    PlatformID: int
+    Title: str
+    CompanyName: str
+    JobCategoryID: int
+    EmploymentType: Optional[str]
+    ExperienceRequirement: str
+    MinExperienceYears: int
+    EducationRequirement: Optional[str]
+    Location: Optional[str]
+    MainTasks: Optional[str]
+    Qualifications: Optional[str] 
+    Preferences: Optional[str]
+    Benefits: Optional[str]
+    Process: Optional[str]
+    Salary: Optional[str]
+    PostedDate: Optional[date]
+    CloseDate: Optional[date]
+    ViewCount: int
+    Url: Optional[str]
+    IsActive: bool
+    CreatedAt: datetime
+    UpdatedAt: datetime
+    Skills: List[str] = [] 
+
+    class Config:
+        from_attributes = True
+
+
+class PaginatedJobPostResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[JobPostResponse]
 class BootcampPost(BaseModel):
     '''
     endpoint:
@@ -177,20 +272,23 @@ class BootcampPost(BaseModel):
     description:
         관리자가 새로운 부트캠프 정보를 등록.
         부트캠프명, 운영 기관, 카테고리, 상세 내용 등을 포함하여 생성.
+
+    주의:
+        실데이터 필드가 비어 있을 수 있어 Optional 허용.
     '''
     title: str = Field(max_length = 500)
     institute_name: str
     job_category_id: int
-    location: str
+    location: Optional[str] = None
     online_offline: Online_offline = Online_offline.ONLINE
     cost_support_type: Cost_support_type = Cost_support_type.PAY_SELF
     education_content: Optional[str] = Field(None, max_length = 10000)
     qualification: Optional[str] = Field(None, max_length = 10000)
     benefits: Optional[str] = Field(None, max_length = 10000)
-    start_date: datetime
-    registration_date: datetime
-    close_date: datetime
-    detail_url: Optional[HttpUrl] = None
+    start_date: Optional[datetime] = None
+    registration_date: Optional[datetime] = None
+    close_date: Optional[datetime] = None
+    detail_url: Optional[str] = None
 
 class BootcampCreate(BaseModel):
     Title: str
@@ -208,6 +306,26 @@ class BootcampCreate(BaseModel):
     DetailUrl: Optional[str] = None
 
 class BootcampResponse(BaseModel):
+    BootcampID: int
+    Title: str
+    InstituteName: str
+    JobCategoryID: int
+    CategoryName: Optional[str]  # 추가
+    Location: Optional[str]
+    OnlineOffline: str
+    CostSupportType: str
+    EducationContent: Optional[str]
+    Qualification: Optional[str]
+    Benefits: Optional[str]
+    StartDate: Optional[datetime]
+    RegistrationDate: Optional[datetime]
+    CloseDate: Optional[datetime]
+    DetailUrl: Optional[str]
+    ViewCount: int
+    CreatedAt: datetime
+    UpdatedAt: datetime
+
+class BootcampDetailResponse(BaseModel):
     BootcampID: int
     Title: str
     InstituteName: str
