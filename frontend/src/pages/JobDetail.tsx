@@ -72,15 +72,17 @@ const JobDetail = () => {
 
         {/* 헤더 섹션 */}
         <div className="mb-8 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
-              조회수 {job.ViewCount.toLocaleString()}
-            </span>
-          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-primary-700">
+              {job.CompanyName}
+            </p>
 
-          <p className="text-sm font-semibold text-primary-700">
-            {job.CompanyName}
-          </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500">
+                조회수 {job.ViewCount.toLocaleString()}
+              </span>
+            </div>
+          </div>
 
           <h1 className="mt-1 text-3xl font-bold text-slate-900">
             {job.Title}
