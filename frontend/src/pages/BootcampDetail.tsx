@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
 
@@ -28,12 +28,16 @@ const BootcampDetailPage = () => {
   const [bootcamp, setBootcamp] = useState<BootcampItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = useRef(false)
 
   // 커리큘럼 "더보기" 상태
   const [isCurriculumExpanded, setIsCurriculumExpanded] = useState(false)
   const CURRICULUM_PREVIEW_LENGTH = 500
 
   useEffect(() => {
+    if (hasFetchedRef.current) return
+    hasFetchedRef.current = true
+
     const fetchBootcamp = async () => {
       if (!id) {
         setError('부트캠프 ID가 없습니다.')
@@ -102,15 +106,17 @@ const BootcampDetailPage = () => {
 
         {/* 헤더 섹션 */}
         <div className="mb-8 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
-              조회수 {bootcamp.ViewCount.toLocaleString()}
-            </span>
-          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-primary-700">
+              {bootcamp.InstituteName}
+            </p>
 
-          <p className="text-sm font-semibold text-primary-700">
-            {bootcamp.InstituteName}
-          </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500">
+                조회수 {bootcamp.ViewCount.toLocaleString()}
+              </span>
+            </div>
+          </div>
 
           <h1 className="mt-1 text-3xl font-bold text-slate-900">
             {bootcamp.Title}
