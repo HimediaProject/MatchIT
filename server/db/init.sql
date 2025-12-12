@@ -18,6 +18,14 @@ CREATE TABLE CareerLevels (
     CareerName VARCHAR(50) UNIQUE NOT NULL
 );
 
+-- 연차 구간을 위한 별도 테이블 추가
+CREATE TABLE ExperienceRanges (
+    RangeID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RangeName VARCHAR(20) UNIQUE NOT NULL,  -- '1년 미만', '1~3년', '3~5년' 등
+    MinYears INT DEFAULT 0,
+    MaxYears INT NULL  -- NULL이면 상한 없음
+);
+
 -- 유저
 CREATE TABLE Users (
     UserID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -235,14 +243,6 @@ CREATE TABLE UserSessions (
     RefreshToken VARCHAR(255),
     ExpiresAt TIMESTAMP NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 연차 구간을 위한 별도 테이블 추가
-CREATE TABLE ExperienceRanges (
-    RangeID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    RangeName VARCHAR(20) UNIQUE NOT NULL,  -- '1년 미만', '1~3년', '3~5년' 등
-    MinYears INT DEFAULT 0,
-    MaxYears INT NULL  -- NULL이면 상한 없음
 );
 
 -- CareerLevels에 RangeID 추가
