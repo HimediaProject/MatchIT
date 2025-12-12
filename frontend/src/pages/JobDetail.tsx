@@ -54,23 +54,6 @@ const JobDetail = () => {
     )
   }
 
-  // 최근 열람 공고 로컬 저장 (최신 3개 유지)
-  useEffect(() => {
-    try {
-      const key = 'recentViews'
-      const raw = localStorage.getItem(key)
-      const arr: string[] = raw ? JSON.parse(raw) : []
-      const title = job.Title || `${job.CompanyName} ${job.Title}`
-      // remove existing
-      const filtered = arr.filter((t) => t !== title)
-      filtered.unshift(title)
-      const limited = filtered.slice(0, 3)
-      localStorage.setItem(key, JSON.stringify(limited))
-    } catch (e) {
-      // ignore storage errors
-    }
-  }, [job])
-
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-4xl px-4 py-12 md:px-6">
@@ -89,15 +72,17 @@ const JobDetail = () => {
 
         {/* 헤더 섹션 */}
         <div className="mb-8 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
-              조회수 {job.ViewCount.toLocaleString()}
-            </span>
-          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-primary-700">
+              {job.CompanyName}
+            </p>
 
-          <p className="text-sm font-semibold text-primary-700">
-            {job.CompanyName}
-          </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500">
+                조회수 {job.ViewCount.toLocaleString()}
+              </span>
+            </div>
+          </div>
 
           <h1 className="mt-1 text-3xl font-bold text-slate-900">
             {job.Title}
