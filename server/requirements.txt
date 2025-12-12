@@ -21,3 +21,6 @@ python-dotenv>=1.2.1                    # .env 환경 변수 로딩 라이브러
 
 # jwt token
 python-jose>=3.3.0                      # JWT 생성/검증 라이브러리 (jose)
+
+# HTTP Client
+httpx>=0.24.0                           # 비동기 HTTP 클라이언트
