@@ -43,6 +43,16 @@ class ExperienceRange(Base):
             "max_years": self.MaxYears,
         }
 
+# -------------------------------------------------------
+# Roles
+# -------------------------------------------------------
+class Role(Base):
+    __tablename__ = "roles"
+
+    RoleID = Column(Integer, primary_key=True, autoincrement=True)
+    Name = Column(String(50), unique=True, nullable=False)
+
+    users = relationship("User", back_populates="role")
 
 # -------------------------------------------------------
 # Users
@@ -53,12 +63,13 @@ class User(Base):
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
     Email = Column("email", String(255), unique=True, nullable=True)
-    # Role = Column("role", String(20), default="user")  # "user" or "admin"
+    RoleID = Column("roleid", Integer, ForeignKey("roles.RoleID"), default=1)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
     # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
     # experience_range = relationship("ExperienceRange")
     social_logins = relationship("SocialLogin", back_populates="user")
