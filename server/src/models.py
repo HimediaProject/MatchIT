@@ -8,6 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+from pgvector.sqlalchemy import Vector
 
 # Base = declarative_base()
 
@@ -202,6 +203,7 @@ class JobPost(Base):
     IsActive = Column("isactive", Boolean, default=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    Embedding = Column("embedding", Vector(768), nullable=True)
 
     __table_args__ = (
         CheckConstraint("ExperienceRequirement IN ('신입','경력')",

@@ -151,6 +151,7 @@ CREATE TABLE JobPosts (
     IsActive BOOLEAN DEFAULT TRUE,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    embedding VECTOR(768),
     CONSTRAINT chk_jobposts_experience_requirement
         CHECK (ExperienceRequirement IN ('신입', '경력')),
     CONSTRAINT fk_jobposts_platform

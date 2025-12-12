@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import JobCategory, JobPost, Platform, Skill
 from src.schemas import JobPostCreate, JobPostResponse, JobPostUpdate, PaginatedJobPostResponse
+from sentence_transformers import SentenceTransformer
+from ai.ai_models import get_embedding_model
 
 router = APIRouter(prefix="/jobs")
 
@@ -294,3 +296,34 @@ def delete_job_post(
     db.commit()
 
     return None
+
+# 전체 채용공고 내용 임베딩 생성 (관리자용)
+@router.post("/embeddings")
+def update_all_job_posting_embeddings(db: Session = Depends(get_db),
+                                      model: SentenceTransformer = Depends(get_embedding_model)):
+    # 채용공고 내용만 있고 임베딩 벡터가 없을 때 임베딩 벡터 컬럼을 업데이트하는 api
+    
+    # 1. jobposting에 있는 content 컬럼 내용 가져오기
+    # 시나리오1. 채용공고 100개를 가지고 와서 이미 벡터화 데이터를 업데이트 해두었다 -> 이미 벡터가 있으면 제와
+    # 시나리오2. 추가로 채용공고 100개를 더 추가했지만 벡터화 데이터를 업데이트 하지 못했다
+    jobposting = db.query(JobPost).filter(JobPost.Embedding.is_(None)).all()  # 벡터화 데이터가 없는 것들만 조회
+
+    # 2. SBRET 모델로 content 데이터를 벡터화하기
+    if not jobposting:
+        """
+        업데이트할 채용공고가 없으면 없다 리턴
+        """
+        return {"message": "업데이트할 채용공고가 없습니다."}
+    
+    update_count = 0
+
+    for post in jobposting:
+        embedding = model.encode(post.MainTasks).tolist()
+        post.embedding = embedding  # embedding 컬럼에 벡터 넣기
+        update_count += 1
+
+    # 3. 데이터베이스에 저장하기
+    db.commit()
+
+    # 4. 응답하기
+    return {"message": f"{update_count}개 채용공고가 업데이트 되었습니다."}

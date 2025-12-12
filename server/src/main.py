@@ -4,7 +4,7 @@ import time
 import logging
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories, chat
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -22,6 +22,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI Lifespan 이벤트
+    서버 시작 시: ML 모델 로드
+    서버 종료 시: ML 모델 언로드
+    """
+    # 데이터베이스 테이블 생성
+    create_tables()
+
+    # Startup: 서버 시작 시 실행
+    print("🚀 서버 시작 중...")
+    model_manager.load_models()
+    print("✅ 서버 시작 완료!\n")
+
+    yield  # 서버 실행 중
+
+    # Shutdown: 서버 종료 시 실행
+    print("\n🛑 서버 종료 중...")
+    model_manager.unload_models()
+    print("✅ 서버 종료 완료!")
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(jwt_login.router)
 app.include_router(google.router)

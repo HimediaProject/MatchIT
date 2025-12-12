@@ -24,3 +24,6 @@ httpx>=0.27.0                           # 비동기 HTTP 클라이언트 (OpenRo
 
 # jwt token
 python-jose>=3.3.0                      # JWT 생성/검증 라이브러리 (jose)
+
+sentence-transformers>=5.1.2
+transformers>=4.57.3
