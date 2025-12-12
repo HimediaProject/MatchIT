@@ -52,12 +52,14 @@ class User(Base):
 
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
-    Email = Column("email", String(255), unique=True, nullable=False)
+    Email = Column("email", String(255), unique=True, nullable=True)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
+    # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     career_level = relationship("CareerLevel", back_populates="users")
+    # experience_range = relationship("ExperienceRange")
     social_logins = relationship("SocialLogin", back_populates="user")
     desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
     skills = relationship("Skill", secondary="userskills", back_populates="users")
