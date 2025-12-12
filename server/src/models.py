@@ -34,6 +34,7 @@ class ExperienceRange(Base):
     RangeName = Column("rangename", String(100), nullable=False)
     MinYears = Column("minyears", Integer, nullable=True)
     MaxYears = Column("maxyears", Integer, nullable=True)
+    users = relationship("User", back_populates="experience_range")
 
     def to_dict(self):
         return {
@@ -54,18 +55,19 @@ class User(Base):
     Name = Column("name", String(100))
     Email = Column("email", String(255), unique=True, nullable=True)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
-    # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
+    ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
 
     career_level = relationship("CareerLevel", back_populates="users")
-    # experience_range = relationship("ExperienceRange")
+    experience_range = relationship("ExperienceRange", back_populates="users")
     social_logins = relationship("SocialLogin", back_populates="user")
-    desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
     skills = relationship("Skill", secondary="userskills", back_populates="users")
     notifications = relationship("UserNotificationSetting", back_populates="user")
     scraps = relationship("UserScrap", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
+    desired_jobs = relationship("DesiredJob", back_populates="users")
 
 
 # -------------------------------------------------------

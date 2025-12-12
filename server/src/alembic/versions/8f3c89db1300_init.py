@@ -29,20 +29,13 @@ def upgrade():
     ('경력');
     """)
 
-    # Users 더미 데이터
+    # ExperienceRanges 더미 데이터
     op.execute("""
-    INSERT INTO users (name, email, careerlevelid) VALUES
-    ('홍길동', 'hong@example.com', 1),
-    ('김철수', 'kim@example.com', 2),
-    ('박영희', 'park@example.com', 2);
-    """)
-
-    # Skills 더미 데이터
-    op.execute("""
-    INSERT INTO skills (skillname) VALUES
-    ('Python'),
-    ('JavaScript'),
-    ('SQL');
+    INSERT INTO experienceranges (rangename, minyears, maxyears) VALUES
+    ('1년 미만', 0, 1),
+    ('1~3년', 1, 3),
+    ('3~5년', 3, 5),
+    ('5년 이상', 5, NULL);
     """)
 
     # DesiredJobs 더미 데이터
@@ -51,6 +44,22 @@ def upgrade():
     ('백엔드 개발자'),
     ('프론트엔드 개발자'),
     ('데이터 엔지니어');
+    """)
+
+    # Users 더미 데이터
+    op.execute("""
+    INSERT INTO users (name, email, careerlevelid, desiredjobid) VALUES
+    ('홍길동', 'hong@example.com', 1, 1),
+    ('김철수', 'kim@example.com', 2, 2),
+    ('박영희', 'park@example.com', 2, 3);
+    """)
+
+    # Skills 더미 데이터
+    op.execute("""
+    INSERT INTO skills (skillname) VALUES
+    ('Python'),
+    ('JavaScript'),
+    ('SQL');
     """)
 
     # Platforms 더미 데이터
@@ -67,15 +76,6 @@ def upgrade():
     ('개발', 1),
     ('디자인', 1),
     ('마케팅', 1);
-    """)
-
-    # ExperienceRanges 더미 데이터
-    op.execute("""
-    INSERT INTO experienceranges (rangename, minyears, maxyears) VALUES
-    ('1년 미만', 0, 1),
-    ('1~3년', 1, 3),
-    ('3~5년', 3, 5),
-    ('5년 이상', 5, NULL);
     """)
 
     # SocialLogins 더미 데이터 (UserID와 FK 맞춰서)
