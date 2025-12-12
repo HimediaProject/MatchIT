@@ -124,6 +124,7 @@ const BootcampsPage = () => {
    */
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10 // 페이지당 표시할 아이템 수
+  const [sort, setSort] = useState<'created' | 'deadline' | 'views'>('created') // 정렬 상태 추가
 
   /**
    * 백엔드에서 데이터 가져오기
@@ -165,6 +166,7 @@ const BootcampsPage = () => {
           page: currentPage,          // 현제 페이지 번호전달
           size: itemsPerPage,         // 페이지당 항목 수 전달
           show_expired: showExpired,  // 마감일 추가
+          sort: sort,                 // 정렬 기준 추가
           online_offline: selectedModes.size > 0
             ? Array.from(selectedModes).map(m => m === '혼합' ? '혼합형': m)
             : undefined,
@@ -194,7 +196,7 @@ const BootcampsPage = () => {
     }
 
     fetchBootcamps()
-  }, [currentPage, itemsPerPage, showExpired, selectedModes, selectedFunding, selectedFields]) // ✅ currentPage, itemsPerPage, showExpired가 바뀔 때마다 다시 호출
+  }, [currentPage, itemsPerPage, showExpired, sort, selectedModes, selectedFunding, selectedFields]) // ✅ sort가 바뀔 때마다 다시 호출
 
   /**
    * ❌ 더 이상 사용 안함: 필터 옵션은 allFields, allModes, allFundings 사용
@@ -269,6 +271,14 @@ const BootcampsPage = () => {
       next.has(value) ? next.delete(value) : next.add(value)
       return next
     })
+  }
+
+  const resetAllFilters = () => {
+    setSelectedFields(new Set())
+    setSelectedModes(new Set())
+    setSelectedFunding(new Set())
+    setShowExpired(false)
+    setCurrentPage(1)
   }
 
   /**
@@ -468,6 +478,15 @@ const BootcampsPage = () => {
                   </label>
                 </div>
               </div>
+
+              <div>
+                <button
+                  onClick={resetAllFilters}
+                  className="mt-2 text-xs font-semibold text-primary-700 underline"
+                >
+                  필터 전체 초기화
+                </button>
+              </div>
             </div>
           </aside>
 
@@ -475,8 +494,16 @@ const BootcampsPage = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-slate-800">
                 총 {total}건
-                {totalPages > 0 && <span className="text-slate-500"> (페이지 {currentPage}/{totalPages})</span>}
               </p>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as 'created' | 'deadline' | 'views')}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="created">최신 등록순</option>
+                <option value="deadline">마감일</option>
+                <option value="views">조회수</option>
+              </select>
             </div>
 
             <div className="space-y-4">
@@ -487,7 +514,7 @@ const BootcampsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{boot.provider}</p>
-                    <h3 className="text-lg font-bold text-slate-900"><Link to={`/bootcamps/${boot.id}`}>{boot.name}</Link></h3>
+                    <h3 className="text-lg font-bold text-slate-900 hover:underline"><Link to={`/bootcamps/${boot.id}`}>{boot.name}</Link></h3>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.field}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.mode}</span>
@@ -507,13 +534,17 @@ const BootcampsPage = () => {
                       
                     )}
                   </div>
-                  {/* </button> -> 확인 필요. */}
-                  <button
-                    onClick={() => addToCompare(boot)}
-                    className="w-full rounded-x2 border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 md:w-auto"
-                  >
-                    {compareList.find((b) => b.id === boot.id) ? '담겼음' : '비교함 담기'}
-                  </button>
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCompare(boot)
+                      }}
+                      className="w-full rounded-xl border border-primary-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 md:w-[140px] md:justify-center"
+                    >
+                      {compareList.find((j) => j.id === boot.id) ? '추가됨' : '비교 담기'}
+                    </button>
+                  </div>
                 </div>
               ))}
               {!bootcamps.length && !loading && (
@@ -594,7 +625,7 @@ const BootcampsPage = () => {
                               <div className="flex flex-col items-end gap-2">
                                 <button
                                   onClick={() => removeFromCompare(item.id)}
-                                  className="text-xs font-semibold text-primary-700 hover:underline"
+                                  className="whitespace-nowrap text-xs font-semibold text-primary-700 hover:underline flex-shrink-0"
                                 >
                                   삭제
                                 </button>
