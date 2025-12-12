@@ -217,10 +217,12 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     if data.email is not None:
         user.Email = data.email
 
-    # 경력 레벨
+    # 경력 레벨 (잘못된 타입 방지)
     if data.career_level is not None:
+        if isinstance(data.career_level, list):
+            logger.warning(f"career_level가 list로 전달되어 무시합니다: {data.career_level}")
         # 문자열인 경우
-        if isinstance(data.career_level, str):
+        elif isinstance(data.career_level, str):
             career = db.query(models.CareerLevel).filter(
                 models.CareerLevel.CareerName == data.career_level
             ).first()
@@ -238,43 +240,61 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
                 raise HTTPException(400, "유효하지 않은 커리어 레벨 ID입니다.")
 
             user.CareerLevelID = data.career_level
+        else:
+            logger.warning(f"career_level 타입을 알 수 없어 무시: {type(data.career_level)}")
 
     # 경력 구간 (experience range)
     if data.experience_range is not None:
-        # 문자열인 경우: 이름으로 찾기
-        if isinstance(data.experience_range, str):
-            if data.experience_range:  # 빈 문자열이 아닌 경우
-                exp = db.query(models.ExperienceRange).filter(
-                    models.ExperienceRange.RangeName == data.experience_range
-                ).first()
-                if exp:
-                    user.ExperienceRangeID = exp.RangeID
+        # DB 컬럼이 없는 환경(초기 스키마)에서도 저장이 실패하지 않도록 보호
+        if not hasattr(user, "ExperienceRangeID"):
+            logger.warning("ExperienceRangeID 컬럼이 없어 experience_range 업데이트를 건너뜁니다.")
+        else:
+            # list가 들어오면 관계 필드에 할당되지 않도록 방어
+            if isinstance(data.experience_range, list):
+                logger.warning(f"experience_range가 list로 전달되어 무시합니다: {data.experience_range}")
+            # 문자열인 경우: 이름으로 찾기
+            elif isinstance(data.experience_range, str):
+                if data.experience_range:  # 빈 문자열이 아닌 경우
+                    exp = db.query(models.ExperienceRange).filter(
+                        models.ExperienceRange.RangeName == data.experience_range
+                    ).first()
+                    if exp:
+                        user.ExperienceRangeID = exp.RangeID
+                    else:
+                        user.ExperienceRangeID = None
                 else:
                     user.ExperienceRangeID = None
-            else:
-                user.ExperienceRangeID = None
 
-        # 숫자인 경우: ID로 설정
-        elif isinstance(data.experience_range, int):
-            if data.experience_range and data.experience_range > 0:  # 유효한 ID인 경우
-                exp = db.query(models.ExperienceRange).filter(
-                    models.ExperienceRange.RangeID == data.experience_range
-                ).first()
-                if exp:
-                    user.ExperienceRangeID = data.experience_range
-                    logger.info(f"경력 구간 저장: user_id={user_id}, range_id={data.experience_range}")
+            # 숫자인 경우: ID로 설정
+            elif isinstance(data.experience_range, int):
+                if data.experience_range and data.experience_range > 0:  # 유효한 ID인 경우
+                    exp = db.query(models.ExperienceRange).filter(
+                        models.ExperienceRange.RangeID == data.experience_range
+                    ).first()
+                    if exp:
+                        user.ExperienceRangeID = data.experience_range
+                        logger.info(f"경력 구간 저장: user_id={user_id}, range_id={data.experience_range}")
+                    else:
+                        user.ExperienceRangeID = None
                 else:
+                    # 0이나 음수는 null로 처리
                     user.ExperienceRangeID = None
             else:
-                # 0이나 음수는 null로 처리
-                user.ExperienceRangeID = None
-
-            
+                logger.warning(f"experience_range 타입을 알 수 없어 무시: {type(data.experience_range)}")
 
     # 스킬
     if data.skills is not None:
+        # 입력이 dict/객체일 수도 있으므로 문자열 이름만 추출
+        normalized_skills = []
+        for item in data.skills:
+            if isinstance(item, str):
+                normalized_skills.append(item)
+            elif isinstance(item, dict):
+                candidate = item.get("name") or item.get("skill") or item.get("label") or item.get("value")
+                if candidate:
+                    normalized_skills.append(candidate)
         new_skill_objs = []
-        for name in data.skills:
+        for name in normalized_skills:
             skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
             if not skill:
                 skill = models.Skill(SkillName=name)
@@ -289,8 +309,17 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     # 4) 희망직무
     if data.desired_jobs is not None:
+        normalized_jobs = []
+        for item in data.desired_jobs:
+            if isinstance(item, str):
+                normalized_jobs.append(item)
+            elif isinstance(item, dict):
+                candidate = item.get("name") or item.get("job") or item.get("label") or item.get("value")
+                if candidate:
+                    normalized_jobs.append(candidate)
+
         new_job_objs = []
-        for name in data.desired_jobs:
+        for name in normalized_jobs:
             job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
             if not job:
                 job = models.DesiredJob(JobName=name)
