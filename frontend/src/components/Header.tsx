@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { authApi } from '../services/apiService'
+import { useAuth } from '../store/useAuth'
 
 type NavItem = {
   label: string
@@ -32,16 +33,20 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { user, logout, fetchCurrentUser } = useAuth()
 
   const checkLoginStatus = useCallback(async () => {
     try {
       const result = await authApi.getCurrentUser()
       setIsLoggedIn(result.isLoggedIn === true)
+      if (result.isLoggedIn && !user) {
+        await fetchCurrentUser()
+      }
     } catch (error) {
       console.error('Error checking login status:', error)
       setIsLoggedIn(false)
     }
-  }, [])
+  }, [user, fetchCurrentUser])
 
   useEffect(() => {
     checkLoginStatus()
@@ -82,6 +87,7 @@ const Header = () => {
         console.warn('Logout request failed', err)
       }
     } finally {
+      logout()
       setIsLoggedIn(false)
       setTimeout(() => {
         window.location.href = '/'
@@ -117,6 +123,20 @@ const Header = () => {
               {item.label}
             </NavLink>
           ))}
+          {/* 관리자 메뉴 - role이 admin일 때만 표시 */}
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                [
+                  'transition-colors hover:text-amber-600',
+                  isActive ? 'text-amber-600 font-semibold' : 'text-slate-700',
+                ].join(' ')
+              }
+            >
+              🔧 관리자
+            </NavLink>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
