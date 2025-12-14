@@ -13,6 +13,9 @@ from src import models
 from datetime import datetime
 from fastapi import Depends as _Depends
 import logging
+import uuid
+import json
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 from src.schemas import UserScrapPost
@@ -24,7 +27,7 @@ router = APIRouter(prefix="/users", tags=['유저 프로필 기능'])
 class ProfileOut(BaseModel):
     user_id: int
     name: Optional[str]
-    email: str
+    email: Optional[str] = None
     experience_range: Optional[str] = None
     career_level: Optional[str] = None
     skills: List[str] = []
@@ -105,6 +108,7 @@ def get_user_data(db: Session, user_id: int):
         db.query(models.User)
         .options(
             joinedload(models.User.career_level),
+            joinedload(models.User.experience_range),
             joinedload(models.User.skills),
             joinedload(models.User.desired_jobs),
         )
@@ -147,10 +151,15 @@ def get_current_user(db: Session = _Depends(get_db), user_id: Optional[str] = Co
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
     try:
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except Exception:
+            raise HTTPException(status_code=401, detail="유효하지 않은 세션입니다.")
+
         session = (
             db.query(models.UserSession)
             .filter(
-                models.UserSession.SessionID == session_id,
+                models.UserSession.SessionID == session_uuid,
                 models.UserSession.UserID == int(user_id),
             )
             .first()
@@ -191,6 +200,14 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
     career_name = user.career_level.CareerName if user.career_level else None
     experience_name = user.experience_range.RangeName if getattr(user, 'experience_range', None) else None
 
+    recentViews = None
+    _rv = getattr(user, "RecentViews", None)
+    if _rv:
+        try:
+            recentViews = json.loads(_rv)
+        except Exception:
+            pass
+
     return ProfileOut(
         user_id=user.UserID,
         name=user.Name,
@@ -199,7 +216,7 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
         experience_range=experience_name,
         skills=user_skills,
         desired_jobs=user_desired_jobs,
-        recentViews=None
+        recentViews=recentViews
     )
 
 
@@ -285,7 +302,7 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     # 스킬
     if data.skills is not None:
         # 입력이 dict/객체일 수도 있으므로 문자열 이름만 추출
-        normalized_skills = []
+        normalized_skills: List[str] = []
         for item in data.skills:
             if isinstance(item, str):
                 normalized_skills.append(item)
@@ -293,14 +310,33 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
                 candidate = item.get("name") or item.get("skill") or item.get("label") or item.get("value")
                 if candidate:
                     normalized_skills.append(candidate)
+
+        # trim/빈값 제거/중복 제거
+        cleaned_skills: List[str] = []
+        seen = set()
+        for s in normalized_skills:
+            s2 = (s or "").strip()
+            if not s2:
+                continue
+            key = s2.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned_skills.append(s2)
+
         new_skill_objs = []
-        for name in normalized_skills:
+        for name in cleaned_skills:
             skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
             if not skill:
-                skill = models.Skill(SkillName=name)
-                db.add(skill)
-                # flush to assign PK without committing the whole transaction yet
-                db.flush()
+                try:
+                    with db.begin_nested():
+                        skill = models.Skill(SkillName=name)
+                        db.add(skill)
+                        db.flush()
+                except IntegrityError:
+                    skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
+                    if not skill:
+                        raise
             new_skill_objs.append(skill)
 
         # replace user's skills with the resolved Skill objects
@@ -309,7 +345,7 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     # 4) 희망직무
     if data.desired_jobs is not None:
-        normalized_jobs = []
+        normalized_jobs: List[str] = []
         for item in data.desired_jobs:
             if isinstance(item, str):
                 normalized_jobs.append(item)
@@ -318,30 +354,54 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
                 if candidate:
                     normalized_jobs.append(candidate)
 
+        cleaned_jobs: List[str] = []
+        seen = set()
+        for j in normalized_jobs:
+            j2 = (j or "").strip()
+            if not j2:
+                continue
+            key = j2.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned_jobs.append(j2)
+
         new_job_objs = []
-        for name in normalized_jobs:
+        for name in cleaned_jobs:
             job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
             if not job:
-                job = models.DesiredJob(JobName=name)
-                db.add(job)
-                db.flush()
+                try:
+                    with db.begin_nested():
+                        job = models.DesiredJob(JobName=name)
+                        db.add(job)
+                        db.flush()
+                except IntegrityError:
+                    job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
+                    if not job:
+                        raise
             new_job_objs.append(job)
 
         # replace user's desired jobs with the resolved DesiredJob objects
         user.desired_jobs = new_job_objs
 
-    db.commit()
+    # 최근 열람(문자열 리스트) 저장
+    if data.recentViews is not None and hasattr(user, "RecentViews"):
+        try:
+            setattr(user, "RecentViews", json.dumps(list(data.recentViews), ensure_ascii=False))
+        except Exception:
+            setattr(user, "RecentViews", None)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     db.refresh(user)
     
     logger.info(f"프로필 업데이트 완료 - user_id: {user_id}")
 
     return read_profile(user.UserID, db)
-
-
-@router.get("/me", response_model=ProfileOut)
-def get_my_profile(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """현재 로그인한 사용자의 프로필 조회"""
-    return read_profile(current_user.UserID, db)
 
 
 @router.patch("/me", response_model=ProfileOut)
@@ -354,121 +414,148 @@ def update_my_profile(data: ProfileUpdate, current_user: models.User = Depends(g
     return update_profile(current_user.UserID, data, db)
 
 
-# @router.get("/{user_id}/scraps", response_model=List[UserScrapGet])
-# def read_userscrap(user_id: int, db: Session = Depends(get_db)):
-#     scraps = get_user_scrap(db, user_id)
+@router.get("/me/scraps", response_model=List[UserScrapGet])
+def read_my_scraps(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    scraps = get_user_scrap(db, current_user.UserID)
+    result: List[UserScrapGet] = []
+    for scrap in scraps:
+        job_post = None
+        bootcamp_post = None
 
-#     result = []
+        if scrap.PostType == "Job" and scrap.job_post:
+            job_post = JobPostOut(
+                id=scrap.job_post.PostID,
+                title=scrap.job_post.Title,
+                company_name=scrap.job_post.CompanyName,
+            )
+        if scrap.PostType == "Bootcamp" and scrap.bootcamp_post:
+            bootcamp_post = BootcampPostOut(
+                id=scrap.bootcamp_post.BootcampID,
+                title=scrap.bootcamp_post.Title,
+                institute_name=scrap.bootcamp_post.InstituteName,
+            )
 
-#     for scrap in scraps:
-
-#         if scrap.PostType == "Job" and scrap.job_post:
-#             job_post = JobPostOut(
-#                 id=scrap.job_post.PostID,
-#                 title=scrap.job_post.Title,
-#                 company_name=scrap.job_post.CompanyName,
-#             )
-#         else:
-#             job_post = None
-
-#         if scrap.PostType == "Bootcamp" and scrap.bootcamp_post:
-#             bootcamp_post = BootcampPostOut(
-#                 id=scrap.bootcamp_post.BootcampID,
-#                 title=scrap.bootcamp_post.Title,
-#                 institute_name=scrap.bootcamp_post.InstituteName,
-#             )
-#         else:
-#             bootcamp_post = None
-
-#         result.append(
-#             UserScrapGet(
-#                 post_type=scrap.PostType,
-#                 job_post_id=scrap.JobPostID,
-#                 bootcamp_post_id=scrap.BootcampPostID,
-#                 job_post=job_post,
-#                 bootcamp_post=bootcamp_post
-#             )
-#         )
-#     return result
+        result.append(
+            UserScrapGet(
+                post_type=scrap.PostType,
+                job_post_id=scrap.JobPostID,
+                bootcamp_post_id=scrap.BootcampPostID,
+                job_post=job_post,
+                bootcamp_post=bootcamp_post,
+            )
+        )
+    return result
 
 
-# @router.post("/me/scraps", response_model=Dict[str, Any])
-# def create_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-#     """현재 로그인한 사용자의 스크랩 추가 (Job 또는 Bootcamp)."""
-#     try:
-#         if data.post_type.value.lower() == 'job':
-#             # 이미 존재하는지 확인
-#             existing = db.query(models.UserScrap).filter(
-#                 models.UserScrap.UserID == current_user.UserID,
-#                 models.UserScrap.PostType == 'Job',
-#                 models.UserScrap.JobPostID == data.target_id,
-#             ).first()
-#             if existing:
-#                 return {"status": "ok", "message": "already_scrapped"}
+@router.get("/{user_id}/scraps", response_model=List[UserScrapGet])
+def read_userscrap(user_id: int, db: Session = Depends(get_db)):
+    scraps = get_user_scrap(db, user_id)
+    result: List[UserScrapGet] = []
+    for scrap in scraps:
+        job_post = None
+        bootcamp_post = None
 
-#             scrap = models.UserScrap(
-#                 UserID=current_user.UserID,
-#                 PostType='Job',
-#                 JobPostID=data.target_id,
-#             )
-#         else:
-#             existing = db.query(models.UserScrap).filter(
-#                 models.UserScrap.UserID == current_user.UserID,
-#                 models.UserScrap.PostType == 'Bootcamp',
-#                 models.UserScrap.BootcampPostID == data.target_id,
-#             ).first()
-#             if existing:
-#                 return {"status": "ok", "message": "already_scrapped"}
+        if scrap.PostType == "Job" and scrap.job_post:
+            job_post = JobPostOut(
+                id=scrap.job_post.PostID,
+                title=scrap.job_post.Title,
+                company_name=scrap.job_post.CompanyName,
+            )
 
-#             scrap = models.UserScrap(
-#                 UserID=current_user.UserID,
-#                 PostType='Bootcamp',
-#                 BootcampPostID=data.target_id,
-#             )
+        if scrap.PostType == "Bootcamp" and scrap.bootcamp_post:
+            bootcamp_post = BootcampPostOut(
+                id=scrap.bootcamp_post.BootcampID,
+                title=scrap.bootcamp_post.Title,
+                institute_name=scrap.bootcamp_post.InstituteName,
+            )
 
-#         db.add(scrap)
-#         db.commit()
-#         db.refresh(scrap)
-#         return {"status": "ok", "scrap_id": scrap.ScrapID}
-#     except Exception as e:
-#         db.rollback()
-#         logger.exception("스크랩 생성 실패")
-#         raise HTTPException(status_code=500, detail=str(e))
+        result.append(
+            UserScrapGet(
+                post_type=scrap.PostType,
+                job_post_id=scrap.JobPostID,
+                bootcamp_post_id=scrap.BootcampPostID,
+                job_post=job_post,
+                bootcamp_post=bootcamp_post,
+            )
+        )
+    return result
 
 
-# @router.delete("/me/scraps", response_model=Dict[str, Any])
-# def delete_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-#     """현재 로그인한 사용자의 스크랩 삭제"""
-#     try:
-#         if data.post_type.value.lower() == 'job':
-#             scrap = db.query(models.UserScrap).filter(
-#                 models.UserScrap.UserID == current_user.UserID,
-#                 models.UserScrap.PostType == 'Job',
-#                 models.UserScrap.JobPostID == data.target_id,
-#             ).first()
-#         else:
-#             scrap = db.query(models.UserScrap).filter(
-#                 models.UserScrap.UserID == current_user.UserID,
-#                 models.UserScrap.PostType == 'Bootcamp',
-#                 models.UserScrap.BootcampPostID == data.target_id,
-#             ).first()
+@router.post("/me/scraps", response_model=Dict[str, Any])
+def create_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 스크랩 추가 (Job 또는 Bootcamp)."""
+    try:
+        if data.post_type.value.lower() == 'job':
+            existing = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Job',
+                models.UserScrap.JobPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_scrapped"}
 
-#         if not scrap:
-#             return {"status": "ok", "message": "not_found"}
+            scrap = models.UserScrap(
+                UserID=current_user.UserID,
+                PostType='Job',
+                JobPostID=data.target_id,
+            )
+        else:
+            existing = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Bootcamp',
+                models.UserScrap.BootcampPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_scrapped"}
 
-#         db.delete(scrap)
-#         db.commit()
-#         return {"status": "ok", "message": "deleted"}
-#     except Exception as e:
-#         db.rollback()
-#         logger.exception("스크랩 삭제 실패")
-#         raise HTTPException(status_code=500, detail=str(e))
+            scrap = models.UserScrap(
+                UserID=current_user.UserID,
+                PostType='Bootcamp',
+                BootcampPostID=data.target_id,
+            )
+
+        db.add(scrap)
+        db.commit()
+        db.refresh(scrap)
+        return {"status": "ok", "scrap_id": scrap.ScrapID}
+    except Exception as e:
+        db.rollback()
+        logger.exception("스크랩 생성 실패")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/me/scraps", response_model=Dict[str, Any])
+def delete_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 스크랩 삭제"""
+    try:
+        if data.post_type.value.lower() == 'job':
+            scrap = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Job',
+                models.UserScrap.JobPostID == data.target_id,
+            ).first()
+        else:
+            scrap = db.query(models.UserScrap).filter(
+                models.UserScrap.UserID == current_user.UserID,
+                models.UserScrap.PostType == 'Bootcamp',
+                models.UserScrap.BootcampPostID == data.target_id,
+            ).first()
+
+        if not scrap:
+            return {"status": "ok", "message": "not_found"}
+
+        db.delete(scrap)
+        db.commit()
+        return {"status": "ok", "message": "deleted"}
+    except Exception as e:
+        db.rollback()
+        logger.exception("스크랩 삭제 실패")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{user_id}/notifications", response_model=List[UserNotifications])
 def read_notifications(user_id: int, db: Session = Depends(get_db)):
     notifications = get_user_notifications(db, user_id)
-
     if not notifications:
         raise HTTPException(404, "알림 항목을 찾을 수 없습니다.")
     

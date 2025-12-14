@@ -1,9 +1,21 @@
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 import time
 import logging
-from fastapi.responses import HTMLResponse, JSONResponse
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# .env는 라우터 모듈 import 이전에 로드되어야 import-time 환경변수 접근이 안정적입니다.
+_possible_env_paths = [
+    Path(__file__).resolve().parents[1] / ".env",  # server/.env
+    Path(__file__).resolve().parents[2] / ".env",  # 프로젝트 루트/.env
+]
+for _env_path in _possible_env_paths:
+    if _env_path.exists():
+        load_dotenv(_env_path)
+        break
+
 from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories
 
 app = FastAPI(title="MatchIT Backend")
@@ -17,7 +29,7 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,38 +71,3 @@ def on_startup():
 @app.get("/")
 def root():
     return {"message": "MatchIT Backend is running"}
-
-# 로그인 페이지
-@app.get('/login', response_class=HTMLResponse)
-def login():
-    return"""
-    <html>
-        <body>
-            <div>
-                <h3>구글 로그인</h3>
-                <a href='/auth/google'>
-                    <img src='images/google_login.png'
-                    alt='구글 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-            <div>
-                <h3>카카오 로그인</h3>
-                <a href='/auth/kakao'>
-                    <img src='images/kakao_login.png'
-                    alt='카카오 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-            <div>
-                <h3>네이버 로그인</h3>
-                <a href='/auth/naver'>
-                    <img src='images/naver_login.png'
-                    alt='네이버 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-        </body>
-    </html>
-    """
-
-@app.get("/auth/kakao/callback")
-async def kakao_callback(code: str | None = None, error: str | None = None):
-    print("kakao_callback:", code, error)

@@ -11,13 +11,29 @@ from datetime import datetime, timedelta
 from src.models import User, SocialLogin, UserSession
 from typing import Optional
 
-ENV_PATH = Path(__file__).parent.parent.parent / '.env'
-load_dotenv(ENV_PATH)
-
+# 환경 변수 로드: 먼저 시스템 환경 변수 확인, 없으면 .env 파일 로드
 NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID')
 NAVER_CLIENT_SECRET = os.getenv('NAVER_CLIENT_SECRET')
 NAVER_REDIRECT_URI = os.getenv('NAVER_REDIRECT_URI')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+# 환경 변수가 없으면 .env 파일에서 로드 시도
+if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET or not NAVER_REDIRECT_URI:
+    # 여러 경로에서 .env 파일 찾기
+    possible_paths = [
+        Path(__file__).parent.parent.parent / ".env",  # server/.env
+        Path(__file__).parent.parent.parent.parent / ".env",  # 프로젝트 루트/.env
+    ]
+    for env_path in possible_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+    
+    # 다시 환경 변수 확인
+    NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID') or NAVER_CLIENT_ID
+    NAVER_CLIENT_SECRET = os.getenv('NAVER_CLIENT_SECRET') or NAVER_CLIENT_SECRET
+    NAVER_REDIRECT_URI = os.getenv('NAVER_REDIRECT_URI') or NAVER_REDIRECT_URI
+    FRONTEND_URL = os.getenv('FRONTEND_URL', FRONTEND_URL)
 
 router = APIRouter(prefix="/auth/naver", tags=["네이버 소셜로그인 기능"])
 
@@ -34,7 +50,7 @@ async def naver_login():
         f"&client_id={NAVER_CLIENT_ID}"
         f"&redirect_uri={NAVER_REDIRECT_URI}"
         f"&state={state}"
-        f"&auth_type=reprompt"                      # 👈 자동로그인 방지
+        f"&auth_type=reprompt"                      # 
     )
     return RedirectResponse(url=naver_url)
 
@@ -100,7 +116,7 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         newly_created = False
 
         if oauth_account:
-            # 기존 사용자 → 기존 세션 삭제
+            # 기존 사용자 기존 세션 삭제
             old_sessions = (
                 db.query(UserSession)
                 .filter(UserSession.UserID == oauth_account.UserID)
@@ -143,12 +159,12 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
 
     # 4. 세션 DB 저장
     try:
-        session_id = str(uuid.uuid4())
+        session_uuid = uuid.uuid4()
         expires_in = int(token_json.get("expires_in", 60 * 60 * 6))
         expires_at = datetime.now() + timedelta(seconds=expires_in)
 
         session = UserSession(
-            SessionID=session_id,
+            SessionID=session_uuid,
             UserID=user.UserID,
             AccessToken=access_token,
             RefreshToken=refresh_token,
@@ -190,7 +206,7 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         "path": "/",
     }
 
-    response.set_cookie("session_id", str(session_id), max_age=60*60*24*30, **cookie)
+    response.set_cookie("session_id", str(session_uuid), max_age=60*60*24*30, **cookie)
     response.set_cookie("user_id", str(user.UserID), max_age=60*60*24*30, **cookie)
 
     # UI용(httponly X)
@@ -284,7 +300,7 @@ async def naver_logout(
                 sid = uuid.UUID(session_id)
                 db.query(UserSession).filter(UserSession.SessionID == sid).delete()
             except Exception:
-                db.query(UserSession).filter(UserSession.SessionID == session_id).delete()
+                return clear(JSONResponse({"message": "invalid session_id"}, status_code=400))
             db.commit()
         except:
             db.rollback()
