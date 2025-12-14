@@ -15,13 +15,30 @@ from src.models import User, SocialLogin, UserSession
 
 logger = logging.getLogger(__name__)
 
-ENV_PATH = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(ENV_PATH)
-
+# 환경 변수 로드: 먼저 시스템 환경 변수 확인, 없으면 .env 파일 로드
+# docker-compose의 env_file이 이미 환경 변수로 설정해주므로 우선 확인
 KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID")
 KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
 KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# 환경 변수가 없으면 .env 파일에서 로드 시도
+if not KAKAO_CLIENT_ID or not KAKAO_CLIENT_SECRET or not KAKAO_REDIRECT_URI:
+    # 여러 경로에서 .env 파일 찾기
+    possible_paths = [
+        Path(__file__).parent.parent.parent / ".env",  # server/.env
+        Path(__file__).parent.parent.parent.parent / ".env",  # 프로젝트 루트/.env
+    ]
+    for env_path in possible_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+    
+    # 다시 환경 변수 확인
+    KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID") or KAKAO_CLIENT_ID
+    KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET") or KAKAO_CLIENT_SECRET
+    KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI") or KAKAO_REDIRECT_URI
+    FRONTEND_URL = os.getenv("FRONTEND_URL", FRONTEND_URL)
 
 router = APIRouter(prefix="/auth/kakao", tags=["카카오 소셜로그인 기능"])
 
@@ -158,11 +175,11 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     # 4. 세션 DB 저장
     try:
-        session_id = str(uuid.uuid4())  # 문자열로 저장
+        session_uuid = uuid.uuid4()
         expires_at = datetime.now() + timedelta(seconds=expires_in)
 
         session = UserSession(
-            SessionID=session_id,
+            SessionID=session_uuid,
             UserID=user.UserID,
             AccessToken=access_token,
             RefreshToken=refresh_token,
@@ -200,7 +217,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
         "path": "/",
     }
 
-    response.set_cookie("session_id", session_id, max_age=60 * 60 * 24 * 30, **cookie_opt)
+    response.set_cookie("session_id", str(session_uuid), max_age=60 * 60 * 24 * 30, **cookie_opt)
     response.set_cookie("user_id", str(user.UserID), max_age=60 * 60 * 24 * 30, **cookie_opt)
 
     # JS 접근용 쿠키
@@ -230,10 +247,11 @@ async def get_current_user(
         return {"isLoggedIn": False, "user": None}
 
     try:
+        session_uuid = uuid.UUID(session_id)
         session = (
             db.query(UserSession)
             .filter(
-                UserSession.SessionID == session_id,
+                UserSession.SessionID == session_uuid,
                 UserSession.UserID == int(user_id),
             )
             .first()
@@ -262,8 +280,6 @@ async def get_current_user(
 
     except Exception:
         return {"isLoggedIn": False, "user": None}
-
-
 # -------------------------
 # 4) 카카오 로그아웃
 # -------------------------
@@ -279,15 +295,21 @@ async def kakao_logout(
 
     # 1. 세션 삭제
     if session_id:
-        session = (
-            db.query(UserSession)
-            .filter(UserSession.SessionID == session_id)
-            .first()
-        )
-        if session:
-            db.delete(session)
-            db.commit()
-            print("[LOGOUT] 세션 삭제 완료")
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except Exception:
+            session_uuid = None
+
+        if session_uuid:
+            session = (
+                db.query(UserSession)
+                .filter(UserSession.SessionID == session_uuid)
+                .first()
+            )
+            if session:
+                db.delete(session)
+                db.commit()
+                print("[LOGOUT] 세션 삭제 완료")
 
     # 2. 소셜 계정 unlink (로그인 상태 초기화 목적)
     if user_id:

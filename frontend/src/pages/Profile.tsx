@@ -31,6 +31,7 @@ const ProfilePage = () => {
   const [selectedCareerLevelId, setSelectedCareerLevelId] = useState<number | null>(null)
   const [selectedExperienceRangeId, setSelectedExperienceRangeId] = useState<number | null>(null)
   const [fetchedCareerName, setFetchedCareerName] = useState<string | null>(null)
+  const [fetchedExperienceName, setFetchedExperienceName] = useState<string | null>(null)
 
   // DB-driven skills & wanted jobs (드롭다운 + 검색)
   const [allSkills, setAllSkills] = useState<string[]>([])
@@ -142,6 +143,20 @@ const ProfilePage = () => {
     }
   }, [careerLevels, fetchedCareerName])
 
+  useEffect(() => {
+    if (fetchedExperienceName && experienceRanges.length > 0) {
+      const expRange = experienceRanges.find((r: any) => {
+        const name = r.name || r.RangeName || r.rangename
+        return name === fetchedExperienceName
+      })
+      if (expRange) {
+        const id = expRange.id || expRange.RangeID || expRange.rangeid
+        setSelectedExperienceRangeId(id)
+      }
+      setFetchedExperienceName(null)
+    }
+  }, [experienceRanges, fetchedExperienceName])
+
   // DB-driven career levels & experience ranges 로드
   useEffect(() => {
     const fetchMeta = async () => {
@@ -239,6 +254,20 @@ const ProfilePage = () => {
               }
             }
 
+            if (profileData.experience_range) {
+              const expRange = experienceRanges.find((r: any) => {
+                const name = r.name || r.RangeName || r.rangename
+                return name === profileData.experience_range
+              })
+
+              if (expRange) {
+                const id = expRange.id || expRange.RangeID || expRange.rangeid
+                setSelectedExperienceRangeId(id)
+              } else {
+                setFetchedExperienceName(profileData.experience_range)
+              }
+            }
+
             if (Array.isArray(profileData.skills) && profileData.skills.length > 0) {
               setSelectedStacks(profileData.skills)
             }
@@ -264,7 +293,12 @@ const ProfilePage = () => {
             try {
               const userId = profileData.user_id || profileData.id || null
               if (userId) {
-                const scrapsRes = await usersApi.getScraps(userId)
+                let scrapsRes: any[] = []
+                try {
+                  scrapsRes = await usersApi.getMyScraps()
+                } catch (e) {
+                  scrapsRes = await usersApi.getScraps(userId)
+                }
                 // scrapsRes는 job_post / bootcamp_post 포함 객체 배열
                 const scrapLabels = (scrapsRes || []).map((s: any) => {
                   if (s.job_post) return s.job_post.title || s.job_post.Title || ''

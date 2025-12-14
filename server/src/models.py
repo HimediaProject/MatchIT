@@ -56,6 +56,7 @@ class User(Base):
     Email = Column("email", String(255), unique=True, nullable=True)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
     ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
+    RecentViews = Column("recentviews", Text, nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
