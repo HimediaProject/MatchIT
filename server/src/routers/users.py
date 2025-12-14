@@ -43,8 +43,8 @@ class ProfileUpdate(BaseModel):
     email: Optional[str] = None
     career_level: Optional[Union[str, int]] = None
     experience_range: Optional[Union[str, int]] = None
-    skills: Optional[List[str]] = None
-    desired_jobs: Optional[List[str]] = None
+    skills: Optional[List[Union[str, int, Dict[str, Any]]]] = None
+    desired_jobs: Optional[List[Union[str, int, Dict[str, Any]]]] = None
     recentViews: Optional[List[str]] = None
 
 class JobPostOut(BaseModel):
@@ -301,88 +301,165 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     # 스킬
     if data.skills is not None:
-        # 입력이 dict/객체일 수도 있으므로 문자열 이름만 추출
-        normalized_skills: List[str] = []
-        for item in data.skills:
-            if isinstance(item, str):
-                normalized_skills.append(item)
-            elif isinstance(item, dict):
-                candidate = item.get("name") or item.get("skill") or item.get("label") or item.get("value")
-                if candidate:
-                    normalized_skills.append(candidate)
-
-        # trim/빈값 제거/중복 제거
-        cleaned_skills: List[str] = []
+        resolved_skills = []
         seen = set()
-        for s in normalized_skills:
-            s2 = (s or "").strip()
-            if not s2:
-                continue
-            key = s2.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            cleaned_skills.append(s2)
+        for item in data.skills:
+            skill = None
 
-        new_skill_objs = []
-        for name in cleaned_skills:
-            skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
-            if not skill:
-                try:
-                    with db.begin_nested():
-                        skill = models.Skill(SkillName=name)
-                        db.add(skill)
-                        db.flush()
-                except IntegrityError:
-                    skill = db.query(models.Skill).filter(models.Skill.SkillName == name).first()
+            if isinstance(item, int):
+                if item <= 0:
+                    continue
+                key = f"id:{item}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                skill = db.query(models.Skill).filter(models.Skill.SkillID == item).first()
+                if not skill:
+                    raise HTTPException(400, "유효하지 않은 스킬 ID입니다.")
+
+            elif isinstance(item, dict):
+                raw_id = item.get("id") or item.get("skill_id") or item.get("SkillID") or item.get("skillId")
+                if isinstance(raw_id, int) and raw_id > 0:
+                    key = f"id:{raw_id}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    skill = db.query(models.Skill).filter(models.Skill.SkillID == raw_id).first()
                     if not skill:
-                        raise
-            new_skill_objs.append(skill)
+                        raise HTTPException(400, "유효하지 않은 스킬 ID입니다.")
+                else:
+                    candidate = item.get("name") or item.get("skill") or item.get("label") or item.get("value")
+                    s2 = (candidate or "").strip()
+                    if not s2:
+                        continue
+                    key = f"name:{s2.lower()}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    skill = db.query(models.Skill).filter(models.Skill.SkillName == s2).first()
+                    if not skill:
+                        try:
+                            with db.begin_nested():
+                                skill = models.Skill(SkillName=s2)
+                                db.add(skill)
+                                db.flush()
+                        except IntegrityError:
+                            skill = db.query(models.Skill).filter(models.Skill.SkillName == s2).first()
+                            if not skill:
+                                raise
 
-        # replace user's skills with the resolved Skill objects
-        user.skills = new_skill_objs
+            elif isinstance(item, str):
+                s2 = (item or "").strip()
+                if not s2:
+                    continue
+                key = f"name:{s2.lower()}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                skill = db.query(models.Skill).filter(models.Skill.SkillName == s2).first()
+                if not skill:
+                    try:
+                        with db.begin_nested():
+                            skill = models.Skill(SkillName=s2)
+                            db.add(skill)
+                            db.flush()
+                    except IntegrityError:
+                        skill = db.query(models.Skill).filter(models.Skill.SkillName == s2).first()
+                        if not skill:
+                            raise
 
+            if skill is not None:
+                resolved_skills.append(skill)
+
+        if user.skills is None:
+            user.skills = []
+        else:
+            user.skills.clear()
+
+        for skill in resolved_skills:
+            user.skills.append(skill)
 
     # 4) 희망직무
     if data.desired_jobs is not None:
-        normalized_jobs: List[str] = []
-        for item in data.desired_jobs:
-            if isinstance(item, str):
-                normalized_jobs.append(item)
-            elif isinstance(item, dict):
-                candidate = item.get("name") or item.get("job") or item.get("label") or item.get("value")
-                if candidate:
-                    normalized_jobs.append(candidate)
-
-        cleaned_jobs: List[str] = []
+        resolved_jobs = []
         seen = set()
-        for j in normalized_jobs:
-            j2 = (j or "").strip()
-            if not j2:
-                continue
-            key = j2.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            cleaned_jobs.append(j2)
+        for item in data.desired_jobs:
+            job = None
 
-        new_job_objs = []
-        for name in cleaned_jobs:
-            job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
-            if not job:
-                try:
-                    with db.begin_nested():
-                        job = models.DesiredJob(JobName=name)
-                        db.add(job)
-                        db.flush()
-                except IntegrityError:
-                    job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == name).first()
+            if isinstance(item, int):
+                if item <= 0:
+                    continue
+                key = f"id:{item}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                job = db.query(models.DesiredJob).filter(models.DesiredJob.DesiredJobID == item).first()
+                if not job:
+                    raise HTTPException(400, "유효하지 않은 희망직무 ID입니다.")
+
+            elif isinstance(item, dict):
+                raw_id = item.get("id") or item.get("job_id") or item.get("DesiredJobID") or item.get("desiredJobId")
+                if isinstance(raw_id, int) and raw_id > 0:
+                    key = f"id:{raw_id}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    job = db.query(models.DesiredJob).filter(models.DesiredJob.DesiredJobID == raw_id).first()
                     if not job:
-                        raise
-            new_job_objs.append(job)
+                        raise HTTPException(400, "유효하지 않은 희망직무 ID입니다.")
+                else:
+                    candidate = item.get("name") or item.get("job") or item.get("label") or item.get("value")
+                    j2 = (candidate or "").strip()
+                    if not j2:
+                        continue
+                    key = f"name:{j2.lower()}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == j2).first()
+                    if not job:
+                        try:
+                            with db.begin_nested():
+                                job = models.DesiredJob(JobName=j2)
+                                db.add(job)
+                                db.flush()
+                        except IntegrityError:
+                            job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == j2).first()
+                            if not job:
+                                raise
 
-        # replace user's desired jobs with the resolved DesiredJob objects
-        user.desired_jobs = new_job_objs
+            elif isinstance(item, str):
+                j2 = (item or "").strip()
+                if not j2:
+                    continue
+                key = f"name:{j2.lower()}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == j2).first()
+                if not job:
+                    try:
+                        with db.begin_nested():
+                            job = models.DesiredJob(JobName=j2)
+                            db.add(job)
+                            db.flush()
+                    except IntegrityError:
+                        job = db.query(models.DesiredJob).filter(models.DesiredJob.JobName == j2).first()
+                        if not job:
+                            raise
+
+            if job is not None:
+                resolved_jobs.append(job)
+
+        if hasattr(user.desired_jobs, "clear") and hasattr(user.desired_jobs, "append"):
+            user.desired_jobs.clear()
+            for job in resolved_jobs:
+                user.desired_jobs.append(job)
+        else:
+            if len(resolved_jobs) > 0:
+                user.desired_jobs = resolved_jobs[0]
+            else:
+                user.desired_jobs = None
 
     # 최근 열람(문자열 리스트) 저장
     if data.recentViews is not None and hasattr(user, "RecentViews"):
