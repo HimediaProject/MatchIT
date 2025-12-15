@@ -169,6 +169,7 @@ def update_user_role(user_id: int, data: UserRoleUpdate, db: Session = Depends(g
             "email": user.Email,
             "name": user.Name,
             "role": data.role,
+            "roleid": user.RoleID,
         }
     except HTTPException:
         raise
