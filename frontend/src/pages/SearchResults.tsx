@@ -92,7 +92,7 @@ const SearchResultsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-primary-700">{j.provider}</p>
-                    <h3 className="text-lg font-bold">{j.title}</h3>
+                    <h3 className="text-lg font-bold"><Link to={`/jobs/${j.id}`}>{j.title}</Link></h3>
                     <p className="text-sm text-slate-600">{j.company_name} • {j.location}</p>
                   </div>
                   <div className="text-sm text-slate-500">{j.posted_date ? new Date(j.posted_date).toLocaleDateString() : ''}</div>
@@ -124,7 +124,7 @@ const SearchResultsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-primary-700">{b.institute_name}</p>
-                    <h3 className="text-lg font-bold">{b.title}</h3>
+                    <h3 className="text-lg font-bold"><Link to={`/bootcamps/${b.id}`}>{b.title}</Link></h3>
                     <p className="text-sm text-slate-600">{b.location}</p>
                   </div>
                   <div className="text-sm text-slate-500">{b.start_date ? new Date(b.start_date).toLocaleDateString() : ''}</div>
