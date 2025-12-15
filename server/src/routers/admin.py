@@ -163,7 +163,13 @@ def update_user_role(user_id: int, data: UserRoleUpdate, db: Session = Depends(g
         db.commit()
         db.refresh(user)
 
-        return user
+        # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
+        return {
+            "userid": user.UserID,
+            "email": user.Email,
+            "name": user.Name,
+            "role": data.role,
+        }
     except HTTPException:
         raise
     except Exception as e:
