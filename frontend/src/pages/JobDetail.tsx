@@ -101,7 +101,7 @@ const JobDetail = () => {
             )}
             <div>
               <p className="text-sm font-semibold text-slate-700 mb-1">경력</p>
-              <p className="text-sm text-slate-600">{job.ExperienceRequirement ?? '경력 무관'}</p>
+              <p className="text-sm text-slate-600">{job.MinExperienceYears ? `${job.MinExperienceYears}년 이상` : '경력 무관'}</p>
             </div>
             {job.EmploymentType && (
               <div>
