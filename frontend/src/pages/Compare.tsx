@@ -13,7 +13,7 @@ type ComparedJob = {
   experience: string
   education: string
   salary: string
-  deadlines: string
+  deadlines: string | null
   url?: string
   employmentType?: string
   mainTasks?: string
@@ -88,7 +88,7 @@ const ComparePage = () => {
       experience: j.experience_requirement || j.ExperienceRequirement || '',
       education: j.education_requirement || j.EducationRequirement || '',
       salary: j.salary || j.Salary || '',
-      deadlines: j.close_date ? formatDate(j.close_date) : j.posted_date ? formatDate(j.posted_date) : '',
+      deadlines: j.close_date ? formatDate(j.close_date) : null,
       url: j.url || j.Url || '',
       employmentType: j.employment_type || j.EmploymentType || '',
       mainTasks: j.main_tasks || j.MainTasks || '',
@@ -357,7 +357,11 @@ const ComparePage = () => {
                     <>
                       <div>
                         <span className="mb-1 block text-xs text-slate-500">마감일</span>
-                        <p className="text-sm text-black text-slate-600">{job.deadlines || '-'}</p>
+                        <p className="text-sm text-black text-slate-600">
+                          {!job.deadlines || job.deadlines === 'null' || job.deadlines === 'undefined'
+                            ? '상시'
+                            : job.deadlines}
+                        </p>
                       </div>
                       {job.salary && (
                         <div>
