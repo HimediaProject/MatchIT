@@ -39,12 +39,20 @@ export const useAuth = create<AuthStore>((set) => ({
     try {
       const result = await authApi.getCurrentUser()
       if (result.isLoggedIn && result.user) {
+        // role이 객체인 경우와 문자열인 경우 모두 처리
+        let role: 'user' | 'admin' = 'user'
+        if (typeof result.user.role === 'string') {
+          role = result.user.role as 'user' | 'admin'
+        } else if (result.user.role && typeof result.user.role === 'object' && 'Name' in result.user.role) {
+          role = result.user.role.Name as 'user' | 'admin'
+        }
+
         set({
           user: {
             id: result.user.user_id || result.user.id,
             name: result.user.name || '',
             email: result.user.email || '',
-            role: result.user.role || 'user',
+            role,
             careerLevel: result.user.career_level,
             skills: result.user.skills || [],
             desiredJobs: result.user.desired_jobs || [],
