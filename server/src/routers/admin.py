@@ -206,20 +206,25 @@ def update_jobpost(job_id: int, data: JobPostUpdate, db: Session = Depends(get_d
     채용 공고 수정
     """
     try:
-        jobpost = db.query(models.JobPost).filter(models.JobPost.JobID == job_id).first()
+        jobpost = db.query(models.JobPost).filter(models.JobPost.PostID == job_id).first()
         if not jobpost:
             raise HTTPException(status_code=404, detail="Job post not found")
 
         if data.jobtitle is not None:
-            jobpost.JobTitle = data.jobtitle
+            jobpost.Title = data.jobtitle
         if data.jobdescription is not None:
-            jobpost.JobDescription = data.jobdescription
+            jobpost.MainTasks = data.jobdescription
 
         jobpost.UpdatedAt = datetime.now()
         db.commit()
         db.refresh(jobpost)
 
-        return jobpost
+        # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
+        return {
+            "jobid": jobpost.PostID,
+            "jobtitle": jobpost.Title or '',
+            "jobdescription": jobpost.MainTasks or jobpost.Qualifications or '',
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -233,16 +238,16 @@ def delete_jobpost(job_id: int, db: Session = Depends(get_db)):
     채용 공고 삭제
     """
     try:
-        jobpost = db.query(models.JobPost).filter(models.JobPost.JobID == job_id).first()
+        jobpost = db.query(models.JobPost).filter(models.JobPost.PostID == job_id).first()
         if not jobpost:
             raise HTTPException(status_code=404, detail="Job post not found")
 
         # 관련 데이터 정리
         db.query(models.JobPostSkill).filter(
-            models.JobPostSkill.JobID == job_id
+            models.JobPostSkill.PostID == job_id
         ).delete()
         db.query(models.UserScrap).filter(
-            models.UserScrap.JobID == job_id
+            models.UserScrap.JobPostID == job_id
         ).delete()
 
         db.delete(jobpost)
