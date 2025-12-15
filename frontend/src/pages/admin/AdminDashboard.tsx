@@ -1,5 +1,6 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 
 export default function AdminDashboard() {
@@ -71,19 +72,19 @@ export default function AdminDashboard() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">빠른 작업</h2>
           <ul className="space-y-2">
             <li>
-              <a href="/admin/users" className="text-blue-600 hover:text-blue-800 font-medium">
+              <Link to="/admin/users" className="text-blue-600 hover:text-blue-800 font-medium">
                 → 회원 관리
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/admin/jobposts" className="text-green-600 hover:text-green-800 font-medium">
+              <Link to="/admin/jobposts" className="text-green-600 hover:text-green-800 font-medium">
                 → 채용 공고 관리
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/admin/bootcamps" className="text-purple-600 hover:text-purple-800 font-medium">
+              <Link to="/admin/bootcamps" className="text-purple-600 hover:text-purple-800 font-medium">
                 → 부트캠프 관리
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
