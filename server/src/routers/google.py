@@ -136,7 +136,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
             db.add(new_oauth)
 
         db.commit()
-        db.refresh(user)
+        db.refresh(user, ["role"])
 
     except Exception as e:
         db.rollback()
@@ -211,7 +211,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
 
 # ------------------------------------------------------------
-# 6) 로그인 상태 확인 API (카카오와 동일)
+# 6) 로그인 상태 확인
 # ------------------------------------------------------------
 @router.get("/me")
 async def get_current_user(
@@ -239,15 +239,23 @@ async def get_current_user(
     user = db.query(User).filter(User.UserID == user_id_int).first()
     if not user:
         return {"isLoggedIn": False, "user": None}
+    
+    # role 정보 로드
+    db.refresh(user, ["role"])
 
     return {
         "isLoggedIn": True,
-        "user": {"id": user.UserID, "name": user.Name, "email": user.Email},
+        "user": {
+            "id": user.UserID,
+            "name": user.Name,
+            "email": user.Email,
+            "role": user.role.Name if user.role else "user",
+        },
     }
 
 
 # ------------------------------------------------------------
-# 7) 로그아웃 (카카오와 완전히 동일)
+# 7) 구글 로그아웃
 # ------------------------------------------------------------
 @router.get("/logout")
 async def google_logout(
