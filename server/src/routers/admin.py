@@ -289,22 +289,27 @@ def update_bootcamp(bootcamp_id: int, data: BootcampUpdate, db: Session = Depend
     부트캠프 수정
     """
     try:
-        bootcamp = db.query(models.Bootcamp).filter(
-            models.Bootcamp.BootcampID == bootcamp_id
+        bootcamp = db.query(models.BootcampPost).filter(
+            models.BootcampPost.BootcampID == bootcamp_id
         ).first()
         if not bootcamp:
             raise HTTPException(status_code=404, detail="Bootcamp not found")
 
         if data.bootcampname is not None:
-            bootcamp.BootcampName = data.bootcampname
+            bootcamp.Title = data.bootcampname
         if data.description is not None:
-            bootcamp.Description = data.description
+            bootcamp.EducationContent = data.description
 
         bootcamp.UpdatedAt = datetime.now()
         db.commit()
         db.refresh(bootcamp)
 
-        return bootcamp
+        # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
+        return {
+            "bootcampid": bootcamp.BootcampID,
+            "bootcampname": bootcamp.Title or '',
+            "description": bootcamp.EducationContent or bootcamp.Benefits or '',
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -318,15 +323,15 @@ def delete_bootcamp(bootcamp_id: int, db: Session = Depends(get_db)):
     부트캠프 삭제
     """
     try:
-        bootcamp = db.query(models.Bootcamp).filter(
-            models.Bootcamp.BootcampID == bootcamp_id
+        bootcamp = db.query(models.BootcampPost).filter(
+            models.BootcampPost.BootcampID == bootcamp_id
         ).first()
         if not bootcamp:
             raise HTTPException(status_code=404, detail="Bootcamp not found")
 
         # 관련 데이터 정리 (필요시)
         db.query(models.UserScrap).filter(
-            models.UserScrap.BootcampID == bootcamp_id
+            models.UserScrap.BootcampPostID == bootcamp_id
         ).delete()
 
         db.delete(bootcamp)
