@@ -147,6 +147,8 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
         db.commit()
         db.refresh(user)
+        # role 정보 로드
+        db.refresh(user, ["role"])
 
     except Exception as e:
         db.rollback()
@@ -251,12 +253,16 @@ async def get_current_user(
         if not user:
             return {"isLoggedIn": False, "user": None}
 
+        # role 정보 로드
+        db.refresh(user, ["role"])
+
         return {
             "isLoggedIn": True,
             "user": {
                 "id": user.UserID,
                 "name": user.Name,
                 "email": user.Email,
+                "role": user.role.Name if user.role else "user",
             },
         }
 
