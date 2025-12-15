@@ -2,26 +2,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import time
 import logging
+from contextlib import asynccontextmanager
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories, chat
+from src.database import create_tables
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories, chat, recommendations
+from ai.ai_models import model_manager
 
-app = FastAPI(title="MatchIT Backend")
-
-# 개발용 CORS 설정
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://frontend:3000",
-    "http://0.0.0.0:3000"
-]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,19 +20,34 @@ async def lifespan(app: FastAPI):
     # 데이터베이스 테이블 생성
     create_tables()
 
-    # Startup: 서버 시작 시 실행
-    print("🚀 서버 시작 중...")
+    # 서버 시작 시 임베딩 모델 로드
     model_manager.load_models()
-    print("✅ 서버 시작 완료!\n")
 
-    yield  # 서버 실행 중
+    try:
+        # 애플리케이션 실행
+        yield
+    finally:
+        # 서버 종료 시 임베딩 모델 언로드
+        model_manager.unload_models()
 
-    # Shutdown: 서버 종료 시 실행
-    print("\n🛑 서버 종료 중...")
-    model_manager.unload_models()
-    print("✅ 서버 종료 완료!")
 
-app = FastAPI(lifespan=lifespan)
+# FastAPI 앱 인스턴스 (lifespan + CORS 포함)
+app = FastAPI(title="MatchIT Backend", lifespan=lifespan)
+
+# 개발용 CORS 설정
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://frontend:3000",
+    "http://0.0.0.0:3000",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(jwt_login.router)
 app.include_router(google.router)
@@ -61,6 +63,7 @@ app.include_router(meta.router)
 
 app.include_router(chat.router)
 app.include_router(job_categories.router)
+app.include_router(recommendations.router)
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,8 @@ from src.schemas import BootcampCreate, BootcampUpdate, \
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
+from ai.ai_models import get_embedding_model
 
 router = APIRouter(prefix = '/bootcamps')
 
@@ -300,3 +302,29 @@ def delete_bootcamp(
     db.commit()
 
     return None
+
+
+@router.post('/embeddings')
+def update_all_bootcamp_embeddings(
+    db: Session = Depends(get_db),
+    model: SentenceTransformer = Depends(get_embedding_model),
+):
+    """부트캠프 교육 내용(EducationContent)을 임베딩하여 Embedding 컬럼을 채우는 관리자용 API"""
+    posts = db.query(BootcampPo).filter(BootcampPo.Embedding.is_(None)).all()
+
+    if not posts:
+        return {"message": "업데이트할 부트캠프가 없습니다."}
+
+    update_count = 0
+    for post in posts:
+        base_text_parts = [post.Title or "", post.InstituteName or "", post.EducationContent or ""]
+        text = "\n".join([t for t in base_text_parts if t])
+        if not text:
+            continue
+        embedding = model.encode(text).tolist()
+        post.Embedding = embedding
+        update_count += 1
+
+    db.commit()
+
+    return {"message": f"{update_count}개 부트캠프가 업데이트 되었습니다."}

@@ -247,6 +247,7 @@ class BootcampPost(Base):
     ViewCount = Column("viewcount", Integer, default=0)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    Embedding = Column("embedding", Vector(768), nullable=True)
 
     __table_args__ = (
         CheckConstraint("OnlineOffline IN ('온라인','오프라인','혼합형')"),

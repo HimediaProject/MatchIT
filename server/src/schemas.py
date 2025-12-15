@@ -259,6 +259,28 @@ class PaginatedJobPostResponse(BaseModel):
     page: int
     size: int
     items: List[JobPostResponse]
+
+
+class SimilarItem(BaseModel):
+    id: int
+    source: str  # "job" or "bootcamp"
+    title: Optional[str]
+    description: Optional[str]
+    url: Optional[str]
+    similarity: float
+
+
+class RecommendationRequest(BaseModel):
+    query: str
+    top_k_jobs: int = 5
+    top_k_bootcamps: int = 5
+
+
+class RecommendationResponse(BaseModel):
+    items: List[SimilarItem]
+    llm_message: Optional[str] = None
+
+
 class BootcampPost(BaseModel):
     '''
     endpoint:

@@ -59,6 +59,7 @@ def job_to_dict(job: models.JobPost):
         job_category_name = job.job_category.CategoryName
 
     return {
+        "id": job.PostID,
         "provider": provider_val,
         "title": job.Title,
         "company_name": job.CompanyName,
@@ -85,6 +86,7 @@ def job_to_dict(job: models.JobPost):
 
 def bootcamp_to_dict(b: models.BootcampPost):
     return {
+        "id": b.BootcampID,
         "title": b.Title,
         "institute_name": b.InstituteName,
         "job_category_id": b.JobCategoryID,

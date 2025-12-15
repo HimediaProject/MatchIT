@@ -319,7 +319,7 @@ def update_all_job_posting_embeddings(db: Session = Depends(get_db),
 
     for post in jobposting:
         embedding = model.encode(post.MainTasks).tolist()
-        post.embedding = embedding  # embedding 컬럼에 벡터 넣기
+        post.Embedding = embedding  # Embedding 컬럼에 벡터 넣기
         update_count += 1
 
     # 3. 데이터베이스에 저장하기
