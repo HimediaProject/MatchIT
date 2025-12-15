@@ -12,6 +12,9 @@ ENV BROWSER=none
 # 패키지 파일 복사
 COPY package*.json ./
 
+# npm 캐시 삭제
+RUN npm cache clean --force
+
 # 의존성 설치 (개발 의존성 포함)
 RUN npm install
 
