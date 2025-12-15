@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
+import { usersApi } from '../services/apiService'
 
 /**
  * 날짜 포맷팅 함수
@@ -25,10 +26,14 @@ const formatDate = (dateString: string | null): string => {
  */
 const BootcampDetailPage = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [bootcamp, setBootcamp] = useState<BootcampItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const hasFetchedRef = useRef(false)
+
+  const [isScrapped, setIsScrapped] = useState(false)
+  const [scrapLoading, setScrapLoading] = useState(false)
 
   // 커리큘럼 "더보기" 상태
   const [isCurriculumExpanded, setIsCurriculumExpanded] = useState(false)
@@ -60,6 +65,100 @@ const BootcampDetailPage = () => {
 
     fetchBootcamp()
   }, [id])
+
+  useEffect(() => {
+    if (!bootcamp?.Title) return
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId)) return
+    const label = `[부트캠프] ${bootcamp.Title}`
+    try {
+      const raw = localStorage.getItem('recentViews')
+      const arr = raw ? JSON.parse(raw) : []
+      const current = Array.isArray(arr) ? arr : []
+
+      const normalized = current
+        .map((x: any) => {
+          if (typeof x === 'string') return { label: String(x) }
+          if (x && typeof x === 'object') {
+            const postType = String(x.postType ?? x.type ?? '')
+            const targetId = Number(x.targetId ?? x.id)
+            const lbl = String(x.label ?? x.title ?? '')
+            return { postType, targetId, label: lbl }
+          }
+          return null
+        })
+        .filter(Boolean) as Array<{ postType?: string; targetId?: number; label: string }>;
+
+      const item = { postType: 'Bootcamp', targetId: numericId, label }
+      const next = [
+        item,
+        ...normalized.filter((x) => !(x?.postType === 'Bootcamp' && Number(x?.targetId) === numericId) && x.label !== label),
+      ].slice(0, 5)
+      if (numericId > 0) {
+        localStorage.setItem('recentViews', JSON.stringify(next))
+      }
+    } catch {
+      try {
+        if (numericId > 0) {
+          localStorage.setItem('recentViews', JSON.stringify([{ postType: 'Bootcamp', targetId: numericId, label }]))
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [bootcamp?.Title, id])
+
+  useEffect(() => {
+    if (!id) return
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId)) return
+
+    let mounted = true
+    const load = async () => {
+      try {
+        const scraps = await usersApi.getMyScraps()
+        const found = Array.isArray(scraps)
+          ? scraps.some((s: any) => s?.post_type === 'Bootcamp' && Number(s?.bootcamp_post_id) === numericId)
+          : false
+        if (mounted) setIsScrapped(found)
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [id])
+
+  const toggleScrap = async () => {
+    if (!id) return
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId)) return
+    if (scrapLoading) return
+
+    setScrapLoading(true)
+    try {
+      if (isScrapped) {
+        await usersApi.removeMyScrap('Bootcamp', numericId)
+        setIsScrapped(false)
+      } else {
+        await usersApi.addMyScrap('Bootcamp', numericId)
+        setIsScrapped(true)
+      }
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        window.alert('스크랩 처리에 실패했습니다.')
+      }
+    } finally {
+      setScrapLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -145,7 +244,14 @@ const BootcampDetailPage = () => {
               {/* 스크랩 버튼 */}
               <button 
                 type="button"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+                onClick={toggleScrap}
+                disabled={scrapLoading}
+                className={
+                  `flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition ` +
+                  (isScrapped
+                    ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                    : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600')
+                }
                 aria-label="스크랩"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
