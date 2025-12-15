@@ -20,8 +20,11 @@ const ProfilePage = () => {
   const [email, setEmail] = useState('hong@example.com')
   const [showRecommendations, setShowRecommendations] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [scraps, setScraps] = useState<string[]>([])
-  const [recentViews, setRecentViews] = useState<string[]>([])
+  type ScrapItem = { postType: 'Job' | 'Bootcamp'; targetId: number; label: string }
+  type RecentViewItem = { postType?: 'Job' | 'Bootcamp'; targetId?: number; label: string }
+
+  const [scraps, setScraps] = useState<ScrapItem[]>([])
+  const [recentViews, setRecentViews] = useState<RecentViewItem[]>([])
   const navigate = useNavigate()
   const previewMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'true'
 
@@ -53,6 +56,36 @@ const ProfilePage = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
+  // 스크랩 삭제 핸들러
+  const handleDeleteScrap = async (index: number) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return
+
+    const target = scraps[index]
+    if (!target) return
+
+    try {
+      await usersApi.removeMyScrap(target.postType, target.targetId)
+    } catch (e) {
+      console.error('스크랩 삭제 실패:', e)
+      alert('스크랩 삭제에 실패했습니다.')
+      return
+    }
+
+    const newScraps = [...scraps]
+    newScraps.splice(index, 1)
+    setScraps(newScraps)
+  }
+
+  // 최근 열람 삭제 핸들러
+  const handleDeleteRecentView = (index: number) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return
+
+    const newRecentViews = [...recentViews]
+    newRecentViews.splice(index, 1)
+    setRecentViews(newRecentViews)
+    localStorage.setItem('recentViews', JSON.stringify(newRecentViews))
+  }
+
   // 프로필 저장 함수
   const handleSaveProfile = async () => {
     setIsSaving(true)
@@ -62,7 +95,17 @@ const ProfilePage = () => {
       try {
         const raw = localStorage.getItem('recentViews')
         if (raw) {
-          recentViewsToSave = JSON.parse(raw)
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed)) {
+            recentViewsToSave = parsed
+              .map((x: any) => {
+                if (typeof x === 'string') return String(x)
+                if (x && typeof x === 'object') return String(x.label ?? x.title ?? '')
+                return ''
+              })
+              .filter(Boolean)
+              .slice(0, 5)
+          }
         }
       } catch (e) {
         // ignore
@@ -96,7 +139,7 @@ const ProfilePage = () => {
     const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
     setNotifications((prev) => [
       { id: Date.now(), category, text, timestamp },
-      ...prev.slice(0, 9), // 최대 10개 유지
+      ...prev.slice(0, 2), // 최대 3개 유지
     ])
   }
 
@@ -209,8 +252,14 @@ const ProfilePage = () => {
     if (previewMode) {
       // 미리보기 모드: 인증 건너뜀, 샘플 데이터 세팅 (DB 예시 기준)
       setIsLoading(false)
-      setScraps(['[샘플] Python 백엔드 채용 공고', '[샘플] 데이터 분석 인턴십'])
-      setRecentViews(['[샘플] React 개발자 채용', '[샘플] ML 엔지니어 공고'])
+      setScraps([
+        { postType: 'Job', targetId: 1, label: '[샘플] Python 백엔드 채용 공고' },
+        { postType: 'Job', targetId: 2, label: '[샘플] 데이터 분석 인턴십' },
+      ])
+      setRecentViews([
+        { postType: 'Job', targetId: 1, label: '[샘플] React 개발자 채용' },
+        { postType: 'Job', targetId: 2, label: '[샘플] ML 엔지니어 공고' },
+      ])
 
       // Alembic 예시를 참고한 간단한 알림 샘플 (UserNotificationSettings 예시값 기반)
       setNotifications([
@@ -275,14 +324,60 @@ const ProfilePage = () => {
               setSelectedInterests(profileData.desired_jobs)
             }
             if (Array.isArray(profileData.recentViews) && profileData.recentViews.length > 0) {
-              setRecentViews(profileData.recentViews)
+              // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭해
+              // 가능한 경우 postType/targetId를 보강하여 클릭 이동이 되게 처리
+              let localNormalized: RecentViewItem[] = []
+              try {
+                const raw = localStorage.getItem('recentViews')
+                if (raw) {
+                  const parsed = JSON.parse(raw)
+                  const arr = Array.isArray(parsed) ? parsed : []
+                  localNormalized = arr
+                    .map((x: any) => {
+                      if (typeof x === 'string') return { label: String(x) }
+                      if (x && typeof x === 'object') {
+                        const postType = String(x.postType ?? x.type ?? '')
+                        const targetId = Number(x.targetId ?? x.id)
+                        const label = String(x.label ?? x.title ?? '')
+                        return { postType: postType === 'Job' || postType === 'Bootcamp' ? postType : undefined, targetId, label }
+                      }
+                      return null
+                    })
+                    .filter(Boolean) as RecentViewItem[]
+                }
+              } catch {
+                // ignore
+              }
+
+              const merged = profileData.recentViews
+                .slice(0, 5)
+                .map((x: any) => {
+                  const label = String(x)
+                  const found = localNormalized.find((y) => y.label === label && y.postType && Number.isFinite(y.targetId))
+                  return found ? found : { label }
+                })
+
+              setRecentViews(merged)
             } else {
               // 서버에 recentViews가 없으면 로컬스토리지에서 불러와서 사용
               try {
                 const raw = localStorage.getItem('recentViews')
                 if (raw) {
-                  const arr = JSON.parse(raw)
-                  if (Array.isArray(arr) && arr.length > 0) setRecentViews(arr.slice(0, 3))
+                  const parsed = JSON.parse(raw)
+                  const arr = Array.isArray(parsed) ? parsed : []
+                  const normalized = arr
+                    .map((x: any) => {
+                      if (typeof x === 'string') return { label: String(x) }
+                      if (x && typeof x === 'object') {
+                        const postType = String(x.postType ?? x.type ?? '')
+                        const targetId = Number(x.targetId ?? x.id)
+                        const label = String(x.label ?? x.title ?? '')
+                        return { postType: postType === 'Job' || postType === 'Bootcamp' ? postType : undefined, targetId, label }
+                      }
+                      return null
+                    })
+                    .filter(Boolean) as RecentViewItem[]
+                  if (normalized.length > 0) setRecentViews(normalized.slice(0, 5))
                 }
               } catch (e) {
                 // ignore
@@ -300,12 +395,25 @@ const ProfilePage = () => {
                   scrapsRes = await usersApi.getScraps(userId)
                 }
                 // scrapsRes는 job_post / bootcamp_post 포함 객체 배열
-                const scrapLabels = (scrapsRes || []).map((s: any) => {
-                  if (s.job_post) return s.job_post.title || s.job_post.Title || ''
-                  if (s.bootcamp_post) return s.bootcamp_post.title || s.bootcamp_post.Title || ''
-                  return s.post_type || ''
-                }).filter(Boolean)
-                setScraps(scrapLabels)
+                const scrapItems = (scrapsRes || [])
+                  .map((s: any) => {
+                    const postType = String(s?.post_type ?? s?.postType ?? '')
+                    if (postType === 'Job') {
+                      const targetId = Number(s?.job_post_id ?? s?.jobPostId)
+                      const label = String(s?.job_post?.title ?? s?.job_post?.Title ?? '')
+                      if (!Number.isFinite(targetId) || !label) return null
+                      return { postType: 'Job' as const, targetId, label }
+                    }
+                    if (postType === 'Bootcamp') {
+                      const targetId = Number(s?.bootcamp_post_id ?? s?.bootcampPostId)
+                      const label = String(s?.bootcamp_post?.title ?? s?.bootcamp_post?.Title ?? '')
+                      if (!Number.isFinite(targetId) || !label) return null
+                      return { postType: 'Bootcamp' as const, targetId, label }
+                    }
+                    return null
+                  })
+                  .filter(Boolean) as ScrapItem[]
+                setScraps(scrapItems.slice(0, 5))
 
                 const notiRes = await usersApi.getNotifications(userId)
                 const mappedNoti = (notiRes || []).map((n: any, i: number) => ({
@@ -314,7 +422,7 @@ const ProfilePage = () => {
                   text: n.notification_type || '설정 알림',
                   timestamp: n.notificationtime || '',
                 }))
-                setNotifications(mappedNoti)
+                setNotifications(mappedNoti.slice(0, 3))
               }
             } catch (e) {
               console.error('Failed to fetch scraps/notifications:', e)
@@ -698,7 +806,28 @@ const ProfilePage = () => {
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {scraps.map((s, i) => (
-                      <li key={i} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">{s}</li>
+                      <li key={`${s.postType}:${s.targetId}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                        <div className="flex items-start justify-between gap-3">
+                          <button
+                            type="button"
+                            onClick={() => navigate(s.postType === 'Job' ? `/jobs/${s.targetId}` : `/bootcamps/${s.targetId}`)}
+                            className="flex-1 text-left"
+                          >
+                            {s.label}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleDeleteScrap(i)
+                            }}
+                            className="shrink-0 text-slate-400 hover:text-red-500"
+                            aria-label="스크랩 삭제"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -711,7 +840,34 @@ const ProfilePage = () => {
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {recentViews.map((r, i) => (
-                      <li key={i} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">{r}</li>
+                      <li key={`${r.postType ?? 'unknown'}:${String(r.targetId ?? r.label)}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                        <div className="flex items-start justify-between gap-3">
+                          {r.postType && Number.isFinite(r.targetId) ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(r.postType === 'Job' ? `/jobs/${r.targetId}` : `/bootcamps/${r.targetId}`)
+                              }
+                              className="flex-1 text-left"
+                            >
+                              {r.label}
+                            </button>
+                          ) : (
+                            <div className="flex-1">{r.label}</div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteRecentView(i)
+                            }}
+                            className="shrink-0 text-slate-400 hover:text-red-500"
+                            aria-label="최근 열람 삭제"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </li>
                     ))}
                   </ul>
                 )}

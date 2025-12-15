@@ -68,7 +68,7 @@ class User(Base):
     notifications = relationship("UserNotificationSetting", back_populates="user")
     scraps = relationship("UserScrap", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
-    desired_jobs = relationship("DesiredJob", back_populates="users")
+    desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
 
 
 # -------------------------------------------------------

@@ -8,7 +8,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy import inspect
 
 revision: str = "20251212_add_experience_range"
 down_revision: Union[str, None] = "8f3c89db1300"
@@ -17,20 +17,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column("experiencerangeid", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_users_experiencerange",
-        "users",
-        "experienceranges",
-        ["experiencerangeid"],
-        ["rangeid"],
-    )
-
+    pass
 
 def downgrade() -> None:
-    op.drop_constraint("fk_users_experiencerange", "users", type_="foreignkey")
-    op.drop_column("users", "experiencerangeid")
+    pass
 

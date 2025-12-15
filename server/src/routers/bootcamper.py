@@ -1,16 +1,67 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Cookie
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, case, desc
 from src.database import get_db
-from src.models import BootcampPost as BootcampPo, JobCategory, Skill
+from src.models import BootcampPost as BootcampPo, JobCategory, Skill, User, UserSession
 from src.schemas import BootcampCreate, BootcampUpdate, \
                             BootcampResponse, PaginatedBootcampResponse, \
                             BootcampDetailResponse
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
+import json
+import uuid
 
 router = APIRouter(prefix = '/bootcamps')
+
+
+def _try_get_current_user(db: Session, user_id: Optional[str], session_id: Optional[str]) -> Optional[User]:
+    if not user_id or not session_id:
+        return None
+
+    try:
+        session_uuid = uuid.UUID(session_id)
+        uid = int(user_id)
+    except Exception:
+        return None
+
+    session = (
+        db.query(UserSession)
+        .filter(UserSession.SessionID == session_uuid, UserSession.UserID == uid)
+        .first()
+    )
+    if not session:
+        return None
+
+    now = datetime.now(session.ExpiresAt.tzinfo) if getattr(session.ExpiresAt, "tzinfo", None) else datetime.now()
+    if session.ExpiresAt < now:
+        return None
+
+    return db.query(User).filter(User.UserID == uid).first()
+
+
+def _append_recent_view(user: User, label: str, max_items: int = 5) -> None:
+    if not hasattr(user, "RecentViews"):
+        return
+
+    current = []
+    raw = getattr(user, "RecentViews", None)
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                current = [str(x) for x in parsed]
+        except Exception:
+            current = []
+
+    label = (label or "").strip()
+    if not label:
+        return
+
+    current = [x for x in current if x != label]
+    current.insert(0, label)
+    current = current[:max_items]
+    setattr(user, "RecentViews", json.dumps(current, ensure_ascii=False))
 
 @router.post('/', response_model = BootcampResponse, status_code = 201)
 def create_bootcamp(
@@ -225,7 +276,9 @@ async def get_filter_options(db: Session = Depends(get_db)):
 @router.get('/{bootcamp_id}', response_model = BootcampDetailResponse)
 def get_bootcamp_detail(
     bootcamp_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: Optional[str] = Cookie(None),
+    session_id: Optional[str] = Cookie(None),
 ):
     """
     부트캠프 상세 조회 (조회수 증가)
@@ -239,6 +292,11 @@ def get_bootcamp_detail(
 
     # 조회수 증가
     bootcamp.ViewCount += 1
+
+    user = _try_get_current_user(db, user_id, session_id)
+    if user:
+        _append_recent_view(user, f"[부트캠프] {bootcamp.Title}")
+
     db.commit()
     db.refresh(bootcamp)
 

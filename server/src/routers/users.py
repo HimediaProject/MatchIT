@@ -195,7 +195,7 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
     career_name = None
     experience_name = None
     user_skills = [s.SkillName for s in user.skills]
-    user_desired_jobs = [j.JobName for j in user.desired_jobs]
+    user_desired_jobs = [j.JobName for j in (user.desired_jobs or [])]
 
     career_name = user.career_level.CareerName if user.career_level else None
     experience_name = user.experience_range.RangeName if getattr(user, 'experience_range', None) else None
@@ -232,7 +232,20 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     
     # 이메일
     if data.email is not None:
-        user.Email = data.email
+        next_email = (data.email or "").strip()
+        if next_email == "":
+            next_email = None
+
+        if next_email is not None:
+            dup = (
+                db.query(models.User)
+                .filter(models.User.Email == next_email, models.User.UserID != user_id)
+                .first()
+            )
+            if dup is not None:
+                raise HTTPException(status_code=409, detail="이미 사용 중인 이메일입니다.")
+
+        user.Email = next_email
 
     # 경력 레벨 (잘못된 타입 방지)
     if data.career_level is not None:
@@ -451,15 +464,14 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
             if job is not None:
                 resolved_jobs.append(job)
 
-        if hasattr(user.desired_jobs, "clear") and hasattr(user.desired_jobs, "append"):
-            user.desired_jobs.clear()
-            for job in resolved_jobs:
-                user.desired_jobs.append(job)
+        if user.desired_jobs is None:
+            user.desired_jobs = []
         else:
-            if len(resolved_jobs) > 0:
-                user.desired_jobs = resolved_jobs[0]
-            else:
-                user.desired_jobs = None
+            user.desired_jobs.clear()
+        for job in resolved_jobs:
+            user.desired_jobs.append(job)
+
+        user.DesiredJobID = resolved_jobs[0].DesiredJobID if len(resolved_jobs) > 0 else None
 
     # 최근 열람(문자열 리스트) 저장
     if data.recentViews is not None and hasattr(user, "RecentViews"):
@@ -470,6 +482,12 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
 
     try:
         db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        msg = str(getattr(e, "orig", e))
+        if "email" in msg.lower():
+            raise HTTPException(status_code=409, detail="이미 사용 중인 이메일입니다.")
+        raise
     except Exception:
         db.rollback()
         raise
@@ -562,6 +580,18 @@ def read_userscrap(user_id: int, db: Session = Depends(get_db)):
 def create_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """현재 로그인한 사용자의 스크랩 추가 (Job 또는 Bootcamp)."""
     try:
+        # 최대 스크랩 개수 제한
+        MAX_SCRAPS = 5
+        current_count = db.query(models.UserScrap).filter(
+            models.UserScrap.UserID == current_user.UserID
+        ).count()
+
+        if current_count >= MAX_SCRAPS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"최대 {MAX_SCRAPS}개까지 스크랩할 수 있습니다."
+            )
+
         if data.post_type.value.lower() == 'job':
             existing = db.query(models.UserScrap).filter(
                 models.UserScrap.UserID == current_user.UserID,
@@ -644,6 +674,19 @@ def read_notifications(user_id: int, db: Session = Depends(get_db)):
         )
         for n in notifications
     ]
+
+@router.post("/debug/recentviews")
+def debug_recent_views(db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.userid == 4).first()
+
+    user.recentviews = [1, 2, 3, 4]
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "userid": user.userid,
+        "recentviews": user.recentviews
+    }
 
 if __name__ == "__main__":
     import uvicorn
