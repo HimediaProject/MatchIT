@@ -16,7 +16,7 @@ for _env_path in _possible_env_paths:
         load_dotenv(_env_path)
         break
 
-from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories
+from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories, admin
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -47,6 +47,7 @@ app.include_router(search.router)
 app.include_router(skills.router)
 app.include_router(meta.router)
 app.include_router(job_categories.router)
+app.include_router(admin.router)
 
 logger = logging.getLogger(__name__)
 

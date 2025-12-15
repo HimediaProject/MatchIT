@@ -29,7 +29,12 @@ CREATE TABLE ExperienceRanges (
 -- 희망 직무
 CREATE TABLE DesiredJobs (
     DesiredJobID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    JobName VARCHAR(100) UNIQUE NOT NULL
+    JobName VARCHAR(100) UNIQUE NOT NULL);
+
+-- 역할 (관리자/유저)
+CREATE TABLE Roles (
+    RoleID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RoleName VARCHAR(50) UNIQUE NOT NULL
 );
 
 -- 유저
@@ -37,11 +42,14 @@ CREATE TABLE Users (
     UserID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     Name VARCHAR(100),
     Email VARCHAR(255) UNIQUE NOT NULL,
+    RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
     ExperienceRangeID INT,
     DesiredJobID INT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_role
+        FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),
     CONSTRAINT fk_users_careerlevel
         FOREIGN KEY (CareerLevelID) REFERENCES CareerLevels(CareerLevelID),
     CONSTRAINT fk_users_experiencerange

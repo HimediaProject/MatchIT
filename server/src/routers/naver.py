@@ -69,7 +69,6 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         "redirect_uri": NAVER_REDIRECT_URI,
         "client_secret": NAVER_CLIENT_SECRET,
         "code": code,
-        "state": state,
     }
 
     async with httpx.AsyncClient() as client:
@@ -150,7 +149,8 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
             db.add(new_oauth)
 
         db.commit()
-        db.refresh(user)
+        # role 정보 로드
+        db.refresh(user, ["role"])
 
     except Exception as e:
         db.rollback()
@@ -246,9 +246,17 @@ async def naver_me(
     if not user:
         return {"isLoggedIn": False, "user": None}
 
+    # role 정보 로드
+    db.refresh(user, ["role"])
+
     return {
         "isLoggedIn": True,
-        "user": {"id": user.UserID, "name": user.Name, "email": user.Email},
+        "user": {
+            "id": user.UserID,
+            "name": user.Name,
+            "email": user.Email,
+            "role": user.role.Name if user.role else "user",
+        },
     }
 
 
