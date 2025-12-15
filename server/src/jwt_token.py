@@ -3,54 +3,77 @@ from datetime import datetime, timedelta, timezone
 
 # JWT => HEADER.PAYLOAD.SIGNATURE
 
-ALG = 'HS256' # 암호화 알고리즘 
-SECRET = "my-secret"
-# HACKER = "secret"
+ALG = "HS256"        # 암호화 알고리즘
+SECRET = "my-secret" # 실제 서비스에서는 반드시 env로 빼기
 
-def create_token(user_info):
+# ---------------------------------------------------
+# Access Token 생성 (role 포함)
+# ---------------------------------------------------
+def create_token(user_info: dict):
+    """
+    user_info 예시:
+    {
+        "user_id": 1,
+        "email": "test@test.com",
+        "role": "admin"  # 또는 "user"
+    }
+    """
     payload = {
-        'user_info': user_info,
-        'type': 'access',
-        'exp': datetime.now(timezone.utc) + timedelta(seconds=5) # 만료 시간 30분
-    } # 키값: exp 값: datetime utc 
-    
-    # 암호화 토큰 생성
-    token = jwt.encode(payload, SECRET, algorithm=ALG) 
+        "user_info": {
+            "user_id": user_info["user_id"],
+            "email": user_info["email"],
+            "role": user_info["role"],   # ⭐ 핵심
+        },
+        "type": "access",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+    }
+
+    token = jwt.encode(payload, SECRET, algorithm=ALG)
     return token
 
-def create_refresh_token(user_info):
+
+# ---------------------------------------------------
+# Refresh Token 생성 (role 포함 권장)
+# ---------------------------------------------------
+def create_refresh_token(user_info: dict):
     payload = {
-        'user_info': user_info,
-        'type': 'refresh',
-        'exp': datetime.now(timezone.utc) + timedelta(days=7) # 만료 시간 30분
-    } # 키값: exp 값: datetime utc 
-    
-    # 암호화 토큰 생성
-    token = jwt.encode(payload, SECRET, algorithm=ALG) 
+        "user_info": {
+            "user_id": user_info["user_id"],
+            "email": user_info["email"],
+            "role": user_info["role"],   # refresh에도 포함
+        },
+        "type": "refresh",
+        "exp": datetime.now(timezone.utc) + timedelta(days=7)
+    }
+
+    token = jwt.encode(payload, SECRET, algorithm=ALG)
     return token
 
-def verify_token(token):
+
+# ---------------------------------------------------
+# Token 검증
+# ---------------------------------------------------
+def verify_token(token: str):
     try:
-        # 토큰을 해독 
-        payload = jwt.decode(token, SECRET, algorithms=ALG)
-        
-        user_info = payload.get('user_info', None)
-        
-        return user_info, None
+        payload = jwt.decode(token, SECRET, algorithms=[ALG])
+
+        token_type = payload.get("type")
+        user_info = payload.get("user_info")
+
+        if not user_info:
+            return None, "invalid"
+
+        return {
+            "user_id": user_info.get("user_id"),
+            "email": user_info.get("email"),
+            "role": user_info.get("role"),
+            "token_type": token_type,
+        }, None
+
+    # 토큰 만료
     except jwt.ExpiredSignatureError:
-        # 만약에 만료되었을 때 에러 처리
-        return None, 'expired'
-    except JWTError: 
-        # 유효하지 않은 토큰일 때 에러 처리
-        return None, 'invalid'
-     
-# payload에 있는 사용자 정보 / 만료인지, 유효하지 않은 건지, 유효한거지
-     
-# print(verify_token(token))
+        return None, "expired"
 
-# payload = jwt.decode(token, HACKER, algorithms=ALG)
-# user_info = payload.get('user_info', None)
-# print(user_info)
-
-# a, b = verify_token(token)
-# print(a, b)
+    # 유효하지 않은 토큰
+    except JWTError:
+        return None, "invalid"
