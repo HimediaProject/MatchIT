@@ -79,7 +79,24 @@ def get_all_users(db: Session = Depends(get_db)):
     """
     try:
         users = db.query(models.User).all()
-        return users
+        # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
+        result = []
+        for u in users:
+            # role 관계가 로드되어 있지 않을 수 있으므로 안전하게 조회
+            role_name = None
+            try:
+                role_name = u.role.Name if getattr(u, 'role', None) else None
+            except Exception:
+                role_name = None
+
+            result.append({
+                "userid": u.UserID,
+                "email": u.Email,
+                "name": u.Name,
+                "role": role_name or "user",
+            })
+
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get users: {str(e)}")
 
@@ -162,8 +179,17 @@ def get_all_jobposts(db: Session = Depends(get_db)):
     모든 채용 공고 조회
     """
     try:
+        # JobPost 모델은 내부적으로 PostID, Title 등을 사용하므로
+        # 프론트가 기대하는 필드명(jobid, jobtitle, jobdescription)으로 매핑
         jobposts = db.query(models.JobPost).all()
-        return jobposts
+        result = []
+        for j in jobposts:
+            result.append({
+                "jobid": getattr(j, 'PostID', None),
+                "jobtitle": getattr(j, 'Title', '') or '',
+                "jobdescription": getattr(j, 'MainTasks', None) or getattr(j, 'Qualifications', None) or '',
+            })
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get job posts: {str(e)}")
 
@@ -232,8 +258,16 @@ def get_all_bootcamps(db: Session = Depends(get_db)):
     모든 부트캠프 조회
     """
     try:
-        bootcamps = db.query(models.Bootcamp).all()
-        return bootcamps
+        # BootcampPost 모델 사용 (테이블명: bootcampposts)
+        bootcamps = db.query(models.BootcampPost).all()
+        result = []
+        for b in bootcamps:
+            result.append({
+                "bootcampid": getattr(b, 'BootcampID', None),
+                "bootcampname": getattr(b, 'Title', '') or '',
+                "description": getattr(b, 'EducationContent', None) or getattr(b, 'Benefits', None) or '',
+            })
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get bootcamps: {str(e)}")
 
