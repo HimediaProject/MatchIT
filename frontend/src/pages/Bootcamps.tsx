@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
+import { SortOption } from '../api/sortoption'
+import { bootcampApi, type BootcampItem } from '../api/bootcamp'
 import { useNavigate } from 'react-router-dom'
 
 type Bootcamp = {
@@ -84,15 +85,6 @@ const mapBackendToFrontend = (item: BootcampItem): Bootcamp => {
 
 // 필터 옵션은 동적으로 생성됩니다 (아래 useMemo 참조)
 
-/**
- * 텍스트를 지정된 길이로 자르고 "..." 추가
- */
-const truncateText = (text: string,
-                      maxLength: number): string => {
-  if (!text || text.length <= maxLength) return text
-  return text.slice(0, maxLength) + '...'
-}
-
 const BootcampsPage = () => {
   const [bootcamps, setBootcamps] = useState<Bootcamp[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,7 +116,7 @@ const BootcampsPage = () => {
    */
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10 // 페이지당 표시할 아이템 수
-  const [sort, setSort] = useState<'created' | 'deadline' | 'views'>('created') // 정렬 상태 추가
+  const [sort, setSort] = useState<SortOption>('created') // 정렬 상태 추가
 
   /**
    * 백엔드에서 데이터 가져오기
@@ -514,7 +506,7 @@ const BootcampsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{boot.provider}</p>
-                    <h3 className="text-lg font-bold text-slate-900 hover:underline"><Link to={`/bootcamps/${boot.id}`}>{boot.name}</Link></h3>
+                    <h3 className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"><Link to={`/bootcamps/${boot.id}`}>{boot.name}</Link></h3>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.field}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.mode}</span>
@@ -524,9 +516,6 @@ const BootcampsPage = () => {
                     </div>
                     {boot.curriculum && (
                       <div className="mt-2">
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {truncateText(boot.curriculum, 50)}
-                        </p>
                         <span className="text-xs text-slate-600">
                           <strong>마감일: {(boot.closeDate && boot.closeDate.split('T')[0]) || '상시'}</strong>
                         </span>
