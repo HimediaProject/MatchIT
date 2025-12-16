@@ -1,4 +1,5 @@
 import apiClient from './axios'
+import { SortOption } from './sortoption'
 
 export interface JobPost {
   PostID: number
@@ -46,7 +47,7 @@ export interface JobListParams {
   experience_requirement?: string
   experience_min?: number | null
   experience_max?: number | null
-  sort?: 'created' | 'deadline' | 'views'
+  sort?: SortOption
 }
 
 export async function fetchJobList(

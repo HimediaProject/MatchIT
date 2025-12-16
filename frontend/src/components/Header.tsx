@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { authApi } from '../services/apiService'
-import { useAuth } from '../store/useAuth'
+import { authApi } from '../api/auth'
+import { useAuth } from '../api/useAuth'
 
 type NavItem = {
   label: string

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { skillsApi } from '../services/apiService'
+import { skillsApi } from '../api/skills'
 
 type Props = {
   onChange?: (skills: string[]) => void
