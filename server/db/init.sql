@@ -24,6 +24,14 @@ CREATE TABLE Roles (
     RoleName VARCHAR(50) UNIQUE NOT NULL
 );
 
+-- 연차 구간을 위한 별도 테이블 추가
+CREATE TABLE ExperienceRanges (
+    RangeID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RangeName VARCHAR(20) UNIQUE NOT NULL,  -- '1년 미만', '1~3년', '3~5년' 등
+    MinYears INT DEFAULT 0,
+    MaxYears INT NULL  -- NULL이면 상한 없음
+);
+
 -- 유저
 CREATE TABLE Users (
     UserID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -31,12 +39,15 @@ CREATE TABLE Users (
     Email VARCHAR(255) UNIQUE NOT NULL,
     RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
+    RangeID INT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_role
         FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),
     CONSTRAINT fk_users_careerlevel
-        FOREIGN KEY (CareerLevelID) REFERENCES CareerLevels(CareerLevelID)
+        FOREIGN KEY (CareerLevelID) REFERENCES CareerLevels(CareerLevelID),
+    CONSTRAINT fk_users_experienceranges
+        FOREIGN KEY (RangeID) REFERENCES ExperienceRanges(RangeID)
 );
 
 -- UpdatedAt 자동 갱신 트리거(옵션: MySQL의 ON UPDATE CURRENT_TIMESTAMP 대체용)
@@ -245,14 +256,3 @@ CREATE TABLE UserSessions (
     ExpiresAt TIMESTAMP NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- 연차 구간을 위한 별도 테이블 추가
-CREATE TABLE ExperienceRanges (
-    RangeID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    RangeName VARCHAR(20) UNIQUE NOT NULL,  -- '1년 미만', '1~3년', '3~5년' 등
-    MinYears INT DEFAULT 0,
-    MaxYears INT NULL  -- NULL이면 상한 없음
-);
-
--- CareerLevels에 RangeID 추가
-ALTER TABLE CareerLevels ADD COLUMN ExperienceRangeID INT REFERENCES ExperienceRanges(RangeID);
