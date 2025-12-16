@@ -88,16 +88,25 @@ const SearchResultsPage = () => {
           </div>
           <div className="mt-4 space-y-3">
             {displayedJobs.map((j, idx) => (
-              <div key={idx} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-primary-700">{j.provider}</p>
-                    <h3 className="text-lg font-bold">{j.title}</h3>
-                    <p className="text-sm text-slate-600">{j.company_name} • {j.location}</p>
+              <div
+                key={idx}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary-700">{j.company_name ?? j.provider}</p>
+                  <h3 className="text-lg font-bold text-slate-900 hover:underline">
+                    <Link to={`/jobs/${j.id}`}>{j.title}</Link>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                    {j.location && <span className="rounded-full bg-slate-100 px-3 py-1">{j.location}</span>}
+                    {j.provider && <span className="rounded-full bg-slate-100 px-3 py-1">{j.provider}</span>}
+                    {j.posted_date && (
+                      <span className="rounded-full bg-slate-100 px-3 py-1">
+                        {new Date(j.posted_date).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-sm text-slate-500">{j.posted_date ? new Date(j.posted_date).toLocaleDateString() : ''}</div>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{j.main_tasks ? j.main_tasks.slice(0, 200) + (j.main_tasks.length > 200 ? '...' : '') : ''}</p>
               </div>
             ))}
             {!jobs.length && !loading && <p className="text-sm text-slate-600">채용공고가 없습니다.</p>}
@@ -120,16 +129,24 @@ const SearchResultsPage = () => {
           </div>
           <div className="mt-4 space-y-3">
             {displayedBootcamps.map((b, idx) => (
-              <div key={idx} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-primary-700">{b.institute_name}</p>
-                    <h3 className="text-lg font-bold">{b.title}</h3>
-                    <p className="text-sm text-slate-600">{b.location}</p>
+              <div
+                key={idx}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary-700">{b.institute_name}</p>
+                  <h3 className="text-lg font-bold text-slate-900 hover:underline">
+                    <Link to={`/bootcamps/${b.id}`}>{b.title}</Link>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                    {b.location && <span className="rounded-full bg-slate-100 px-3 py-1">{b.location}</span>}
+                    {b.start_date && (
+                      <span className="rounded-full bg-slate-100 px-3 py-1">
+                        {new Date(b.start_date).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-sm text-slate-500">{b.start_date ? new Date(b.start_date).toLocaleDateString() : ''}</div>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{b.education_content ? b.education_content.slice(0, 200) + (b.education_content.length > 200 ? '...' : '') : ''}</p>
               </div>
             ))}
             {!bootcamps.length && !loading && <p className="text-sm text-slate-600">부트캠프가 없습니다.</p>}
