@@ -39,12 +39,13 @@ export const useAuth = create<AuthStore>((set) => ({
     try {
       const result = await authApi.getCurrentUser()
       if (result.isLoggedIn && result.user) {
-        // role이 객체인 경우와 문자열인 경우 모두 처리
+        // role을 문자열/객체 여부와 관계없이 소문자로 정규화
         let role: 'user' | 'admin' = 'user'
         if (typeof result.user.role === 'string') {
-          role = result.user.role as 'user' | 'admin'
+          role = (result.user.role || '').toLowerCase() === 'admin' ? 'admin' : 'user'
         } else if (result.user.role && typeof result.user.role === 'object' && 'Name' in result.user.role) {
-          role = result.user.role.Name as 'user' | 'admin'
+          const roleName = (result.user.role as { Name?: string }).Name || ''
+          role = roleName.toLowerCase() === 'admin' ? 'admin' : 'user'
         }
 
         set({
