@@ -261,6 +261,7 @@ class PaginatedJobPostResponse(BaseModel):
     page: int
     size: int
     items: List[JobPostResponse]
+    
 class BootcampPost(BaseModel):
     '''
     endpoint:
