@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../store/useAuth";
+import { useAuth } from "../api/useAuth";
 import { useEffect } from "react";
 
 export default function AdminRoute() {
@@ -20,7 +20,7 @@ export default function AdminRoute() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "admin") return <Navigate to="/" replace />;
+  if (user.role?.toLowerCase() !== "admin") return <Navigate to="/" replace />;
 
   return <Outlet />;
 }

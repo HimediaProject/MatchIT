@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { searchApi } from '../services/apiService'
+import { searchApi } from '../api/search'
 
 function useQuery() {
   return new URLSearchParams(useLocation().search)
+}
+
+// 날짜 차이 계산 (주 단위)
+const calculateDuration = (startDate: string | null, closeDate: string | null): string => {
+  if (!startDate || !closeDate) return '-'
+
+  const start = new Date(startDate)
+  const close = new Date(closeDate)
+
+  if (isNaN(start.getTime()) || isNaN(close.getTime())) return '-'
+
+  const diffTime = Math.abs(close.getTime() - start.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.ceil(diffDays / 7)
+
+  return `${diffWeeks}주`
 }
 
 const SearchResultsPage = () => {
@@ -99,12 +115,15 @@ const SearchResultsPage = () => {
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                     {j.location && <span className="rounded-full bg-slate-100 px-3 py-1">{j.location}</span>}
-                    {j.provider && <span className="rounded-full bg-slate-100 px-3 py-1">{j.provider}</span>}
-                    {j.posted_date && (
-                      <span className="rounded-full bg-slate-100 px-3 py-1">
-                        {new Date(j.posted_date).toLocaleDateString()}
-                      </span>
-                    )}
+                    <span className="rounded-full bg-slate-100 px-3 py-1">{j.experience_requirement ?? '경력 무관'}</span>
+                    {(j.skills ?? []).map((skill: string) => (
+                      <span key={skill} className="rounded-full bg-slate-100 px-3 py-1">{skill}</span>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <span className="text-xs text-slate-600">
+                      <strong>마감일: {(j.close_date && j.close_date.split('T')[0]) || '상시'}</strong>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -140,11 +159,16 @@ const SearchResultsPage = () => {
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                     {b.location && <span className="rounded-full bg-slate-100 px-3 py-1">{b.location}</span>}
-                    {b.start_date && (
-                      <span className="rounded-full bg-slate-100 px-3 py-1">
-                        {new Date(b.start_date).toLocaleDateString()}
-                      </span>
-                    )}
+                    {b.category_name && <span className="rounded-full bg-slate-100 px-3 py-1">{b.category_name}</span>}
+                    {b.online_offline && <span className="rounded-full bg-slate-100 px-3 py-1">{b.online_offline}</span>}
+                    {b.cost_support_type && <span className="rounded-full bg-slate-100 px-3 py-1">{b.cost_support_type}</span>}
+                    {b.cost_support_type && <span className="rounded-full bg-slate-100 px-3 py-1">{b.cost_support_type}</span>}
+                    <span className="rounded-full bg-slate-100 px-3 py-1">{calculateDuration(b.start_date, b.close_date)}</span>
+                  </div>
+                  <div className="mt-2">
+                    <span className="text-xs text-slate-600">
+                      <strong>마감일: {(b.close_date && b.close_date.split('T')[0]) || '상시'}</strong>
+                    </span>
                   </div>
                 </div>
               </div>

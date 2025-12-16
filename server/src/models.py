@@ -52,7 +52,7 @@ class ExperienceRange(Base):
 class Role(Base):
     __tablename__ = "roles"
 
-    RoleID = Column("roleid", Integer, primary_key=True, autoincrement=True)
+    RoleID = Column("roleid", Integer, primary_key=True)
     Name = Column("rolename", String(50), unique=True, nullable=False)
 
     users = relationship("User", back_populates="role")
@@ -65,11 +65,11 @@ class User(Base):
 
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
-    Email = Column("email", String(255), unique=True, nullable=False)
-    RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), server_default="1")
+    Email = Column("email", String(255), unique=True, nullable=True)
+    RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), default=1)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
-    RecentViews = Column("recentviews", Text, nullable=True)
-    RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), default=1)
+    RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
+    # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))

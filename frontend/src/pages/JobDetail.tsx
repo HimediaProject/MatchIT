@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchJobDetail } from '../api/jobposts'
-import { usersApi } from '../services/apiService'
+import { usersApi } from "../api/users";
 
 
 const JobDetail = () => {
@@ -201,6 +201,17 @@ const JobDetail = () => {
                 <p className="text-sm text-slate-600">{job.EmploymentType}</p>
               </div>
             )}
+            {(job.CloseDate && (
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">마감일</p>
+                <p className="text-sm text-slate-600">{new Date(job.CloseDate).toLocaleDateString()}</p>
+              </div>
+            )) || 
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">마감일</p>
+                <p className="text-sm text-slate-600">상시</p>
+              </div>
+            }
           </div>
           <div className="mt-6 flex items-center gap-3">
             {/* 스크랩 버튼 */}
