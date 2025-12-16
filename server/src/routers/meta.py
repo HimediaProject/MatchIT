@@ -47,6 +47,20 @@ def get_experience_ranges(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@router.get("/stats", summary="Get platform statistics")
+def get_stats(db: Session = Depends(get_db)):
+    try:
+        job_count = db.query(models.JobPost).count()
+        bootcamp_count = db.query(models.BootcampPost).count()
+        return JSONResponse(content={
+            "job_posts": job_count,
+            "bootcamps": bootcamp_count
+        }, media_type="application/json; charset=utf-8")
+    except Exception as e:
+        logger.exception("get_stats failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @router.get("/desiredjobs", summary="Get desired jobs")
 def get_desired_jobs(db: Session = Depends(get_db)):
     try:

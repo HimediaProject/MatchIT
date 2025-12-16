@@ -1,4 +1,4 @@
-import { useAuth } from "../../store/useAuth";
+import { useAuth } from "../../api/useAuth";
 
 export default function AdminHeader() {
   const { user, logout } = useAuth();

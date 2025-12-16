@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { bootcampApi, type BootcampItem } from '../services/bootcampApi'
+import { bootcampApi, type BootcampItem } from '../api/bootcamp'
 
 /**
  * 날짜 포맷팅 함수
