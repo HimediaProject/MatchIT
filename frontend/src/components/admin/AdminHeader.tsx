@@ -1,7 +1,8 @@
-import { useAuth } from "../../store/useAuth";
+import { useAuth } from "../../api/useAuth";
 
 export default function AdminHeader() {
   const { user, logout } = useAuth();
+  console.log("ADMIN HEADER USER:", user);
 
   return (
     <header className="bg-white shadow-md px-6 py-4 flex justify-between items-center">

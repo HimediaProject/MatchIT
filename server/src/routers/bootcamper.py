@@ -6,6 +6,7 @@ from src.models import BootcampPost as BootcampPo, JobCategory, Skill, User, Use
 from src.schemas import BootcampCreate, BootcampUpdate, \
                             BootcampResponse, PaginatedBootcampResponse, \
                             BootcampDetailResponse
+from src.utils import get_order_clause
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
@@ -194,14 +195,7 @@ async def get_bootcamp_list(
     total = query.count()
 
     # 정렬 적용
-    if sort == "deadline":
-        order_clause = BootcampPo.CloseDate.asc().nulls_last()
-    elif sort == "views":
-        order_clause = BootcampPo.ViewCount.desc().nulls_last()
-    elif sort == "created":
-        order_clause = BootcampPo.CreatedAt.desc().nulls_last()
-    else:
-        order_clause = BootcampPo.CreatedAt.desc().nulls_last()
+    order_clause = get_order_clause(BootcampPo, sort)
 
     # 페이지네이션 적용
     offset = (page - 1) * size

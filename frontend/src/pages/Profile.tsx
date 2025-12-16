@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authApi, skillsApi, metaApi, usersApi } from '../services/apiService'
-
-type RecommendationCard = {
-  title: string
-  description: string
-  tags: string[]
-}
+import { authApi } from '../api/auth'
+import { skillsApi } from '../api/skills'
+import { metaApi } from '../api/meta'
+import { usersApi } from '../api/users'
 
 // 아이콘 SVG 컴포넌트
 const SearchIcon = () => (
@@ -18,7 +15,6 @@ const SearchIcon = () => (
 const ProfilePage = () => {
   const [name, setName] = useState('홍길동')
   const [email, setEmail] = useState('hong@example.com')
-  const [showRecommendations, setShowRecommendations] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   type ScrapItem = { postType: 'Job' | 'Bootcamp'; targetId: number; label: string }
   type RecentViewItem = { postType?: 'Job' | 'Bootcamp'; targetId?: number; label: string }
