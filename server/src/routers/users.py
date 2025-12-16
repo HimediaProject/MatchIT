@@ -288,8 +288,8 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
     # 경력 구간 (experience range)
     if data.experience_range is not None:
         # DB 컬럼이 없는 환경(초기 스키마)에서도 저장이 실패하지 않도록 보호
-        if not hasattr(user, "ExperienceRangeID"):
-            logger.warning("ExperienceRangeID 컬럼이 없어 experience_range 업데이트를 건너뜁니다.")
+        if not hasattr(user, "RangeID"):
+            logger.warning("RangeID 컬럼이 없어 experience_range 업데이트를 건너뜁니다.")
         else:
             # list가 들어오면 관계 필드에 할당되지 않도록 방어
             if isinstance(data.experience_range, list):
@@ -301,11 +301,11 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
                         models.ExperienceRange.RangeName == data.experience_range
                     ).first()
                     if exp:
-                        user.ExperienceRangeID = exp.RangeID
+                        user.RangeID = exp.RangeID
                     else:
-                        user.ExperienceRangeID = None
+                        user.RangeID = None
                 else:
-                    user.ExperienceRangeID = None
+                    user.RangeID = None
 
             # 숫자인 경우: ID로 설정
             elif isinstance(data.experience_range, int):
@@ -314,13 +314,13 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
                         models.ExperienceRange.RangeID == data.experience_range
                     ).first()
                     if exp:
-                        user.ExperienceRangeID = data.experience_range
+                        user.RangeID = data.experience_range
                         logger.info(f"경력 구간 저장: user_id={user_id}, range_id={data.experience_range}")
                     else:
-                        user.ExperienceRangeID = None
+                        user.RangeID = None
                 else:
                     # 0이나 음수는 null로 처리
-                    user.ExperienceRangeID = None
+                    user.RangeID = None
             else:
                 logger.warning(f"experience_range 타입을 알 수 없어 무시: {type(data.experience_range)}")
 
