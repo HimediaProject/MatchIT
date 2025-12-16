@@ -2,6 +2,19 @@ import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
 import { adminApi } from "../../api/admin";
 
+// API가 role을 문자열 혹은 객체(Name 등)로 내려줄 수 있으므로 소문자 문자열로 정규화
+const normalizeRole = (role: any): "user" | "admin" => {
+  if (typeof role === "string") {
+    return role.toLowerCase() === "admin" ? "admin" : "user";
+  }
+  if (role && typeof role === "object") {
+    const name =
+      role.Name || role.name || role.role || role.role_name || role.Role || "";
+    return String(name).toLowerCase() === "admin" ? "admin" : "user";
+  }
+  return "user";
+};
+
 interface AdminUser {
   userid: number;
   email: string;
@@ -20,7 +33,14 @@ export default function AdminUserList() {
     try {
       setLoading(true);
       const data = await adminApi.getUsers();
-      setUsers(data);
+      const list = Array.isArray(data) ? data : Array.isArray((data as any)?.users) ? (data as any).users : [];
+      const normalized = list.map((u: any) => ({
+        userid: u.userid ?? u.user_id ?? u.id,
+        email: u.email ?? u.Email ?? "",
+        name: u.name ?? u.username ?? u.full_name ?? "",
+        role: normalizeRole(u.role),
+      }));
+      setUsers(normalized);
     } catch (error) {
       console.error("Failed to load users:", error);
     } finally {
