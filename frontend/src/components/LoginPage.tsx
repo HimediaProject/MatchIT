@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authApi } from '../services/apiService'
+import { authApi } from '../api/auth'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)

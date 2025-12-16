@@ -2,23 +2,16 @@ import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCategories, fetchJobList, fetchSkills, type JobPost } from '../api/jobposts'
+import { SortOption } from '../api/sortoption'
 
 const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
-
-// 텍스트 미리보기용 유틸
-const truncateText = (text?: string | null, maxLength: number = 80) => {
-  if (!text) return ''
-  const t = text.trim()
-  if (t.length <= maxLength) return t
-  return t.slice(0, maxLength) + '...'
-}
 
 const JobsPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set())
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set())
   const [selectedExperience, setSelectedExperience] = useState<string>('')
 
-  const [sort, setSort] = useState<'created' | 'deadline' | 'views'>('created')
+  const [sort, setSort] = useState<SortOption>('created')
 
   const [page, setPage] = useState<number>(1)
   const size = 10
@@ -177,15 +170,6 @@ const JobsPage = () => {
     return Number.isNaN(ts) ? null : ts
   }
 
-  const parseSalaryValue = (salary?: string | null) => {
-    if (!salary) return null
-    const matches = salary.match(/\d+/g)
-    if (!matches) return null
-    const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n))
-    if (!nums.length) return null
-    return Math.max(...nums)
-  }
-
   const compareWithNulls = (a: number | null, b: number | null, direction: 'asc' | 'desc') => {
     if (a === null && b === null) return 0
     if (a === null) return 1
@@ -337,7 +321,7 @@ const JobsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
-                    <h3 onClick={() => navigate(`/jobs/${job.PostID}`)} className="text-lg font-bold text-slate-900 cursor-pointer hover:underline">
+                    <h3 onClick={() => navigate(`/jobs/${job.PostID}`)} className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer">
                       {job.Title}
                     </h3>
 
@@ -354,12 +338,6 @@ const JobsPage = () => {
                       job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process
                     ) && (
                       <div className="mt-2">
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {truncateText(
-                            job.MainTasks || job.Qualifications || job.Preferences || job.Benefits || job.Process,
-                            80,
-                          )}
-                        </p>
                         <span className="text-xs text-slate-600">
                           <strong>마감일: {(job.CloseDate && job.CloseDate.split('T')[0]) || '상시'}</strong>
                         </span>
