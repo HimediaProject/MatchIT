@@ -28,16 +28,53 @@ export const adminApi = {
   },
 
   async updateUserRole(userId: number, role: 'user' | 'admin') {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ role }),
-    })
-    if (!response.ok) throw new Error(`Failed to update user role: ${response.status}`)
-    return response.json()
+    // 다양한 백엔드 라우트/메서드/바디 조합을 순차 시도 (404/405 대응)
+    const headers = { 'Content-Type': 'application/json' }
+    // 모든 페이로드에 role 키를 포함시켜 422(role 누락) 방지
+    const payloads = [
+      { role, role_name: role },
+      { role },
+      { role: role.toUpperCase(), role_name: role },
+    ]
+    const urls = [
+      `${API_BASE_URL}/admin/users/${userId}/role`,
+      `${API_BASE_URL}/admin/users/${userId}`,
+    ]
+    const methods: Array<'PATCH' | 'PUT' | 'POST'> = ['PATCH', 'PUT', 'POST']
+
+    let lastStatus = 0
+    let lastBody = ''
+
+    for (const url of urls) {
+      for (const method of methods) {
+        for (const payload of payloads) {
+          const response = await fetch(url, {
+            method,
+            credentials: 'include',
+            headers,
+            body: JSON.stringify(payload),
+          })
+
+          if (response.ok) {
+            return response.json()
+          }
+
+          lastStatus = response.status
+          try {
+            lastBody = await response.text()
+          } catch {
+            lastBody = ''
+          }
+
+          // 404/405만 다음 조합으로 계속 시도, 그 외 에러는 즉시 반환
+          if (![404, 405].includes(response.status)) {
+            throw new Error(`Failed to update user role: ${response.status} ${lastBody}`)
+          }
+        }
+      }
+    }
+
+    throw new Error(`Failed to update user role: ${lastStatus} ${lastBody}`)
   },
 
   // ========== 채용 공고 관리 ==========

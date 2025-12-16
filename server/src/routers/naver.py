@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-from src.models import User, SocialLogin, UserSession
+from src.models import User, Role, SocialLogin, UserSession
 from typing import Optional
 
 ENV_PATH = Path(__file__).parent.parent.parent / '.env'
@@ -113,11 +113,13 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         else:
             # 신규 가입
             user = db.query(User).filter(User.Email == naver_email).first()
+            user_role = db.query(Role).filter(Role.Name == "user").first()
 
             if not user:
                 user = User(
                     Email=naver_email if naver_email else f"naver_{naver_id}@no-email.com",
                     Name=naver_name,
+                    role=user_role,
                 )
                 db.add(user)
                 db.flush()

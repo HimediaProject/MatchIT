@@ -6,60 +6,70 @@ from fastapi import APIRouter, \
                     Form, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse # 해당 페이지로 바로 이동 시켜줌
 from sqlalchemy.orm import Session
-from src.database import get_db
-# from models import User
-import uuid
 from datetime import datetime
+
+from src.database import get_db
 from src.jwt_token import create_token, create_refresh_token, verify_token
+from src.models import User
 
 router = APIRouter(prefix='/jwt')
 
-# 임시 데이터 저장 (나중에 DB로 대체)
-fake_user = {
-    'admin': '1234',
-    'hj': '1234'
-}
 retoken = {}
 
 @router.post('/login')
-def login(response: Response,
-        username: str = Form(...), 
-        password: str = Form(...)):  # 아이디, 비밀번호 입력 받기, 쿠키에 저장시키기 위해서 response 객체 받기
-    # 1. 사용자 로그인 정보 비교 
-    if username not in fake_user or fake_user[username] != password: 
-        # 1. DB에 없는 사용자면 로그인 거부, 로그인에 실패했다는 페이지 보여주기 또는 알림창
-        raise HTTPException(status_code=401, detail='로그인 실패')  
-    # 2. Access token을 발급
-    access_token = create_token(username)
+def login(
+    response: Response,
+    username: str = Form(...), 
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):  # 아이디, 비밀번호 입력 받기, 쿠키에 저장시키기 위해서 response 객체 받기
     
-    # 3. Refresh token 발급 
-    refresh_token = create_refresh_token(username)
+    # 1. 사용자 조회 
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="존재하지 않는 사용자")  
+    
+    if user.password != password:
+        raise HTTPException(status_code=401, detail="비밀번호 오류")
+    
+    # 2. JWT 토큰 생성
+    user_info = {
+        "user_id": user.UserID,
+        "email": user.Email,
+        "role": user.role.Name.lower()
+    }
+
+    # 3. 토큰 생성
+    access_token = create_token(user_info)
+    refresh_token = create_refresh_token(user_info)
+
     # refresh token을 서버에 저장 
     retoken[refresh_token] = {
-        'username': username, 
+        "user_id": user.UserID,
         'created_at': datetime.now()
     }
-    # 4. 프로필로 리다이렉트 또는 홈으로 가거나 (인증 절차 후 행동 결정)
+
+    # 4. 쿠키 저장
     response = RedirectResponse(url='/jwt/profile', status_code=302) 
-    # 5. 쿠키 토큰 저장 
+
     response.set_cookie(
         key='access_token',
-        value=f'{access_token}',
+        value=access_token,
         httponly=True,
         secure=False,
         samesite='lax',
-        max_age=60*1
+        max_age=60*30,
     )
     response.set_cookie(
         key='refresh_token',
-        value=f'{refresh_token}',
+        value=refresh_token,
         httponly=True,
         secure=False,
         samesite='lax',
         max_age=24*60*60*7
     )
-    # 6. 응답 
-    
+
+    # 5. 응답 
     return response
 
 @router.get('/refresh')
