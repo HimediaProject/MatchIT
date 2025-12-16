@@ -7,6 +7,7 @@ import logging
 from src.database import get_db
 from src import models
 from src.routers.comparison import job_to_dict, bootcamp_to_dict
+from src.utils import get_order_clause
 
 router = APIRouter(prefix="/search", tags=["검색 기능"])
 
@@ -22,6 +23,7 @@ def search(
 	experience_range_id: Optional[int] = Query(None, description="경력 구간 ID"),
 	limit: int = Query(20, ge=1, le=100, description="최대 반환 개수"),
 	random_order: bool = Query(False, description="랜덤 정렬 여부"),
+	sort: Optional[str] = Query(None, description="정렬 기준"),
 	db: Session = Depends(get_db),
 ):
 	"""
@@ -124,6 +126,9 @@ def search(
 			# PostgreSQL/SQLite의 경우 func.random(), MySQL의 경우 func.rand() 사용
 			# 대부분의 DB에서 func.random()을 지원하므로 사용
 			jobs_q = jobs_q.order_by(func.random())
+		else:
+			# 정렬 적용
+			jobs_q = jobs_q.order_by(get_order_clause(models.JobPost, sort))
 		
 		jobs_q = jobs_q.limit(limit)
 		jobs = [job_to_dict(j) for j in jobs_q.all()]
@@ -178,6 +183,9 @@ def search(
 		if random_order:
 			# PostgreSQL/SQLite의 경우 func.random(), MySQL의 경우 func.rand() 사용
 			bootcamps_q = bootcamps_q.order_by(func.random())
+		else:
+			# 정렬 적용
+			bootcamps_q = bootcamps_q.order_by(get_order_clause(models.BootcampPost, sort))
 		
 		bootcamps_q = bootcamps_q.limit(limit)
 		bootcamps = [bootcamp_to_dict(b) for b in bootcamps_q.all()]

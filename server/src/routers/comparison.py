@@ -90,6 +90,7 @@ def bootcamp_to_dict(b: models.BootcampPost):
         "title": b.Title,
         "institute_name": b.InstituteName,
         "job_category_id": b.JobCategoryID,
+        "category_name": b.job_category.CategoryName if b.job_category else None,
         "location": b.Location,
         "online_offline": b.OnlineOffline,
         "cost_support_type": b.CostSupportType,

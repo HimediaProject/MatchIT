@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import JobCategory, JobPost, Platform, Skill
 from src.schemas import JobPostCreate, JobPostResponse, JobPostUpdate, PaginatedJobPostResponse
+from src.utils import get_order_clause
 
 router = APIRouter(prefix="/jobs")
 
@@ -113,14 +114,7 @@ def get_job_posts(
 
     offset = (page - 1) * size
 
-    if sort == "deadline":
-        order_clause = JobPost.CloseDate.asc().nulls_last()
-    elif sort == "views":
-        order_clause = JobPost.ViewCount.desc().nulls_last()
-    elif sort == "created":
-        order_clause = JobPost.CreatedAt.desc().nulls_last()
-    else:
-        order_clause = JobPost.CreatedAt.desc().nulls_last()
+    order_clause = get_order_clause(JobPost, sort)
 
     jobs = (
         query.order_by(order_clause, JobPost.PostID.desc())

@@ -265,6 +265,24 @@ const ComparePage = () => {
                           </div>
 
                           <div className="flex gap-2 mt-auto">
+                            {/* 스크랩 버튼 */}
+                              <button 
+                                type="button"
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+                                aria-label="스크랩"
+                              >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                </svg>
+                              </button>
+
+                              {/* 공유하기 버튼 */}
+                              <button 
+                                type="button"
+                                className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
+                              >
+                                공유하기
+                              </button>
                             <button
                               onClick={() => handleApply(item)}
                               className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700"
