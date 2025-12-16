@@ -43,6 +43,7 @@ class ProfileUpdate(BaseModel):
     email: Optional[str] = None
     career_level: Optional[Union[str, int]] = None
     experience_range: Optional[Union[str, int]] = None
+    role_id: Optional[int] = None
     skills: Optional[List[Union[str, int, Dict[str, Any]]]] = None
     desired_jobs: Optional[List[Union[str, int, Dict[str, Any]]]] = None
     recentViews: Optional[List[str]] = None
@@ -225,6 +226,17 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
 def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_db)):
     logger.info(f"프로필 업데이트 시작 - user_id: {user_id}, data: {data}")
     user = get_user_data(db, user_id)
+
+    # RoleID 업데이트
+    if data.role_id is not None:
+        if data.role_id > 0:  # 유효한 ID인 경우
+            role = db.query(models.Role).filter(models.Role.RoleID == data.role_id).first()
+            if not role:
+                raise HTTPException(400, "유효하지 않은 역할 ID입니다.")
+            user.RoleID = data.role_id
+        else:
+            # 0이나 음수는 null로 처리
+            user.RoleID = None
 
     # 이름
     if data.name is not None:

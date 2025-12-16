@@ -36,6 +36,8 @@ class ExperienceRange(Base):
     MaxYears = Column("maxyears", Integer, nullable=True)
     users = relationship("User", back_populates="experience_range")
 
+    users = relationship("User", back_populates="experience_range")
+
     def to_dict(self):
         return {
             "id": self.RangeID,
@@ -63,18 +65,18 @@ class User(Base):
 
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
-    Email = Column("email", String(255), unique=True, nullable=True)
-    RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), default=1)
+    Email = Column("email", String(255), unique=True, nullable=False)
+    RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), server_default="1")
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
-    ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     RecentViews = Column("recentviews", Text, nullable=True)
+    RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), default=1)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
 
     role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
-    experience_range = relationship("ExperienceRange", back_populates="users")
+    experience_range = relationship("ExperienceRange", back_populates="users", foreign_keys=[RangeID])
     social_logins = relationship("SocialLogin", back_populates="user")
     skills = relationship("Skill", secondary="userskills", back_populates="users")
     notifications = relationship("UserNotificationSetting", back_populates="user")

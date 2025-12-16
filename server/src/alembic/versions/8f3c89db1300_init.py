@@ -21,22 +21,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
+    # # # 1. 시퀀스 초기화
+    # op.execute("SELECT setval(pg_get_serial_sequence('roles', 'roleid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('careerlevels', 'careerlevelid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('experienceranges', 'rangeid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('users', 'userid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('skills', 'skillid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('desiredjobs', 'desiredjobid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('platforms', 'platformid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('jobcategories', 'categoryid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('jobposts', 'postid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('bootcampposts', 'bootcampid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('sociallogins', 'socialloginid'), 1, false);")
+    # op.execute("SELECT setval(pg_get_serial_sequence('usernotificationsettings', 'usernotificationid'), 1, false);")
+    
+    # 2. 데이터 삽입
+    # Roles 테이블 더미 데이터
+    op.execute("""
+    INSERT INTO roles (rolename) VALUES
+    ('admin'),
+    ('user');
+    """)
+
     # CareerLevels 더미 데이터
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE careerlevels_careerlevelid_seq RESTART WITH 1;
-    
     INSERT INTO careerlevels (careername) VALUES
     ('학생'),
     ('신입'),
-    ('경력');
+    ('경력')
     """)
 
     # ExperienceRanges 더미 데이터
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE experienceranges_rangeid_seq RESTART WITH 1;
-    
     INSERT INTO experienceranges (rangename, minyears, maxyears) VALUES
     ('1년 미만', 0, 1),
     ('1~3년', 1, 3),
@@ -46,30 +62,14 @@ def upgrade():
 
     # DesiredJobs 더미 데이터
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE desiredjobs_desiredjobid_seq RESTART WITH 1;
-    
     INSERT INTO desiredjobs (jobname) VALUES
     ('백엔드 개발자'),
     ('프론트엔드 개발자'),
     ('데이터 엔지니어');
     """)
 
-    # Roles 테이블 더미 데이터
-    op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE roles_roleid_seq RESTART WITH 1;
-    
-    INSERT INTO roles (rolename) VALUES
-    ('admin'),
-    ('user');
-    """)
-
     # Skills 더미 데이터
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE skills_skillid_seq RESTART WITH 1;
-    
     INSERT INTO skills (skillname) VALUES
     ('Python'),
     ('JavaScript'),
@@ -78,9 +78,6 @@ def upgrade():
 
     # Platforms 더미 데이터
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE platforms_platformid_seq RESTART WITH 1;
-    
     INSERT INTO platforms (platformname) VALUES
     ('Saramin'),
     ('JobKorea'),
@@ -89,30 +86,11 @@ def upgrade():
 
     # JobCategories 더미 데이터 (최상위 3개)
     op.execute("""
-    -- 시퀀스 재설정
-    ALTER SEQUENCE jobcategories_categoryid_seq RESTART WITH 1;
-    
     INSERT INTO jobcategories (categoryname, depth) VALUES
     ('개발', 1),
     ('디자인', 1),
     ('마케팅', 1);
     """)
-
-    # UserNotificationSettings 더미 데이터
-    # op.execute("""
-    # INSERT INTO usernotificationsettings (userid, notificationtype, isenabled, notificationtime) VALUES
-    # (1, '채용 알림', TRUE, '09:00'),
-    # (2, '맞춤형 정보', FALSE, '12:00'),
-    # (3, '이벤트 소식', TRUE, '18:00');
-    # """)
-
-    # JobPostSkills 더미 데이터
-    # op.execute("""
-    # INSERT INTO jobpostskills (postid, skillid) VALUES
-    # (1, 2),
-    # (2, 2),
-    # (3, 1);
-    # """)
 
 
 def downgrade():

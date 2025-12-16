@@ -44,18 +44,17 @@ CREATE TABLE Users (
     Email VARCHAR(255) UNIQUE NOT NULL,
     RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
-    ExperienceRangeID INT,
+    RangeID INT,
     DesiredJobID INT,
+    RecentViews TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_role
         FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),
     CONSTRAINT fk_users_careerlevel
         FOREIGN KEY (CareerLevelID) REFERENCES CareerLevels(CareerLevelID),
-    CONSTRAINT fk_users_experiencerange
-        FOREIGN KEY (ExperienceRangeID) REFERENCES ExperienceRanges(RangeID),
-    CONSTRAINT fk_users_desiredjob
-        FOREIGN KEY (DesiredJobID) REFERENCES DesiredJobs(DesiredJobID)
+    CONSTRAINT fk_users_experienceranges
+        FOREIGN KEY (RangeID) REFERENCES ExperienceRanges(RangeID)
 );
 
 -- UpdatedAt 자동 갱신 트리거(옵션: MySQL의 ON UPDATE CURRENT_TIMESTAMP 대체용)
@@ -258,6 +257,3 @@ CREATE TABLE UserSessions (
     ExpiresAt TIMESTAMP NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- CareerLevels에 RangeID 추가
-ALTER TABLE CareerLevels ADD COLUMN ExperienceRangeID INT REFERENCES ExperienceRanges(RangeID);
