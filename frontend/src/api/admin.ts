@@ -1,3 +1,5 @@
+import type { AdminBootcamp, BootcampUpdatePayload } from '../types/bootcamp'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // 회원 관리 API
@@ -114,7 +116,7 @@ export const adminApi = {
   },
 
   // ========== 부트캠프 관리 ==========
-  async getBootcamps() {
+  async getBootcamps(): Promise<AdminBootcamp[]> {
     const response = await fetch(`${API_BASE_URL}/admin/bootcamps`, {
       method: 'GET',
       credentials: 'include',
@@ -138,7 +140,7 @@ export const adminApi = {
     return response.json()
   },
 
-  async updateBootcamp(bootcampId: number, data: { bootcampname?: string; description?: string }) {
+  async updateBootcamp(bootcampId: number, data: BootcampUpdatePayload) {
     const response = await fetch(`${API_BASE_URL}/admin/bootcamps/${bootcampId}`, {
       method: 'PATCH',
       credentials: 'include',
