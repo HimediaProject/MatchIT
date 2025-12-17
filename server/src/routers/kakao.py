@@ -228,7 +228,10 @@ async def get_current_user(
     db: Session = Depends(get_db),
 ):
 
+    logger.info(f"get_current_user called with user_id: {user_id}, session_id: {session_id}")
+
     if not user_id or not session_id:
+        logger.info("Missing user_id or session_id")
         return {"isLoggedIn": False, "user": None}
 
     try:
@@ -242,19 +245,24 @@ async def get_current_user(
         )
 
         if not session:
+            logger.info("Session not found in DB")
             return {"isLoggedIn": False, "user": None}
 
         if session.ExpiresAt < datetime.now():
+            logger.info("Session expired")
             db.delete(session)
             db.commit()
             return {"isLoggedIn": False, "user": None}
 
         user = db.query(User).filter(User.UserID == int(user_id)).first()
         if not user:
+            logger.info("User not found in DB")
             return {"isLoggedIn": False, "user": None}
 
         # role 정보 로드
         db.refresh(user, ["role"])
+
+        logger.info(f"User authenticated: {user.Name}, role: {user.role.Name if user.role else 'user'}")
 
         return {
             "isLoggedIn": True,
@@ -266,7 +274,8 @@ async def get_current_user(
             },
         }
 
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in get_current_user: {e}")
         return {"isLoggedIn": False, "user": None}
 
 
