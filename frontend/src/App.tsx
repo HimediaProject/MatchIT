@@ -23,6 +23,7 @@ const Layout = () => {
         <Outlet />
       </main>
       <Footer />
+      <ChatbotModal />
     </div>
   )
 }
