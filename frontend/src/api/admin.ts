@@ -1,5 +1,44 @@
 import type { AdminBootcamp, BootcampUpdatePayload } from '../types/bootcamp'
 
+export interface AdminJobUpdatePayload {
+  Title?: string | null
+  CompanyName?: string | null
+  JobCategoryID?: number | null
+  EmploymentType?: string | null
+  ExperienceRequirement?: string | null
+  MinExperienceYears?: number | null
+  EducationRequirement?: string | null
+  Location?: string | null
+  MainTasks?: string | null
+  Qualifications?: string | null
+  Preferences?: string | null
+  Benefits?: string | null
+  Process?: string | null
+  Salary?: string | null
+  PostedDate?: string | null
+  CloseDate?: string | null
+  Url?: string | null
+  IsActive?: boolean | null
+  PlatformID?: number | null
+}
+
+export interface AdminBootcampUpdatePayload {
+  Title?: string | null
+  InstituteName?: string | null
+  JobCategoryID?: number | null
+  Location?: string | null
+  OnlineOffline?: string | null
+  CostSupportType?: string | null
+  EducationContent?: string | null
+  Qualification?: string | null
+  Benefits?: string | null
+  StartDate?: string | null
+  RegistrationDate?: string | null
+  CloseDate?: string | null
+  DetailUrl?: string | null
+  ViewCount?: number | null
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // 회원 관리 API
@@ -115,6 +154,20 @@ export const adminApi = {
     return response.json()
   },
 
+  async updateFullJobPost(jobId: number, data: AdminJobUpdatePayload) {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) throw new Error(`Failed to update job post: ${response.status}`)
+    return response.json()
+  },
+
   // ========== 부트캠프 관리 ==========
   async getBootcamps(): Promise<AdminBootcamp[]> {
     const response = await fetch(`${API_BASE_URL}/admin/bootcamps`, {
@@ -149,6 +202,20 @@ export const adminApi = {
       },
       body: JSON.stringify(data),
     })
+    if (!response.ok) throw new Error(`Failed to update bootcamp: ${response.status}`)
+    return response.json()
+  },
+
+  async updateFullBootcamp(bootcampId: number, data: AdminBootcampUpdatePayload) {
+    const response = await fetch(`${API_BASE_URL}/bootcamps/${bootcampId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
     if (!response.ok) throw new Error(`Failed to update bootcamp: ${response.status}`)
     return response.json()
   },
