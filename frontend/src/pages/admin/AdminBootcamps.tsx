@@ -1,18 +1,14 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 import type { AdminBootcamp } from "../../types/bootcamp";
 
 export default function AdminBootcamps() {
   const [bootcamps, setBootcamps] = useState<AdminBootcamp[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingBootcamp, setEditingBootcamp] = useState<AdminBootcamp | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editedName, setEditedName] = useState("");
-  const [editedInstitution, setEditedInstitution] = useState("");
-  const [editedDescription, setEditedDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   // 페이지네이션 상태 (클라이언트 사이드)
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,45 +48,9 @@ export default function AdminBootcamps() {
     }
   };
 
-  const handleOpenEditModal = (bootcamp: AdminBootcamp) => {
-    setEditingBootcamp(bootcamp);
-    setEditedName(bootcamp.bootcampname);
-    setEditedInstitution(bootcamp.institution || "");
-    setEditedDescription(bootcamp.description || "");
-    setShowEditModal(true);
-  };
+  const sortedBootcamps = [...bootcamps].sort((a, b) => Number(a.bootcampid) - Number(b.bootcampid));
 
-  const handleSaveEdit = async () => {
-    if (!editingBootcamp) return;
-
-    try {
-      await adminApi.updateBootcamp(editingBootcamp.bootcampid, {
-        bootcampname: editedName,
-        institution: editedInstitution,
-        description: editedDescription,
-      });
-
-      setBootcamps(
-        bootcamps.map((b) =>
-          b.bootcampid === editingBootcamp.bootcampid
-            ? {
-                ...b,
-                bootcampname: editedName,
-                institution: editedInstitution,
-                description: editedDescription,
-              }
-            : b
-        )
-      );
-      setShowEditModal(false);
-      alert("부트캠프가 수정되었습니다.");
-    } catch (error) {
-      console.error("Failed to update bootcamp:", error);
-      alert("부트캠프 수정에 실패했습니다.");
-    }
-  };
-
-  const filteredBootcamps = bootcamps.filter((bootcamp) =>
+  const filteredBootcamps = sortedBootcamps.filter((bootcamp) =>
     bootcamp.bootcampname.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (bootcamp.institution && bootcamp.institution.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -209,7 +169,7 @@ export default function AdminBootcamps() {
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
                         <button
-                          onClick={() => handleOpenEditModal(bootcamp)}
+                          onClick={() => navigate(`/admin/bootcamps/${bootcamp.bootcampid}/edit`)}
                           className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600"
                         >
                           수정
@@ -273,66 +233,6 @@ export default function AdminBootcamps() {
             </button>
           </div>
         )}
-
-      {/* 수정 모달 */}
-      {showEditModal && editingBootcamp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4">부트캠프 수정</h2>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                이름
-              </label>
-              <input
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                기관명
-              </label>
-              <input
-                type="text"
-                value={editedInstitution}
-                onChange={(e) => setEditedInstitution(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                설명
-              </label>
-              <textarea
-                value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
-              >
-                저장
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }
