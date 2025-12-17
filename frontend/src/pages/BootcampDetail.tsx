@@ -34,6 +34,62 @@ const BootcampDetailPage = () => {
 
   const [isScrapped, setIsScrapped] = useState(false)
   const [scrapLoading, setScrapLoading] = useState(false)
+  const [showCopied, setShowCopied] = useState(false)
+  const [showCopyFail, setShowCopyFail] = useState(false)
+  const [showScrapError, setShowScrapError] = useState(false)
+
+  const handleShareClick = async () => {
+    const title = bootcamp?.Title ?? '부트캠프'
+    const text = bootcamp?.Title ?? ''
+    const url = window.location.href
+
+    // 먼저 meta 태그에서 이미지 후보를 찾아 파일 공유 시도
+    const getMetaImage = () => {
+      const og = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null
+      if (og && og.content) return og.content
+      const tw = document.querySelector('meta[name="twitter:image"]') as HTMLMetaElement | null
+      if (tw && tw.content) return tw.content
+      return null
+    }
+
+    const imageUrl = getMetaImage()
+
+    if (imageUrl && navigator.canShare) {
+      try {
+        const res = await fetch(imageUrl, { mode: 'cors' })
+        const blob = await res.blob()
+        const ext = blob.type.split('/')[1] || 'jpg'
+        const file = new File([blob], `share-image.${ext}`, { type: blob.type })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title, text })
+          return
+        }
+      } catch (e) {
+        // 이미지 fetch 실패하면 폴백으로 일반 공유 시도
+        console.debug('image share failed', e)
+      }
+    }
+
+    // 일반 텍스트/URL 공유 시도
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url })
+        return
+      } catch (e) {
+        // 취소 또는 실패
+      }
+    }
+
+    // 최후의 수단: 클립보드 복사 안내 (토스트 표시)
+    try {
+      await navigator.clipboard.writeText(url)
+      setShowCopied(true)
+      setTimeout(() => setShowCopied(false), 3000)
+    } catch {
+      setShowCopyFail(true)
+      setTimeout(() => setShowCopyFail(false), 3000)
+    }
+  }
 
   // 커리큘럼 "더보기" 상태
   const [isCurriculumExpanded, setIsCurriculumExpanded] = useState(false)
@@ -153,7 +209,8 @@ const BootcampDetailPage = () => {
           navigate('/login')
         }
       } else {
-        window.alert('스크랩 처리에 실패했습니다.')
+        setShowScrapError(true)
+        setTimeout(() => setShowScrapError(false), 3000)
       }
     } finally {
       setScrapLoading(false)
@@ -188,7 +245,8 @@ const BootcampDetailPage = () => {
   const modeDisplay = bootcamp.OnlineOffline === '혼합형' ? '혼합' : bootcamp.OnlineOffline
 
   return (
-    <div className="bg-white">
+    <>
+      <div className="bg-white">
       <div className="mx-auto max-w-4xl px-4 py-12 md:px-6">
         {/* 뒤로 가기 */}
         <div className="mb-6">
@@ -262,6 +320,7 @@ const BootcampDetailPage = () => {
               {/* 공유하기 버튼 */}
               <button 
                 type="button"
+                onClick={handleShareClick}
                 className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
               >
                 공유하기
@@ -362,6 +421,22 @@ const BootcampDetailPage = () => {
         )}
       </div>
     </div>
+      {showCopied && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-black/80 text-white px-4 py-2 text-sm">
+          링크가 복사되었습니다.
+        </div>
+      )}
+      {showCopyFail && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-red-600 text-white px-4 py-2 text-sm">
+          링크 복사에 실패했습니다. 수동으로 복사해주세요.
+        </div>
+      )}
+      {showScrapError && (
+        <div className="fixed bottom-6 right-6 z-50 mt-14 rounded-lg bg-red-600 text-white px-4 py-2 text-sm">
+          스크랩 처리에 실패했습니다.
+        </div>
+      )}
+    </>
   )
 }
 
