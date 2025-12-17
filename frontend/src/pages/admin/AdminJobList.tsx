@@ -1,5 +1,6 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 
 interface JobPost {
@@ -16,6 +17,11 @@ export default function AdminJobList() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // 페이지네이션 상태 (클라이언트 사이드)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 페이지당 항목 수
 
   const loadJobPosts = async () => {
     try {
@@ -32,6 +38,11 @@ export default function AdminJobList() {
   useEffect(() => {
     loadJobPosts();
   }, []);
+
+  // 검색어가 변경되면 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleDeleteJobPost = async (jobId: number) => {
     if (!window.confirm("정말 이 공고를 삭제하시겠습니까?")) return;
@@ -81,11 +92,69 @@ export default function AdminJobList() {
     }
   };
 
+  const filteredJobPosts = jobPosts.filter((job) =>
+    job.jobtitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (job.company && job.company.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // 페이지네이션 계산 (클라이언트 사이드)
+  const total = filteredJobPosts.length;
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentJobPosts = filteredJobPosts.slice(startIndex, endIndex);
+
+  // 페이지 번호 생성 (Bootcamps.tsx와 동일한 로직)
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push(-1);
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push(-1);
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push(-1);
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push(-1);
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">채용 공고 관리</h1>
-        <p className="text-gray-600 mt-2">전체 공고 조회, 수정, 삭제</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">채용 공고 관리</h1>
+            <p className="text-gray-600 mt-2">전체 공고 조회, 수정, 삭제</p>
+          </div>
+
+          <div className="mt-2">
+            <input
+              type="text"
+              placeholder="제목 또는 기업명으로 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -105,7 +174,7 @@ export default function AdminJobList() {
                     제목
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
-                    기업
+                    기업명
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     작업
@@ -114,14 +183,14 @@ export default function AdminJobList() {
               </thead>
 
               <tbody>
-                {jobPosts.length === 0 ? (
+                {filteredJobPosts.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      채용 공고가 없습니다.
+                      {jobPosts.length === 0 ? "채용 공고가 없습니다." : "검색 결과가 없습니다."}
                     </td>
                   </tr>
                 ) : (
-                  jobPosts.map((job) => (
+                  currentJobPosts.map((job) => (
                     <tr
                       key={job.jobid}
                       className="border-b border-gray-200 hover:bg-gray-50"
@@ -130,9 +199,14 @@ export default function AdminJobList() {
                         {job.jobid}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {job.jobtitle}
+                        <Link
+                          to={`/jobs/${job.jobid}`}
+                          className="text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
+                        >
+                          {job.jobtitle}
+                        </Link>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                         {job.company || "-"}
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
@@ -155,8 +229,52 @@ export default function AdminJobList() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
       )}
+
+        {/* 페이지네이션 */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              이전
+            </button>
+
+            {getPageNumbers().map((pageNum, idx) => {
+              if (pageNum === -1) {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`min-w-[40px] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    currentPage === pageNum
+                      ? 'border-primary-600 bg-primary-600 text-white'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              다음
+            </button>
+          </div>
+        )}
 
       {/* 수정 모달 */}
       {showEditModal && editingJob && (
