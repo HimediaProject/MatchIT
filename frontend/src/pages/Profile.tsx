@@ -76,7 +76,7 @@ const ProfilePage = () => {
   const handleDeleteRecentView = (index: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
 
-    const newRecentViews = [...recentViews]
+    const newRecentViews = [...recentviews]
     newRecentViews.splice(index, 1)
     setRecentViews(newRecentViews)
     localStorage.setItem('recentviews', JSON.stringify(newRecentViews))
