@@ -72,7 +72,7 @@ const BootcampDetailPage = () => {
     if (!Number.isFinite(numericId)) return
     const label = `[부트캠프] ${bootcamp.Title}`
     try {
-      const raw = localStorage.getItem('recentViews')
+      const raw = localStorage.getItem('recentviews')
       const arr = raw ? JSON.parse(raw) : []
       const current = Array.isArray(arr) ? arr : []
 
@@ -95,12 +95,12 @@ const BootcampDetailPage = () => {
         ...normalized.filter((x) => !(x?.postType === 'Bootcamp' && Number(x?.targetId) === numericId) && x.label !== label),
       ].slice(0, 5)
       if (numericId > 0) {
-        localStorage.setItem('recentViews', JSON.stringify(next))
+        localStorage.setItem('recentviews', JSON.stringify(next))
       }
     } catch {
       try {
         if (numericId > 0) {
-          localStorage.setItem('recentViews', JSON.stringify([{ postType: 'Bootcamp', targetId: numericId, label }]))
+          localStorage.setItem('recentviews', JSON.stringify([{ postType: 'Bootcamp', targetId: numericId, label }]))
         }
       } catch {
         // ignore
@@ -254,7 +254,7 @@ const BootcampDetailPage = () => {
                 }
                 aria-label="스크랩"
               >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-6 w-6" fill={isScrapped ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               </button>

@@ -72,3 +72,10 @@ def on_startup():
 @app.get("/")
 def root():
     return {"message": "MatchIT Backend is running"}
+<<<<<<< HEAD
+=======
+
+@app.get("/auth/kakao/callback")
+async def kakao_callback(code: str | None = None, error: str | None = None):
+    print("kakao_callback:", code, error)
+>>>>>>> ae4afd53f00d5287960daae91e036fff2c697340

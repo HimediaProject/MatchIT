@@ -27,18 +27,16 @@ export const adminApi = {
     return response.json()
   },
 
-  async updateUserRole(userId: number, role: 'user' | 'admin') {
+  async updateUserRole(userId: number, role: number) {
     // 다양한 백엔드 라우트/메서드/바디 조합을 순차 시도 (404/405 대응)
     const headers = { 'Content-Type': 'application/json' }
-    // 모든 페이로드에 role 키를 포함시켜 422(role 누락) 방지
+    const roleId = role;
+    // 백엔드가 roleid를 int로 기대하므로 roleid: roleId로 전송
     const payloads = [
-      { role, role_name: role },
-      { role },
-      { role: role.toUpperCase(), role_name: role },
+      { roleid: roleId },
     ]
     const urls = [
       `${API_BASE_URL}/admin/users/${userId}/role`,
-      `${API_BASE_URL}/admin/users/${userId}`,
     ]
     const methods: Array<'PATCH' | 'PUT' | 'POST'> = ['PATCH', 'PUT', 'POST']
 
