@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { usersApi } from '../api/users'
 
 // API 베이스 URL 설정
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -6,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 // 백엔드 스키마와 매칭되는 타입 정의 (화면 표시용)
 type ComparedJob = {
   id: string
+  numericId?: number | null
   provider: string // 플랫폼 (wanted, remember 등)
   title: string
   company: string
@@ -25,6 +28,7 @@ type ComparedJob = {
 }
 type ComparedBootcamp = {
   id: string
+  numericId?: number | null
   provider: string
   title: string
   period: string
@@ -56,10 +60,16 @@ const splitTextByBullets = (text?: string | null) => {
 }
 
 const ComparePage = () => {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<'jobs' | 'bootcamps'>('bootcamps')
   const [items, setItems] = useState<Array<ComparedJob | ComparedBootcamp>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showCopied, setShowCopied] = useState(false)
+  const [showCopyFail, setShowCopyFail] = useState(false)
+  const [scrappedSet, setScrappedSet] = useState<Set<string>>(new Set())
+  const [scrapLoadingId, setScrapLoadingId] = useState<string | null>(null)
+  const [showScrapError, setShowScrapError] = useState(false)
 
   // Parse ids from URL query param `ids=1,2,3` and optional `mode=jobs|bootcamps`
   const parseIdsFromSearch = () => {
@@ -81,6 +91,7 @@ const ComparePage = () => {
   const mapJob = (j: any, idx: number): ComparedJob => {
     return {
       id: j.PostID ? String(j.PostID) : `job-${idx}`,
+      numericId: j.PostID ? Number(j.PostID) : null,
       provider: j.provider || j.platform || '',
       title: j.title || j.Title || '',
       company: j.company_name || j.CompanyName || '',
@@ -106,6 +117,7 @@ const ComparePage = () => {
     const start = b.start_date || b.StartDate || null
     return {
       id: b.BootcampID ? String(b.BootcampID) : `boot-${idx}`,
+      numericId: b.BootcampID ? Number(b.BootcampID) : null,
       provider: b.institute_name || b.InstituteName || '',
       title: b.title || b.Title || '',
       period: reg || close ? `${formatDate(reg)} ~ ${formatDate(close)}` : '',
@@ -140,9 +152,16 @@ const ComparePage = () => {
       }
       const data = await res.json()
       if (modeToFetch === 'jobs') {
-        setItems((data || []).map((d: any, i: number) => mapJob(d, i)))
+        let mapped = (data || []).map((d: any, i: number) => mapJob(d, i))
+        // 보장: 응답에 numericId가 없으면 요청한 ids 배열로 채움
+        mapped = mapped.map((it: any, i: number) => ({ ...it, numericId: it.numericId ?? (ids[i] ?? null) }))
+        console.debug('[Compare] fetchCompare jobs -> mapped items', mapped)
+        setItems(mapped)
       } else {
-        setItems((data || []).map((d: any, i: number) => mapBootcamp(d, i)))
+        let mapped = (data || []).map((d: any, i: number) => mapBootcamp(d, i))
+        mapped = mapped.map((it: any, i: number) => ({ ...it, numericId: it.numericId ?? (ids[i] ?? null) }))
+        console.debug('[Compare] fetchCompare bootcamps -> mapped items', mapped)
+        setItems(mapped)
       }
     } catch (e: any) {
       setError(e?.message || String(e))
@@ -180,6 +199,168 @@ const ComparePage = () => {
         return
       }
       alert('지원 링크가 제공되지 않았습니다.')
+    }
+  }
+
+  const handleShareClick = async (item: ComparedJob | ComparedBootcamp) => {
+    const isJob = mode === 'jobs'
+    const title = isJob ? (item as ComparedJob).title || '공고' : (item as ComparedBootcamp).title || '과정'
+    const text = title
+    const url = isJob ? ((item as ComparedJob).url || window.location.href) : ((item as ComparedBootcamp).detailUrl || window.location.href)
+
+    const getMetaImage = () => {
+      const og = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null
+      if (og && og.content) return og.content
+      const tw = document.querySelector('meta[name="twitter:image"]') as HTMLMetaElement | null
+      if (tw && tw.content) return tw.content
+      return null
+    }
+
+    const imageUrl = getMetaImage()
+
+    if (imageUrl && (navigator as any).canShare) {
+      try {
+        const res = await fetch(imageUrl, { mode: 'cors' })
+        const blob = await res.blob()
+        const ext = blob.type.split('/')[1] || 'jpg'
+        const file = new File([blob], `share-image.${ext}`, { type: blob.type })
+        if ((navigator as any).canShare({ files: [file] })) {
+          await (navigator as any).share({ files: [file], title, text })
+          return
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url })
+        return
+      } catch {
+        // cancel or fail
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setShowCopied(true)
+      setTimeout(() => setShowCopied(false), 3000)
+    } catch {
+      setShowCopyFail(true)
+      setTimeout(() => setShowCopyFail(false), 3000)
+    }
+  }
+
+  // load my scraps and mark which items are scrapped
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const scraps = await usersApi.getMyScraps()
+        console.debug('[Compare] loaded scraps', scraps)
+        if (!mounted) return
+        const s = new Set<string>()
+        if (Array.isArray(scraps)) {
+          scraps.forEach((it: any) => {
+            if (!it || typeof it !== 'object') return
+            if (it.post_type === 'Job' && it.job_post_id != null) s.add(String(it.job_post_id))
+            if (it.post_type === 'Bootcamp' && it.bootcamp_post_id != null) s.add(String(it.bootcamp_post_id))
+          })
+        }
+        console.debug('[Compare] computed scrappedSet', Array.from(s))
+        setScrappedSet(s)
+      } catch (err) {
+        console.debug('[Compare] load scraps error', err)
+      }
+    }
+    if (items && items.length > 0) load()
+    return () => { mounted = false }
+  }, [items])
+
+  const toggleScrap = async (itemId: string, postType: 'Job' | 'Bootcamp') => {
+    console.debug('[Compare] toggleScrap called', { itemId, postType })
+    // try to use numericId stored on mapped item if available
+    let numericId = Number(itemId)
+    try {
+      // if itemId is actually an object (older call), handle gracefully
+      if (typeof (itemId as any) === 'object' && itemId != null) {
+        const anyItem: any = itemId
+        if (anyItem.numericId != null) numericId = Number(anyItem.numericId)
+        else if (anyItem.id != null) numericId = Number(anyItem.id)
+      }
+    } catch {
+      // ignore
+    }
+    if (!Number.isFinite(numericId) || numericId <= 0) {
+      console.debug('[Compare] toggleScrap aborted: invalid numeric id', { numericId })
+      // backend expects numeric id; if not numeric, do nothing
+      return
+    }
+    if (scrapLoadingId) return
+    setScrapLoadingId(String(numericId))
+    try {
+      if (scrappedSet.has(String(numericId))) {
+        await usersApi.removeMyScrap(postType, numericId)
+        setScrappedSet((prev) => {
+          const next = new Set(prev)
+          next.delete(String(numericId))
+          return next
+        })
+      } else {
+        await usersApi.addMyScrap(postType, numericId)
+        setScrappedSet((prev) => new Set(prev).add(String(numericId)))
+      }
+      console.debug('[Compare] toggleScrap success', { numericId, postType })
+    } catch (e: any) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        setShowScrapError(true)
+        setTimeout(() => setShowScrapError(false), 3000)
+      }
+    } finally {
+      setScrapLoadingId(null)
+    }
+  }
+
+  // JobDetail.tsx의 toggleScrap 스타일로 항목별 토글 함수
+  const toggleScrapFor = async (item: ComparedJob | ComparedBootcamp) => {
+    const postType = mode === 'jobs' ? 'Job' : 'Bootcamp'
+    const rawId = (item as any).numericId ?? item.id
+    const numericId = Number(rawId)
+    const isValidId = Number.isFinite(numericId) && numericId > 0
+    if (!isValidId) return
+    if (scrapLoadingId) return
+    setScrapLoadingId(String(numericId))
+    try {
+      const found = scrappedSet.has(String(numericId))
+      if (found) {
+        await usersApi.removeMyScrap(postType as 'Job' | 'Bootcamp', numericId)
+        setScrappedSet((prev) => {
+          const next = new Set(prev)
+          next.delete(String(numericId))
+          return next
+        })
+      } else {
+        await usersApi.addMyScrap(postType as 'Job' | 'Bootcamp', numericId)
+        setScrappedSet((prev) => new Set(prev).add(String(numericId)))
+      }
+    } catch (e: any) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        setShowScrapError(true)
+        setTimeout(() => setShowScrapError(false), 3000)
+      }
+    } finally {
+      setScrapLoadingId(null)
     }
   }
 
@@ -265,24 +446,27 @@ const ComparePage = () => {
                           </div>
 
                           <div className="flex gap-2 mt-auto">
-                            {/* 스크랩 버튼 */}
-                              <button 
+                              {/* 스크랩 버튼 */}
+                              <button
                                 type="button"
-                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+                                onClick={() => { console.debug('[Compare] scrap button click', { id: (item as any).id, numericId: (item as any).numericId }); toggleScrapFor(item) }}
+                                disabled={scrapLoadingId === String((item as any).numericId ?? item.id)}
+                                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition ${scrappedSet.has(String((item as any).numericId ?? item.id)) ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100' : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
                                 aria-label="스크랩"
                               >
-                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="h-6 w-6" fill={scrappedSet.has(String((item as any).numericId ?? item.id)) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                                 </svg>
                               </button>
 
                               {/* 공유하기 버튼 */}
-                              <button 
-                                type="button"
-                                className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
-                              >
-                                공유하기
-                              </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleShareClick(item)}
+                                    className="h-12 flex-1 rounded-xl bg-primary-50 text-base font-bold text-primary-700 transition hover:bg-primary-100"
+                                  >
+                                    공유하기
+                                  </button>
                             <button
                               onClick={() => handleApply(item)}
                               className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700"
@@ -491,6 +675,22 @@ const ComparePage = () => {
           </div>
         )}
       </div>
+
+      {showCopied && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-black/80 text-white px-4 py-2 text-sm">
+          링크가 복사되었습니다.
+        </div>
+      )}
+      {showCopyFail && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-red-600 text-white px-4 py-2 text-sm">
+          링크 복사에 실패했습니다. 수동으로 복사해주세요.
+        </div>
+      )}
+      {showScrapError && (
+        <div className="fixed bottom-6 right-6 z-50 mt-14 rounded-lg bg-red-600 text-white px-4 py-2 text-sm">
+          스크랩 처리에 실패했습니다.
+        </div>
+      )}
     </div>
   )
 }
