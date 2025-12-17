@@ -76,19 +76,15 @@ def check_admin_role(db: Session = Depends(get_db)):
 @router.get("/users", response_model=List[UserOut])
 def get_all_users(db: Session = Depends(get_db)):
     """
-    모든 사용자 조회
+    모든 사용자 조회 (관리자 먼저, 그 다음 일반사용자 순으로 정렬)
     """
     try:
-        users = db.query(models.User).all()
+        users = db.query(models.User).order_by(models.User.RoleID.desc(), models.User.UserID.asc()).all()
         # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
         result = []
         for u in users:
-            # role 관계가 로드되어 있지 않을 수 있으므로 안전하게 조회
-            role_id = None
-            try:
-                role_id = u.role.RoleID if getattr(u, 'role', None) else 1
-            except Exception:
-                role_id = 1
+            # RoleID를 직접 사용 (기본값 1)
+            role_id = u.RoleID if u.RoleID else 1
             result.append({
                 "userid": u.UserID,
                 "email": u.Email,

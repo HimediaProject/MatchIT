@@ -2,22 +2,6 @@ import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
 import { adminApi } from "../../api/admin";
 
-// API가 role을 int로 내려줄 수 있으므로 int로 정규화
-const normalizeRole = (role: any): "user" | "admin" => {
-  if (typeof role === "number") {
-    return role === 2 ? "admin" : "user";
-  }
-  if (typeof role === "string") {
-    return role.toLowerCase() === "admin" ? "admin" : "user";
-  }
-  if (role && typeof role === "object") {
-    const name =
-      role.Name || role.name || role.role || role.role_name || role.Role || "";
-    return String(name).toLowerCase() === "admin" ? "admin" : "user";
-  }
-  return "user";
-};
-
 interface AdminUser {
   userid: number;
   email: string;
@@ -42,7 +26,7 @@ export default function AdminUserList() {
         userid: u.userid ?? u.user_id ?? u.id,
         email: u.email ?? u.Email ?? "",
         name: u.name ?? u.username ?? u.full_name ?? "",
-        role: normalizeRole(u.role),
+        role: typeof u.role === "number" ? u.role : 1,
       }));
       setUsers(normalized);
     } catch (error) {
