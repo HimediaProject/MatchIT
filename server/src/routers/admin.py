@@ -15,19 +15,20 @@ class UserOut(BaseModel):
     userid: int
     email: str
     name: Optional[str]
-    role: str
+    role: int  # 1 for user, 2 for admin
 
     class Config:
         from_attributes = True
 
 
 class UserRoleUpdate(BaseModel):
-    role: str  # "user" or "admin"
+    roleid: int  # 1 for user, 2 for admin
 
 
 class JobPostOut(BaseModel):
     jobid: int
     jobtitle: str
+    company: Optional[str]
     jobdescription: Optional[str]
 
     class Config:
@@ -75,25 +76,20 @@ def check_admin_role(db: Session = Depends(get_db)):
 @router.get("/users", response_model=List[UserOut])
 def get_all_users(db: Session = Depends(get_db)):
     """
-    모든 사용자 조회
+    모든 사용자 조회 (관리자 먼저, 그 다음 일반사용자 순으로 정렬)
     """
     try:
-        users = db.query(models.User).all()
+        users = db.query(models.User).order_by(models.User.RoleID.desc(), models.User.UserID.asc()).all()
         # 반환 형태를 프론트엔드가 기대하는 형태로 매핑
         result = []
         for u in users:
-            # role 관계가 로드되어 있지 않을 수 있으므로 안전하게 조회
-            role_name = None
-            try:
-                role_name = u.role.Name if getattr(u, 'role', None) else None
-            except Exception:
-                role_name = None
-
+            # RoleID를 직접 사용 (기본값 1)
+            role_id = u.RoleID if u.RoleID else 1
             result.append({
                 "userid": u.UserID,
                 "email": u.Email,
                 "name": u.Name,
-                "role": role_name or "user",
+                "role": role_id,
             })
 
         return result
@@ -143,23 +139,18 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 @router.patch("/users/{user_id}/role", response_model=UserOut)
 def update_user_role(user_id: int, data: UserRoleUpdate, db: Session = Depends(get_db)):
     """
-    사용자 역할 변경 (admin 또는 user)
+    사용자 역할 변경 (roleid: 1 for user, 2 for admin)
     """
     try:
-        # 역할 검증
-        if data.role not in ["user", "admin"]:
-            raise HTTPException(status_code=400, detail="Invalid role. Must be 'user' or 'admin'")
-
-        # 역할 ID 조회
-        role = db.query(models.Role).filter(models.Role.Name == data.role).first()
-        if not role:
-            raise HTTPException(status_code=404, detail="Role not found")
+        # 역할 ID 검증
+        if data.roleid not in [1, 2]:
+            raise HTTPException(status_code=400, detail="Invalid roleid. Must be 1 (user) or 2 (admin)")
 
         user = db.query(models.User).filter(models.User.UserID == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        user.RoleID = role.RoleID
+        user.RoleID = data.roleid
         db.commit()
         db.refresh(user)
 
@@ -168,8 +159,7 @@ def update_user_role(user_id: int, data: UserRoleUpdate, db: Session = Depends(g
             "userid": user.UserID,
             "email": user.Email,
             "name": user.Name,
-            "role": data.role,
-            "roleid": user.RoleID,
+            "role": user.RoleID,
         }
     except HTTPException:
         raise
@@ -194,6 +184,7 @@ def get_all_jobposts(db: Session = Depends(get_db)):
             result.append({
                 "jobid": getattr(j, 'PostID', None),
                 "jobtitle": getattr(j, 'Title', '') or '',
+                "company": getattr(j, 'CompanyName', None) or '',
                 "jobdescription": getattr(j, 'MainTasks', None) or getattr(j, 'Qualifications', None) or '',
             })
         return result
