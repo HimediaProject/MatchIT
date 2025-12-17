@@ -1,6 +1,6 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 
 interface JobPost {
@@ -13,11 +13,8 @@ interface JobPost {
 export default function AdminJobList() {
   const [jobPosts, setJobPosts] = useState<JobPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingJob, setEditingJob] = useState<JobPost | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
-  const [editedDescription, setEditedDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   // 페이지네이션 상태 (클라이언트 사이드)
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,42 +54,9 @@ export default function AdminJobList() {
     }
   };
 
-  const handleOpenEditModal = (job: JobPost) => {
-    setEditingJob(job);
-    setEditedTitle(job.jobtitle);
-    setEditedDescription(job.jobdescription || "");
-    setShowEditModal(true);
-  };
+  const sortedJobPosts = [...jobPosts].sort((a, b) => Number(a.jobid) - Number(b.jobid));
 
-  const handleSaveEdit = async () => {
-    if (!editingJob) return;
-
-    try {
-      await adminApi.updateJobPost(editingJob.jobid, {
-        jobtitle: editedTitle,
-        jobdescription: editedDescription,
-      });
-
-      setJobPosts(
-        jobPosts.map((j) =>
-          j.jobid === editingJob.jobid
-            ? {
-                ...j,
-                jobtitle: editedTitle,
-                jobdescription: editedDescription,
-              }
-            : j
-        )
-      );
-      setShowEditModal(false);
-      alert("공고가 수정되었습니다.");
-    } catch (error) {
-      console.error("Failed to update job post:", error);
-      alert("공고 수정에 실패했습니다.");
-    }
-  };
-
-  const filteredJobPosts = jobPosts.filter((job) =>
+  const filteredJobPosts = sortedJobPosts.filter((job) =>
     job.jobtitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (job.company && job.company.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -211,7 +175,7 @@ export default function AdminJobList() {
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
                         <button
-                          onClick={() => handleOpenEditModal(job)}
+                          onClick={() => navigate(`/admin/jobposts/${job.jobid}/edit`)}
                           className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600"
                         >
                           수정
@@ -275,54 +239,6 @@ export default function AdminJobList() {
             </button>
           </div>
         )}
-
-      {/* 수정 모달 */}
-      {showEditModal && editingJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4">공고 수정</h2>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                제목
-              </label>
-              <input
-                type="text"
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                설명
-              </label>
-              <textarea
-                value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
-              >
-                저장
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }
