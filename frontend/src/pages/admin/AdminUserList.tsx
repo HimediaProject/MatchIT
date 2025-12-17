@@ -17,6 +17,10 @@ export default function AdminUserList() {
   const [newRole, setNewRole] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // 페이지네이션 상태 (클라이언트 사이드)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 페이지당 항목 수
+
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -39,6 +43,11 @@ export default function AdminUserList() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // 검색어가 변경되면 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleDeleteUser = async (userId: number) => {
     if (!window.confirm("📢 이 사용자를 삭제하시겠습니까?")) return;
@@ -81,6 +90,45 @@ export default function AdminUserList() {
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // 페이지네이션 계산 (클라이언트 사이드)
+  const total = filteredUsers.length;
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // 페이지 번호 생성 (Bootcamps.tsx와 동일한 로직)
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push(-1);
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push(-1);
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push(-1);
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push(-1);
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
 
   return (
     <AdminLayout>
@@ -140,7 +188,7 @@ export default function AdminUserList() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  currentUsers.map((user) => (
                     <tr
                       key={user.userid}
                       className="border-b border-gray-200 hover:bg-gray-50"
@@ -185,8 +233,52 @@ export default function AdminUserList() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
       )}
+
+        {/* 페이지네이션 */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              이전
+            </button>
+
+            {getPageNumbers().map((pageNum, idx) => {
+              if (pageNum === -1) {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`min-w-[40px] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    currentPage === pageNum
+                      ? 'border-primary-600 bg-primary-600 text-white'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              다음
+            </button>
+          </div>
+        )}
 
       {/* 권한 변경 모달 */}
       {showRoleModal && selectedUser && (
