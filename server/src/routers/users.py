@@ -738,20 +738,20 @@ def delete_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{user_id}/notifications", response_model=List[UserNotifications])
-def read_notifications(user_id: int, db: Session = Depends(get_db)):
-    notifications = get_user_notifications(db, user_id)
-    if not notifications:
-        raise HTTPException(404, "알림 항목을 찾을 수 없습니다.")
+# @router.get("/{user_id}/notifications", response_model=List[UserNotifications])
+# def read_notifications(user_id: int, db: Session = Depends(get_db)):
+#     notifications = get_user_notifications(db, user_id)
+#     if not notifications:
+#         raise HTTPException(404, "알림 항목을 찾을 수 없습니다.")
     
-    return [
-        UserNotifications(
-            notification_type=n.NotificationType,
-            isenabled=n.IsEnabled,
-            notificationtime=n.NotificationTime,
-        )
-        for n in notifications
-    ]
+#     return [
+#         UserNotifications(
+#             notification_type=n.NotificationType,
+#             isenabled=n.IsEnabled,
+#             notificationtime=n.NotificationTime,
+#         )
+#         for n in notifications
+#     ]
 
 if __name__ == "__main__":
     import uvicorn

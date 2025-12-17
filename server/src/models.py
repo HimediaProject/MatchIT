@@ -73,6 +73,7 @@ class User(Base):
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
+    RecentViews = Column("recentviews", Text)
 
     role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
