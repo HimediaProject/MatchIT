@@ -1,16 +1,67 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Cookie
 from sqlalchemy import Integer, cast, func, or_, select
 from sqlalchemy.orm import Session
+import json
+import uuid
 
 from src.database import get_db
-from src.models import JobCategory, JobPost, Platform, Skill
+from src.models import JobCategory, JobPost, Platform, Skill, User, UserSession
 from src.schemas import JobPostCreate, JobPostResponse, JobPostUpdate, PaginatedJobPostResponse
 from src.utils import get_order_clause
 
 router = APIRouter(prefix="/jobs")
+
+
+def _try_get_current_user(db: Session, user_id: Optional[str], session_id: Optional[str]) -> Optional[User]:
+    if not user_id or not session_id:
+        return None
+
+    try:
+        session_uuid = uuid.UUID(session_id)
+        uid = int(user_id)
+    except Exception:
+        return None
+
+    session = (
+        db.query(UserSession)
+        .filter(UserSession.SessionID == session_uuid, UserSession.UserID == uid)
+        .first()
+    )
+    if not session:
+        return None
+
+    now = datetime.now(session.ExpiresAt.tzinfo) if getattr(session.ExpiresAt, "tzinfo", None) else datetime.now()
+    if session.ExpiresAt < now:
+        return None
+
+    return db.query(User).filter(User.UserID == uid).first()
+
+
+def _append_recent_view(user: User, label: str, max_items: int = 5) -> None:
+    if not hasattr(user, "RecentViews"):
+        return
+
+    current = []
+    raw = getattr(user, "RecentViews", None)
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                current = [str(x) for x in parsed]
+        except Exception:
+            current = []
+
+    label = (label or "").strip()
+    if not label:
+        return
+
+    current = [x for x in current if x != label]
+    current.insert(0, label)
+    current = current[:max_items]
+    setattr(user, "RecentViews", json.dumps(current, ensure_ascii=False))
 
 
 @router.post("/", response_model=JobPostResponse, status_code=201)
@@ -167,6 +218,8 @@ def get_job_posts(
 def get_job_post_detail(
     job_id: int,
     db: Session = Depends(get_db),
+    user_id: Optional[str] = Cookie(None),
+    session_id: Optional[str] = Cookie(None),
 ):
     job_post = db.query(JobPost).filter(JobPost.PostID == job_id).first()
 
@@ -175,6 +228,11 @@ def get_job_post_detail(
 
     job_post.ViewCount += 1
     job_post.UpdatedAt = datetime.now(job_post.UpdatedAt.tzinfo) if job_post.UpdatedAt else datetime.now(timezone.utc)
+
+    user = _try_get_current_user(db, user_id, session_id)
+    if user:
+        _append_recent_view(user, f"[채용] {job_post.Title}")
+
     db.commit()
     db.refresh(job_post)
 

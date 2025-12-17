@@ -1,9 +1,21 @@
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 import time
 import logging
-from fastapi.responses import HTMLResponse, JSONResponse
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# .env는 라우터 모듈 import 이전에 로드되어야 import-time 환경변수 접근이 안정적입니다.
+_possible_env_paths = [
+    Path(__file__).resolve().parents[1] / ".env",  # server/.env
+    Path(__file__).resolve().parents[2] / ".env",  # 프로젝트 루트/.env
+]
+for _env_path in _possible_env_paths:
+    if _env_path.exists():
+        load_dotenv(_env_path)
+        break
+
 from .routers import jwt_login, google, kakao, naver, comparison, users, bootcamper, search, skills, meta, jobposts, job_categories, admin
 
 app = FastAPI(title="MatchIT Backend")
@@ -17,7 +29,7 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,7 +72,3 @@ def on_startup():
 @app.get("/")
 def root():
     return {"message": "MatchIT Backend is running"}
-
-@app.get("/auth/kakao/callback")
-async def kakao_callback(code: str | None = None, error: str | None = None):
-    print("kakao_callback:", code, error)

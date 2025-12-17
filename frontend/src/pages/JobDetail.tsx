@@ -1,21 +1,20 @@
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchJobDetail, type JobPost } from '../api/jobposts'
+import { fetchJobDetail } from '../api/jobposts'
+import { usersApi } from "../api/users";
+
 
 const JobDetail = () => {
   const { jobId } = useParams()
 
   const navigate = useNavigate()
 
-  if (!jobId) {
-    return (
-      <div className="flex justify-center py-10">
-        <p className="text-red-600">잘못된 공고 ID입니다.</p>
-      </div>
-    )
-  }
+  const [isScrapped, setIsScrapped] = useState(false)
+  const [scrapLoading, setScrapLoading] = useState(false)
 
   const id = Number(jobId)
+  const isValidId = Number.isFinite(id) && id > 0
 
   const {
     data: job, 
@@ -25,8 +24,101 @@ const JobDetail = () => {
   } = useQuery({
     queryKey: ['jobDetail', id],  
     queryFn: () => fetchJobDetail(id),  
-    enabled: !!id,  
+    enabled: isValidId,  
   })
+
+  useEffect(() => {
+    if (!isValidId) return
+    if (!job?.Title) return
+    const label = `[채용] ${job.Title}`
+    try {
+      const raw = localStorage.getItem('recentviews')
+      const arr = raw ? JSON.parse(raw) : []
+      const current = Array.isArray(arr) ? arr : []
+
+      const normalized = current
+        .map((x: any) => {
+          if (typeof x === 'string') return { label: String(x) }
+          if (x && typeof x === 'object') {
+            const postType = String(x.postType ?? x.type ?? '')
+            const targetId = Number(x.targetId ?? x.id)
+            const lbl = String(x.label ?? x.title ?? '')
+            return { postType, targetId, label: lbl }
+          }
+          return null
+        })
+        .filter(Boolean) as Array<{ postType?: string; targetId?: number; label: string }>
+
+      const item = { postType: 'Job', targetId: id, label }
+      const next = [
+        item,
+        ...normalized.filter((x) => !(x?.postType === 'Job' && Number(x?.targetId) === id) && x.label !== label),
+      ].slice(0, 5)
+      localStorage.setItem('recentviews', JSON.stringify(next))
+    } catch {
+      try {
+        localStorage.setItem('recentviews', JSON.stringify([{ postType: 'Job', targetId: id, label }]))
+      } catch {
+        // ignore
+      }
+    }
+  }, [job?.Title, id, isValidId])
+
+  useEffect(() => {
+    if (!isValidId) return
+
+    let mounted = true
+    const load = async () => {
+      try {
+        const scraps = await usersApi.getMyScraps()
+        const found = Array.isArray(scraps)
+          ? scraps.some((s: any) => s?.post_type === 'Job' && Number(s?.job_post_id) === id)
+          : false
+        if (mounted) setIsScrapped(found)
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [id, isValidId])
+
+  const toggleScrap = async () => {
+    if (!isValidId) return
+    if (scrapLoading) return
+
+    setScrapLoading(true)
+    try {
+      if (isScrapped) {
+        await usersApi.removeMyScrap('Job', id)
+        setIsScrapped(false)
+      } else {
+        await usersApi.addMyScrap('Job', id)
+        setIsScrapped(true)
+      }
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        window.alert('스크랩 처리에 실패했습니다.')
+      }
+    } finally {
+      setScrapLoading(false)
+    }
+  }
+
+  if (!isValidId) {
+    return (
+      <div className="flex justify-center py-10">
+        <p className="text-red-600">잘못된 공고 ID입니다.</p>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -125,10 +217,17 @@ const JobDetail = () => {
             {/* 스크랩 버튼 */}
             <button 
               type="button"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+              onClick={toggleScrap}
+              disabled={scrapLoading}
+              className={
+                `flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition ` +
+                (isScrapped
+                  ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                  : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600')
+              }
               aria-label="스크랩"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6" fill={isScrapped ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             </button>

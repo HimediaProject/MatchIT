@@ -18,18 +18,23 @@ CREATE TABLE CareerLevels (
     CareerName VARCHAR(50) UNIQUE NOT NULL
 );
 
--- 역할 (관리자/유저)
-CREATE TABLE Roles (
-    RoleID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    RoleName VARCHAR(50) UNIQUE NOT NULL
-);
-
 -- 연차 구간을 위한 별도 테이블 추가
 CREATE TABLE ExperienceRanges (
     RangeID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     RangeName VARCHAR(20) UNIQUE NOT NULL,  -- '1년 미만', '1~3년', '3~5년' 등
     MinYears INT DEFAULT 0,
     MaxYears INT NULL  -- NULL이면 상한 없음
+);
+
+-- 희망 직무
+CREATE TABLE DesiredJobs (
+    DesiredJobID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    JobName VARCHAR(100) UNIQUE NOT NULL);
+
+-- 역할 (관리자/유저)
+CREATE TABLE Roles (
+    RoleID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RoleName VARCHAR(50) UNIQUE NOT NULL
 );
 
 -- 유저
@@ -40,6 +45,8 @@ CREATE TABLE Users (
     RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
     RangeID INT,
+    DesiredJobID INT,
+    RecentViews TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_role
@@ -77,12 +84,6 @@ CREATE TABLE SocialLogins (
         CHECK (Provider IN ('Kakao', 'Naver', 'Google')),
     CONSTRAINT fk_sociallogins_user
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-);
-
--- 희망 직무
-CREATE TABLE DesiredJobs (
-    DesiredJobID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    JobName VARCHAR(100) UNIQUE NOT NULL
 );
 
 CREATE TABLE UserDesiredJobs (

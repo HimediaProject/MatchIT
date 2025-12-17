@@ -34,6 +34,7 @@ class ExperienceRange(Base):
     RangeName = Column("rangename", String(100), nullable=False)
     MinYears = Column("minyears", Integer, nullable=True)
     MaxYears = Column("maxyears", Integer, nullable=True)
+    users = relationship("User", back_populates="experience_range")
 
     users = relationship("User", back_populates="experience_range")
 
@@ -71,16 +72,18 @@ class User(Base):
     # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
+    RecentViews = Column("recentviews", Text)
 
     role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
     experience_range = relationship("ExperienceRange", back_populates="users", foreign_keys=[RangeID])
     social_logins = relationship("SocialLogin", back_populates="user")
-    desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
     skills = relationship("Skill", secondary="userskills", back_populates="users")
     notifications = relationship("UserNotificationSetting", back_populates="user")
     scraps = relationship("UserScrap", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
+    desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
 
 
 # -------------------------------------------------------

@@ -62,19 +62,19 @@ export const bootcampApi = {
         }
     })
 
-        const response = await fetch(`${API_BASE_URL}/bootcamps?${queryParams}`)
+        const response = await fetch(`${API_BASE_URL}/bootcamps?${queryParams}`, { credentials: 'include' })
         if (!response.ok) throw new Error('Failed to fetch bootcamps')
         return response.json()
     },
 
     getBootcampDetail: async (id: number): Promise<BootcampItem> => {
-        const response = await fetch(`${API_BASE_URL}/bootcamps/${id}`)
+        const response = await fetch(`${API_BASE_URL}/bootcamps/${id}`, { credentials: 'include' })
         if (!response.ok) throw new Error('Failed to fetch bootcamp detail')
         return response.json()
     },
 
     getFilterOptions: async (): Promise<FilterOptionsResponse> => {
-        const response = await fetch(`${API_BASE_URL}/bootcamps/filter-options`)
+        const response = await fetch(`${API_BASE_URL}/bootcamps/filter-options`, { credentials: 'include' })
         if (!response.ok) throw new Error('Failed to fetch filter options')
         return response.json()
     },

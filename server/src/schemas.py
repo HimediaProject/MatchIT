@@ -34,6 +34,8 @@ class Provider_job(str, Enum):
 class Post_type(str, Enum):
     JOB = 'job'
     BOOTCAMP = 'bootcamp'
+    JOB_CAP = 'Job'
+    BOOTCAMP_CAP = 'Bootcamp'
 
 class Online_offline(str, Enum):
     ONLINE = '온라인'

@@ -4,20 +4,37 @@ import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Cookie, Response, Request
+from typing import Optional
+
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
 from src.models import User, SocialLogin, UserSession
-from typing import Optional
 
-ENV_PATH = Path(__file__).parent.parent.parent / '.env'
-load_dotenv(ENV_PATH)
-
+# 환경 변수 로드: 먼저 시스템 환경 변수 확인, 없으면 .env 파일 로드
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# 환경 변수가 없으면 .env 파일에서 로드 시도
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET or not GOOGLE_REDIRECT_URI:
+    # 여러 경로에서 .env 파일 찾기
+    possible_paths = [
+        Path(__file__).parent.parent.parent / ".env",  # server/.env
+        Path(__file__).parent.parent.parent.parent / ".env",  # 프로젝트 루트/.env
+    ]
+    for env_path in possible_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+    
+    # 다시 환경 변수 확인
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or GOOGLE_CLIENT_ID
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET") or GOOGLE_CLIENT_SECRET
+    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI") or GOOGLE_REDIRECT_URI
+    FRONTEND_URL = os.getenv("FRONTEND_URL", FRONTEND_URL)
 
 router = APIRouter(prefix="/auth/google", tags=["구글 소셜로그인 기능"])
 
@@ -146,11 +163,11 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     # 4) 세션 저장
     # ------------------------------------------------------------
     try:
-        session_id = str(uuid.uuid4())
+        session_uuid = uuid.uuid4()
         expires_at = datetime.now() + timedelta(seconds=expires_in)
 
         session = UserSession(
-            SessionID=session_id,
+            SessionID=session_uuid,
             UserID=user.UserID,
             AccessToken=access_token,
             RefreshToken=refresh_token,
@@ -194,7 +211,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         path="/",
     )
 
-    response.set_cookie("session_id", str(session_id), max_age=60 * 60 * 24 * 30, **cookie_opt)
+    response.set_cookie("session_id", str(session_uuid), max_age=60 * 60 * 24 * 30, **cookie_opt)
     response.set_cookie("user_id", str(user.UserID), max_age=60 * 60 * 24 * 30, **cookie_opt)
 
     # UI용
@@ -227,9 +244,14 @@ async def get_current_user(
     except:
         return {"isLoggedIn": False, "user": None}
 
+    try:
+        session_uuid = uuid.UUID(session_id)
+    except Exception:
+        return {"isLoggedIn": False, "user": None}
+
     session = (
         db.query(UserSession)
-        .filter(UserSession.SessionID == session_id, UserSession.UserID == user_id_int)
+        .filter(UserSession.SessionID == session_uuid, UserSession.UserID == user_id_int)
         .first()
     )
 
@@ -252,8 +274,6 @@ async def get_current_user(
             "role": user.role.Name if user.role else "user",
         },
     }
-
-
 # ------------------------------------------------------------
 # 7) 구글 로그아웃
 # ------------------------------------------------------------
@@ -292,10 +312,16 @@ async def google_logout(
     # DB 세션 삭제
     if session_id:
         try:
-            s = db.query(UserSession).filter(UserSession.SessionID == session_id).first()
-            if s:
-                db.delete(s)
-                db.commit()
+            try:
+                session_uuid = uuid.UUID(session_id)
+            except Exception:
+                session_uuid = None
+
+            if session_uuid:
+                s = db.query(UserSession).filter(UserSession.SessionID == session_uuid).first()
+                if s:
+                    db.delete(s)
+                    db.commit()
         except Exception as e:
             db.rollback()
             print("[GOOGLE_LOGOUT] DB 세션 삭제 실패:", e)

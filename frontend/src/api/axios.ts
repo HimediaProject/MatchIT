@@ -21,7 +21,7 @@ async function request<T>(
 ) {
   const finalUrl = buildUrl(url, params)
 
-  const res = await fetch(finalUrl, { method })
+  const res = await fetch(finalUrl, { method, credentials: 'include' })
 
   if (!res.ok) {
     const text = await res.text()
