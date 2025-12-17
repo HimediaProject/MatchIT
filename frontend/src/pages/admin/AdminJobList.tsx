@@ -1,5 +1,6 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 
 interface JobPost {
@@ -198,7 +199,12 @@ export default function AdminJobList() {
                         {job.jobid}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {job.jobtitle}
+                        <Link
+                          to={`/jobs/${job.jobid}`}
+                          className="text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
+                        >
+                          {job.jobtitle}
+                        </Link>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                         {job.company || "-"}

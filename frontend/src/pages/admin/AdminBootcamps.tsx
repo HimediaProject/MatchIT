@@ -1,5 +1,6 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 import type { AdminBootcamp } from "../../types/bootcamp";
 
@@ -196,7 +197,12 @@ export default function AdminBootcamps() {
                         {bootcamp.bootcampid}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {bootcamp.bootcampname}
+                        <Link
+                          to={`/bootcamps/${bootcamp.bootcampid}`}
+                          className="text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
+                        >
+                          {bootcamp.bootcampname}
+                        </Link>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {bootcamp.institution || "-"}
