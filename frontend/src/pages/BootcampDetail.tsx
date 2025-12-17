@@ -348,7 +348,7 @@ const BootcampDetailPage = () => {
               <p className="text-sm text-slate-600">{formatDate(bootcamp.StartDate)}</p>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-1">마감일</p>
+              <p className="text-sm font-semibold text-slate-700 mb-1">종료일</p>
               <p className="text-sm text-slate-600">{formatDate(bootcamp.CloseDate)}</p>
             </div>
             <div>

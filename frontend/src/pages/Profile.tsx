@@ -819,12 +819,15 @@ const ProfilePage = () => {
                           <li key={`job:${s.targetId}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
                             <div className="flex items-start justify-between gap-3">
                               <button
-                                type="button"
-                                onClick={() => navigate(`/jobs/${s.targetId}`)}
-                                className="flex-1 text-left"
-                              >
-                                {s.label}
-                              </button>
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        window.open(`/jobs/${s.targetId}`, '_blank', 'noopener,noreferrer')
+                                      }}
+                                      className="flex-1 text-left"
+                                    >
+                                      {s.label}
+                                    </button>
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -862,7 +865,10 @@ const ProfilePage = () => {
                             <div className="flex items-start justify-between gap-3">
                               <button
                                 type="button"
-                                onClick={() => navigate(`/bootcamps/${s.targetId}`)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  window.open(`/bootcamps/${s.targetId}`, '_blank', 'noopener,noreferrer')
+                                }}
                                 className="flex-1 text-left"
                               >
                                 {s.label}
@@ -899,9 +905,11 @@ const ProfilePage = () => {
                           {r.postType && Number.isFinite(r.targetId) ? (
                             <button
                               type="button"
-                              onClick={() =>
-                                navigate(r.postType === 'Job' ? `/jobs/${r.targetId}` : `/bootcamps/${r.targetId}`)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const url = r.postType === 'Job' ? `/jobs/${r.targetId}` : `/bootcamps/${r.targetId}`
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }}
                               className="flex-1 text-left"
                             >
                               {r.label}

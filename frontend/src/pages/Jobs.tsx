@@ -321,8 +321,16 @@ const JobsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{job.CompanyName}</p>
-                    <h3 onClick={() => navigate(`/jobs/${job.PostID}`)} className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer">
-                      {job.Title}
+                    <h3 className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors">
+                      <a
+                        href={`/jobs/${job.PostID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="cursor-pointer"
+                      >
+                        {job.Title}
+                      </a>
                     </h3>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">

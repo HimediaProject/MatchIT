@@ -193,6 +193,7 @@ def get_user_scrap(db: Session, user_id: int):
         .options(joinedload(models.UserScrap.job_post))
         .options(joinedload(models.UserScrap.bootcamp_post))
         .filter(models.UserScrap.UserID == user_id)
+        .order_by(models.UserScrap.ScrappedAt.desc())
         .all()
     )
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { SortOption } from '../api/sortoption'
 import { bootcampApi, type BootcampItem } from '../api/bootcamp'
 import { useNavigate } from 'react-router-dom'
@@ -506,7 +505,17 @@ const BootcampsPage = () => {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary-700">{boot.provider}</p>
-                    <h3 className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"><Link to={`/bootcamps/${boot.id}`}>{boot.name}</Link></h3>
+                    <h3 className="text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors">
+                      <a
+                        href={`/bootcamps/${boot.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="cursor-pointer"
+                      >
+                        {boot.name}
+                      </a>
+                    </h3>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.field}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1">{boot.mode}</span>

@@ -115,7 +115,11 @@ const ScrapsPage = () => {
                   <div className="flex items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => navigate(s.postType === 'Job' ? `/jobs/${s.targetId}` : `/bootcamps/${s.targetId}`)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const url = s.postType === 'Job' ? `/jobs/${s.targetId}` : `/bootcamps/${s.targetId}`
+                        window.open(url, '_blank', 'noopener,noreferrer')
+                      }}
                       className="flex-1 text-left"
                     >
                       {s.label}

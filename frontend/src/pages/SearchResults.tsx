@@ -111,7 +111,14 @@ const SearchResultsPage = () => {
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-primary-700">{j.company_name ?? j.provider}</p>
                   <h3 className="text-lg font-bold text-slate-900 hover:underline">
-                    <Link to={`/jobs/${j.id}`}>{j.title}</Link>
+                    <a
+                      href={`/jobs/${j.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {j.title}
+                    </a>
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                     {j.location && <span className="rounded-full bg-slate-100 px-3 py-1">{j.location}</span>}
@@ -155,7 +162,14 @@ const SearchResultsPage = () => {
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-primary-700">{b.institute_name}</p>
                   <h3 className="text-lg font-bold text-slate-900 hover:underline">
-                    <Link to={`/bootcamps/${b.id}`}>{b.title}</Link>
+                    <a
+                      href={`/bootcamps/${b.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {b.title}
+                    </a>
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                     {b.location && <span className="rounded-full bg-slate-100 px-3 py-1">{b.location}</span>}

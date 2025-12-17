@@ -23,6 +23,7 @@ type PreviewItem = {
   tags: string[]
   type: '채용' | '부트캠프'
   url: string
+  id?: number
   date: string
 }
 
@@ -31,6 +32,7 @@ type Recommendation = {
   description: string
   tags: string[]
   url: string
+  id?: number
 }
 
 const StepCard = ({ step, index, children, className }: { step: Step; index: number; children: ReactNode; className?: string }) => (
@@ -179,6 +181,7 @@ const HomePage = () => {
             ? job.skills.slice(0, 3) 
             : ['채용', job.job_category || 'IT'].filter(Boolean),
           url: job.url || '#',
+          id: job.PostID ?? job.post_id ?? job.job_post_id ?? job.jobPostId ?? job.id ?? job.JobPostID ?? undefined,
         }))
 
         // 부트캠프공고를 Recommendation 형태로 변환
@@ -189,6 +192,7 @@ const HomePage = () => {
             : `${bootcamp.institute_name || ''}에서 제공하는 ${bootcamp.title || ''} 과정입니다.`,
           tags: ['부트캠프', bootcamp.location || '온라인', bootcamp.cost_support_type || '국비'].filter(Boolean),
           url: bootcamp.detail_url || '#',
+          id: bootcamp.id ?? bootcamp.bootcamp_post_id ?? bootcamp.bootcampPostId ?? bootcamp.BootcampID ?? undefined,
         }))
 
         // 상단 2개는 채용공고, 하단 2개는 부트캠프공고로 합치기
@@ -266,6 +270,7 @@ const HomePage = () => {
             tags,
             type: '채용',
             url: job.url || '#',
+            id: job.PostID ?? job.post_id ?? job.job_post_id ?? job.jobPostId ?? job.id ?? job.JobPostID ?? undefined,
             date,
           }
         })
@@ -284,6 +289,7 @@ const HomePage = () => {
             tags,
             type: '부트캠프',
             url: bootcamp.detail_url || '#',
+            id: bootcamp.id ?? bootcamp.bootcamp_post_id ?? bootcamp.bootcampPostId ?? bootcamp.BootcampID ?? undefined,
             date,
           }
         })
@@ -415,7 +421,11 @@ const HomePage = () => {
                       <div className="space-y-1">
                         <p className="text-xs font-semibold text-primary-700">{item.type}</p>
                         <a
-                          href={item.url}
+                          href={
+                            item.type === '채용'
+                              ? (item.id ? `/jobs/${item.id}` : '/jobs')
+                              : (item.id ? `/bootcamps/${item.id}` : '/bootcamps')
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-lg font-semibold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
@@ -740,7 +750,18 @@ const HomePage = () => {
                   className="flex h-56 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-6 shadow-soft"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <a href={rec.url} target="_blank" rel="noopener noreferrer" className="line-clamp-2 flex-1 text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer">{rec.title}</a>
+                    <a
+                      href={
+                        index < 2
+                          ? (rec.id ? `/jobs/${rec.id}` : '/jobs')
+                          : (rec.id ? `/bootcamps/${rec.id}` : '/bootcamps')
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="line-clamp-2 flex-1 text-lg font-bold text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
+                    >
+                      {rec.title}
+                    </a>
                     <span className="shrink-0 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
                       {index < 2 ? '채용' : '부트캠프'}
                     </span>
