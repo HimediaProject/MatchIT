@@ -441,6 +441,9 @@ const ProfilePage = () => {
     }
   }, [navigate, previewMode])
 
+  const jobScraps = scraps.filter((s) => s.postType === 'Job')
+  const bootcampScraps = scraps.filter((s) => s.postType === 'Bootcamp')
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
@@ -797,36 +800,91 @@ const ProfilePage = () => {
 
               <div>
                 <h3 className="text-sm font-bold text-slate-900">스크랩</h3>
-                {scraps.length === 0 ? (
-                  <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">스크랩한 공고가 없습니다.</div>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {scraps.map((s, i) => (
-                      <li key={`${s.postType}:${s.targetId}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
-                        <div className="flex items-start justify-between gap-3">
-                          <button
-                            type="button"
-                            onClick={() => navigate(s.postType === 'Job' ? `/jobs/${s.targetId}` : `/bootcamps/${s.targetId}`)}
-                            className="flex-1 text-left"
-                          >
-                            {s.label}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void handleDeleteScrap(i)
-                            }}
-                            className="shrink-0 text-slate-400 hover:text-red-500"
-                            aria-label="스크랩 삭제"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="mt-2 grid gap-4">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-slate-700">채용공고</h4>
+                      <button
+                        onClick={() => navigate('/scraps?type=Job')}
+                        className="text-sm text-primary-600 hover:underline"
+                      >
+                        더보기
+                      </button>
+                    </div>
+                    {jobScraps.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">채용공고 스크랩이 없습니다.</div>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {jobScraps.slice(0, 2).map((s, i) => (
+                          <li key={`job:${s.targetId}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                            <div className="flex items-start justify-between gap-3">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/jobs/${s.targetId}`)}
+                                className="flex-1 text-left"
+                              >
+                                {s.label}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void handleDeleteScrap(scraps.findIndex((x) => x.postType === s.postType && x.targetId === s.targetId))
+                                }}
+                                className="shrink-0 text-slate-400 hover:text-red-500"
+                                aria-label="스크랩 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-slate-700">부트캠프</h4>
+                      <button
+                        onClick={() => navigate('/scraps?type=Bootcamp')}
+                        className="text-sm text-primary-600 hover:underline"
+                      >
+                        더보기
+                      </button>
+                    </div>
+                    {bootcampScraps.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">부트캠프 스크랩이 없습니다.</div>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {bootcampScraps.slice(0, 2).map((s, i) => (
+                          <li key={`boot:${s.targetId}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                            <div className="flex items-start justify-between gap-3">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/bootcamps/${s.targetId}`)}
+                                className="flex-1 text-left"
+                              >
+                                {s.label}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void handleDeleteScrap(scraps.findIndex((x) => x.postType === s.postType && x.targetId === s.targetId))
+                                }}
+                                className="shrink-0 text-slate-400 hover:text-red-500"
+                                aria-label="스크랩 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>

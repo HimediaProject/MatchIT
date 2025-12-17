@@ -658,17 +658,9 @@ def read_userscrap(user_id: int, db: Session = Depends(get_db)):
 def create_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """현재 로그인한 사용자의 스크랩 추가 (Job 또는 Bootcamp)."""
     try:
-        # 최대 스크랩 개수 제한
-        MAX_SCRAPS = 5
         current_count = db.query(models.UserScrap).filter(
             models.UserScrap.UserID == current_user.UserID
         ).count()
-
-        if current_count >= MAX_SCRAPS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"최대 {MAX_SCRAPS}개까지 스크랩할 수 있습니다."
-            )
 
         if data.post_type.value.lower() == 'job':
             existing = db.query(models.UserScrap).filter(

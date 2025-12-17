@@ -9,6 +9,7 @@ import JobsPage from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
 import LoginPage from './components/LoginPage'
 import ProfilePage from './pages/Profile'
+import ScrapsPage from './pages/Scraps'
 import SearchResultsPage from './pages/SearchResults'
 import CallbackPage from './pages/CallbackPage'
 import AdminRouteGroup from './routes/AdminRouteGroup'
@@ -45,6 +46,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/callback" element={<CallbackPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/scraps" element={<ScrapsPage />} />
         
         {/* 관리자 전용 라우트 */}
         <Route path="/admin/*" element={<AdminRouteGroup />} />
