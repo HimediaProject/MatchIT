@@ -1,7 +1,7 @@
 import { useAuth } from "../../api/useAuth";
 
 export default function AdminHeader() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   console.log("ADMIN HEADER USER:", user);
 
   return (
@@ -10,13 +10,6 @@ export default function AdminHeader() {
 
       <div className="flex items-center gap-4">
         <span className="font-medium text-gray-700">{user?.name} (Admin)</span>
-
-        <button
-          onClick={logout}
-          className="px-4 py-1 bg-red-500 rounded-md text-white"
-        >
-          로그아웃
-        </button>
       </div>
     </header>
   );
