@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api/auth'
 
+import googleIcon from "../images/google.png";
+import kakaoIcon from "../images/kakao.png";
+import naverIcon from "../images/naver.png";
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
@@ -92,30 +96,67 @@ export default function LoginPage() {
                 <button
                   disabled={isLoading}
                   onClick={() => handleSocialLogin('google')}
-                  className="w-full py-3 border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-4 px-4 disabled:opacity-50"
+                  className="w-full py-3 px-4
+                             border border-slate-200
+                             bg-white hover:bg-slate-50
+                             flex items-center gap-4
+                             rounded-xl
+                             transition
+                             hover:shadow-sm
+                             disabled:opacity-50"
                 >
-                  <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-700 border border-slate-200">G</div>
-                  <span className="flex-1 text-left">Google 계정으로 계속</span>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    <img
+                      src={googleIcon}
+                      alt="구글 로그인"
+                      className="w-8 h-8 object-contain cursor-pointer"
+                    ></img>
+                  </div>
+                  <span className="flex-1 text-left">Google 계정으로 로그인</span>
                 </button>
 
                 <button
-                disabled={isLoading}
-                onClick={() => handleSocialLogin('kakao')}
-                className="w-full disabled:opacity-50"
+                  disabled={isLoading}
+                  onClick={() => handleSocialLogin('kakao')}
+                  className="w-full py-3 px-4
+                             border border-slate-200
+                             bg-white hover:bg-slate-50
+                             flex items-center gap-4
+                             rounded-xl
+                             transition
+                             hover:shadow-sm
+                             disabled:opacity-50"
                 >
-                  <img
-                  src="src/images/kakao_login.png"
-                  alt="카카오 로그인"
-                  className="w-full h-[48px] cursor-pointer"/>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    <img
+                      src={kakaoIcon}
+                      alt="카카오 로그인"
+                      className="w-7 h-7 object-contain cursor-pointer"
+                    ></img>
+                  </div>
+                  <span className="flex-1 text-left">Kakao 계정으로 로그인</span>
                 </button>
 
                 <button
                   disabled={isLoading}
                   onClick={() => handleSocialLogin('naver')}
-                  className="w-full py-3 border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-4 px-4 disabled:opacity-50"
+                  className="w-full py-3 px-4
+                             border border-slate-200
+                             bg-white hover:bg-slate-50
+                             flex items-center gap-4
+                             rounded-xl
+                             transition
+                             hover:shadow-sm
+                             disabled:opacity-50"
                 >
-                  <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-700 border border-slate-200">N</div>
-                  <span className="flex-1 text-left">Naver 계정으로 계속</span>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    <img
+                      src={naverIcon}
+                      alt="네이버 로그인"
+                      className="w-8 h-8 object-contain cursor-pointer"
+                    ></img>
+                  </div>
+                  <span className="flex-1 text-left">Naver 계정으로 로그인</span>
                 </button>
               </div>
 
