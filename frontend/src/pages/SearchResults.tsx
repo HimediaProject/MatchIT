@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { searchApi } from '../services/apiService'
+import { searchApi } from '../api/search'
 
 function useQuery() {
   return new URLSearchParams(useLocation().search)
+}
+
+// 날짜 차이 계산 (주 단위)
+const calculateDuration = (startDate: string | null, closeDate: string | null): string => {
+  if (!startDate || !closeDate) return '-'
+
+  const start = new Date(startDate)
+  const close = new Date(closeDate)
+
+  if (isNaN(start.getTime()) || isNaN(close.getTime())) return '-'
+
+  const diffTime = Math.abs(close.getTime() - start.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.ceil(diffDays / 7)
+
+  return `${diffWeeks}주`
 }
 
 const SearchResultsPage = () => {
@@ -52,14 +68,6 @@ const SearchResultsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyword, source, careerLevelId, experienceRangeId, skills.length, ...skills])
 
-  // 필터 정보 표시
-  const filterInfo = []
-  if (keyword) filterInfo.push(`키워드: ${keyword}`)
-  if (skills.length > 0) filterInfo.push(`기술 스택: ${skills.join(', ')}`)
-  if (source && source !== '전체') filterInfo.push(`항목: ${source}`)
-  if (careerLevelId) filterInfo.push(`커리어 레벨 ID: ${careerLevelId}`)
-  if (experienceRangeId) filterInfo.push(`경력 구간 ID: ${experienceRangeId}`)
-
   const displayedJobs = view === 'jobs' ? jobs : jobs.slice(0, 5)
   const displayedBootcamps = view === 'bootcamps' ? bootcamps : bootcamps.slice(0, 5)
 
@@ -76,16 +84,6 @@ const SearchResultsPage = () => {
     <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">검색 결과</h1>
-        {filterInfo.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {filterInfo.map((info, idx) => (
-              <p key={idx} className="text-sm text-slate-600">{info}</p>
-            ))}
-          </div>
-        )}
-        {filterInfo.length === 0 && (
-          <p className="text-sm text-slate-600">필터를 선택해주세요.</p>
-        )}
       </div>
 
       {loading && <p>검색 중...</p>}
@@ -106,16 +104,28 @@ const SearchResultsPage = () => {
           </div>
           <div className="mt-4 space-y-3">
             {displayedJobs.map((j, idx) => (
-              <div key={idx} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-primary-700">{j.provider}</p>
-                    <h3 className="text-lg font-bold">{j.title}</h3>
-                    <p className="text-sm text-slate-600">{j.company_name} • {j.location}</p>
+              <div
+                key={idx}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary-700">{j.company_name ?? j.provider}</p>
+                  <h3 className="text-lg font-bold text-slate-900 hover:underline">
+                    <Link to={`/jobs/${j.id}`}>{j.title}</Link>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                    {j.location && <span className="rounded-full bg-slate-100 px-3 py-1">{j.location}</span>}
+                    <span className="rounded-full bg-slate-100 px-3 py-1">{j.experience_requirement ?? '경력 무관'}</span>
+                    {(j.skills ?? []).map((skill: string) => (
+                      <span key={skill} className="rounded-full bg-slate-100 px-3 py-1">{skill}</span>
+                    ))}
                   </div>
-                  <div className="text-sm text-slate-500">{j.posted_date ? new Date(j.posted_date).toLocaleDateString() : ''}</div>
+                  <div className="mt-2">
+                    <span className="text-xs text-slate-600">
+                      <strong>마감일: {(j.close_date && j.close_date.split('T')[0]) || '상시'}</strong>
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{j.main_tasks ? j.main_tasks.slice(0, 200) + (j.main_tasks.length > 200 ? '...' : '') : ''}</p>
               </div>
             ))}
             {!jobs.length && !loading && <p className="text-sm text-slate-600">채용공고가 없습니다.</p>}
@@ -138,16 +148,29 @@ const SearchResultsPage = () => {
           </div>
           <div className="mt-4 space-y-3">
             {displayedBootcamps.map((b, idx) => (
-              <div key={idx} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-primary-700">{b.institute_name}</p>
-                    <h3 className="text-lg font-bold">{b.title}</h3>
-                    <p className="text-sm text-slate-600">{b.location}</p>
+              <div
+                key={idx}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-soft md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary-700">{b.institute_name}</p>
+                  <h3 className="text-lg font-bold text-slate-900 hover:underline">
+                    <Link to={`/bootcamps/${b.id}`}>{b.title}</Link>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                    {b.location && <span className="rounded-full bg-slate-100 px-3 py-1">{b.location}</span>}
+                    {b.category_name && <span className="rounded-full bg-slate-100 px-3 py-1">{b.category_name}</span>}
+                    {b.online_offline && <span className="rounded-full bg-slate-100 px-3 py-1">{b.online_offline}</span>}
+                    {b.cost_support_type && <span className="rounded-full bg-slate-100 px-3 py-1">{b.cost_support_type}</span>}
+                    {b.cost_support_type && <span className="rounded-full bg-slate-100 px-3 py-1">{b.cost_support_type}</span>}
+                    <span className="rounded-full bg-slate-100 px-3 py-1">{calculateDuration(b.start_date, b.close_date)}</span>
                   </div>
-                  <div className="text-sm text-slate-500">{b.start_date ? new Date(b.start_date).toLocaleDateString() : ''}</div>
+                  <div className="mt-2">
+                    <span className="text-xs text-slate-600">
+                      <strong>마감일: {(b.close_date && b.close_date.split('T')[0]) || '상시'}</strong>
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{b.education_content ? b.education_content.slice(0, 200) + (b.education_content.length > 200 ? '...' : '') : ''}</p>
               </div>
             ))}
             {!bootcamps.length && !loading && <p className="text-sm text-slate-600">부트캠프가 없습니다.</p>}

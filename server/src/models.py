@@ -36,6 +36,8 @@ class ExperienceRange(Base):
     MinYears = Column("minyears", Integer, nullable=True)
     MaxYears = Column("maxyears", Integer, nullable=True)
 
+    users = relationship("User", back_populates="experience_range")
+
     def to_dict(self):
         return {
             "id": self.RangeID,
@@ -44,6 +46,16 @@ class ExperienceRange(Base):
             "max_years": self.MaxYears,
         }
 
+# -------------------------------------------------------
+# Roles
+# -------------------------------------------------------
+class Role(Base):
+    __tablename__ = "roles"
+
+    RoleID = Column("roleid", Integer, primary_key=True)
+    Name = Column("rolename", String(50), unique=True, nullable=False)
+
+    users = relationship("User", back_populates="role")
 
 # -------------------------------------------------------
 # Users
@@ -53,12 +65,17 @@ class User(Base):
 
     UserID = Column("userid", Integer, primary_key=True, autoincrement=True)
     Name = Column("name", String(100))
-    Email = Column("email", String(255), unique=True, nullable=False)
+    Email = Column("email", String(255), unique=True, nullable=True)
+    RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), default=1)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
+    RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
+    # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
+    experience_range = relationship("ExperienceRange", back_populates="users", foreign_keys=[RangeID])
     social_logins = relationship("SocialLogin", back_populates="user")
     desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
     skills = relationship("Skill", secondary="userskills", back_populates="users")
@@ -221,6 +238,7 @@ class JobPostSkill(Base):
     SkillID = Column("skillid", Integer, ForeignKey("skills.skillid"), primary_key=True)
 
 
+
 # -------------------------------------------------------
 # BootcampPosts
 # -------------------------------------------------------
@@ -294,8 +312,8 @@ class UserSession(Base):
 
     SessionID = Column("sessionid", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     UserID = Column("userid", Integer, ForeignKey("users.userid"), nullable=False)
-    AccessToken = Column("accesstoken", String(255), nullable=False)
-    RefreshToken = Column("refreshtoken", String(255))
+    AccessToken = Column("accesstoken", String(1000), nullable=False)
+    RefreshToken = Column("refreshtoken", String(1000))
     ExpiresAt = Column("expiresat", DateTime(timezone=True), nullable=False)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
 

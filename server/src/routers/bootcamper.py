@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, case, desc
 from src.database import get_db
 from src.models import BootcampPost as BootcampPo, JobCategory, Skill
 from src.schemas import BootcampCreate, BootcampUpdate, \
                             BootcampResponse, PaginatedBootcampResponse, \
                             BootcampDetailResponse
+from src.utils import get_order_clause
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
@@ -49,6 +50,7 @@ async def get_bootcamp_list(
     cost_support_type: List[str] = Query(None, description = "비용 지원 유형"),
     location: Optional[str] = Query(None, description = "지역 필터"),
     show_expired: bool = Query(False, description = "마감 공고 포함 여부 (False: 진행 중만, True: 모두)"),
+    sort: Optional[str] = Query("created", description = "정렬 기준 (created: 최신순, deadline: 마감일순, views: 조회수순)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -141,9 +143,12 @@ async def get_bootcamp_list(
     # 전체 개수 조회
     total = query.count()
 
+    # 정렬 적용
+    order_clause = get_order_clause(BootcampPo, sort)
+
     # 페이지네이션 적용
     offset = (page - 1) * size
-    items = query.order_by(BootcampPo.CreatedAt.desc()).offset(offset).limit(size).all()
+    items = query.order_by(order_clause).offset(offset).limit(size).all()
 
     # CategoryName 추가
     result_items = []

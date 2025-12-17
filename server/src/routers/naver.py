@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from datetime import datetime, timedelta
-from src.models import User, SocialLogin, UserSession
+from src.models import User, Role, SocialLogin, UserSession
 from typing import Optional
 
 ENV_PATH = Path(__file__).parent.parent.parent / '.env'
@@ -34,6 +34,7 @@ async def naver_login():
         f"&client_id={NAVER_CLIENT_ID}"
         f"&redirect_uri={NAVER_REDIRECT_URI}"
         f"&state={state}"
+        f"&auth_type=reprompt"                      # 👈 자동로그인 방지
     )
     return RedirectResponse(url=naver_url)
 
@@ -52,7 +53,6 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         "redirect_uri": NAVER_REDIRECT_URI,
         "client_secret": NAVER_CLIENT_SECRET,
         "code": code,
-        "state": state,
     }
 
     async with httpx.AsyncClient() as client:
@@ -64,7 +64,10 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
     expires_in = token_json.get("expires_in", 60 * 60 * 6)
 
     if not access_token:
-        return JSONResponse({"error": "토큰 발급 실패", "details": token_json}, status_code=400)
+        return JSONResponse(
+            status_code=400,
+            content={"error": "토큰 발급 실패", "details": token_json},
+        )
 
     # 2. 사용자 정보 가져오기
     user_info_url = "https://openapi.naver.com/v1/nid/me"
@@ -85,7 +88,10 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
     try:
         oauth_account = (
             db.query(SocialLogin)
-            .filter(SocialLogin.Provider == "Naver", SocialLogin.ProviderUserID == str(naver_id))
+            .filter(
+                SocialLogin.Provider == "Naver",
+                SocialLogin.ProviderUserID == str(naver_id),
+            )
             .first()
         )
 
@@ -95,7 +101,9 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         if oauth_account:
             # 기존 사용자 → 기존 세션 삭제
             old_sessions = (
-                db.query(UserSession).filter(UserSession.UserID == oauth_account.UserID).all()
+                db.query(UserSession)
+                .filter(UserSession.UserID == oauth_account.UserID)
+                .all()
             )
             for s in old_sessions:
                 db.delete(s)
@@ -105,11 +113,13 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         else:
             # 신규 가입
             user = db.query(User).filter(User.Email == naver_email).first()
+            user_role = db.query(Role).filter(Role.Name == "user").first()
 
             if not user:
                 user = User(
                     Email=naver_email if naver_email else f"naver_{naver_id}@no-email.com",
                     Name=naver_name,
+                    role=user_role,
                 )
                 db.add(user)
                 db.flush()
@@ -125,15 +135,18 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
             db.add(new_oauth)
 
         db.commit()
-        db.refresh(user)
+        # role 정보 로드
+        db.refresh(user, ["role"])
 
     except Exception as e:
         db.rollback()
-        return JSONResponse({"error": "DB 처리 실패", "details": str(e)}, status_code=500)
+        return JSONResponse(
+            {"error": "DB 처리 실패", "details": str(e)}, status_code=500)
 
     # 4. 세션 DB 저장
     try:
-        session_id = uuid.uuid4()
+        session_id = str(uuid.uuid4())
+        expires_in = int(token_json.get("expires_in", 60 * 60 * 6))
         expires_at = datetime.now() + timedelta(seconds=expires_in)
 
         session = UserSession(
@@ -147,7 +160,10 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         db.commit()
     except Exception as e:
         db.rollback()
-        return JSONResponse({"error": "세션 저장 실패", "details": str(e)}, status_code=500)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "세션 저장 실패", "details": str(e)},
+            )
 
     # 5. 프론트엔드로 이동
     if newly_created:
@@ -186,7 +202,7 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------
-# 로그인 상태 확인 (카카오 동일)
+# 3) 로그인 상태 확인
 # ---------------------------
 @router.get("/me")
 async def naver_me(
@@ -216,14 +232,22 @@ async def naver_me(
     if not user:
         return {"isLoggedIn": False, "user": None}
 
+    # role 정보 로드
+    db.refresh(user, ["role"])
+
     return {
         "isLoggedIn": True,
-        "user": {"id": user.UserID, "name": user.Name, "email": user.Email},
+        "user": {
+            "id": user.UserID,
+            "name": user.Name,
+            "email": user.Email,
+            "role": user.role.Name if user.role else "user",
+        },
     }
 
 
 # ---------------------------
-# 네이버 로그아웃
+# 4) 네이버 로그아웃
 # ---------------------------
 @router.get("/logout")
 async def naver_logout(

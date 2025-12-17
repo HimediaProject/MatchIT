@@ -1,12 +1,13 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 import time
 import logging
 import os
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import (jwt_login, google, kakao, naver, comparison,
-                      users, users_test, bootcamper,
-                      search, skills, meta, chatbot_streaming)
+                      users, bootcamper, search, skills, meta,
+                      jobposts, job_categories, admin, chatbot_streaming)
 
 app = FastAPI(title="MatchIT Backend")
 
@@ -31,12 +32,14 @@ app.include_router(kakao.router)
 app.include_router(naver.router)
 app.include_router(comparison.router)
 app.include_router(users.router)
-app.include_router(users_test.router)
 app.include_router(bootcamper.router)
+app.include_router(jobposts.router)
 app.include_router(search.router)
 app.include_router(skills.router)
 app.include_router(meta.router)
 app.include_router(chatbot_streaming.router)
+app.include_router(job_categories.router)
+app.include_router(admin.router)
 
 logger = logging.getLogger(__name__)
 
@@ -114,37 +117,6 @@ def on_startup():
 @app.get("/")
 def root():
     return {"message": "MatchIT Backend is running"}
-
-# 로그인 페이지
-@app.get('/login', response_class=HTMLResponse)
-def login():
-    return"""
-    <html>
-        <body>
-            <div>
-                <h3>구글 로그인</h3>
-                <a href='/auth/google'>
-                    <img src='images/google_login.png'
-                    alt='구글 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-            <div>
-                <h3>카카오 로그인</h3>
-                <a href='/auth/kakao'>
-                    <img src='images/kakao_login.png'
-                    alt='카카오 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-            <div>
-                <h3>네이버 로그인</h3>
-                <a href='/auth/naver'>
-                    <img src='images/naver_login.png'
-                    alt='네이버 로그인' style='width: 123px; cursor: pointer;'></img>
-                </a>
-            </div>
-        </body>
-    </html>
-    """
 
 @app.get("/auth/kakao/callback")
 async def kakao_callback(code: str | None = None, error: str | None = None):

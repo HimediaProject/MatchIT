@@ -38,3 +38,5 @@ peft>=0.12.0                            # LoRA(Fine Tuning 결과)를 베이스 
 accelerate>=0.34.0                      # 모델을 GPU/CPU에 자동 배치
 bitsandbytes>=0.43.0                    # 모델을 4bit로 압축 메모리 절약 (2GB -> 500MB)
 sentencepiece>=0.2.0
+# HTTP Client
+httpx>=0.24.0                           # 비동기 HTTP 클라이언트

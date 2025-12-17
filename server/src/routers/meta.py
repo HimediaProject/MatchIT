@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import logging
+import json
 
 from src.database import get_db
 from src import models
@@ -21,7 +23,7 @@ def get_career_levels(db: Session = Depends(get_db)):
                 "id": c.CareerLevelID,
                 "name": c.CareerName,
             })
-        return {"careerlevels": results} if results else []
+        return JSONResponse(content={"careerlevels": results}, media_type="application/json; charset=utf-8")
     except Exception as e:
         logger.exception("get_career_levels failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -39,7 +41,38 @@ def get_experience_ranges(db: Session = Depends(get_db)):
                 "min_years": r.MinYears,
                 "max_years": r.MaxYears,
             })
-        return {"experienceranges": results} if results else []
+        return JSONResponse(content={"experienceranges": results}, media_type="application/json; charset=utf-8")
     except Exception as e:
         logger.exception("get_experience_ranges failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/stats", summary="Get platform statistics")
+def get_stats(db: Session = Depends(get_db)):
+    try:
+        job_count = db.query(models.JobPost).count()
+        bootcamp_count = db.query(models.BootcampPost).count()
+        return JSONResponse(content={
+            "job_posts": job_count,
+            "bootcamps": bootcamp_count
+        }, media_type="application/json; charset=utf-8")
+    except Exception as e:
+        logger.exception("get_stats failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/desiredjobs", summary="Get desired jobs")
+def get_desired_jobs(db: Session = Depends(get_db)):
+    try:
+        items = db.query(models.DesiredJob).order_by(models.DesiredJob.DesiredJobID).all()
+        results = []
+        for d in items:
+            results.append({
+                "id": d.DesiredJobID,
+                "name": d.JobName,
+            })
+        return JSONResponse(content={"desiredjobs": results}, media_type="application/json; charset=utf-8")
+    except Exception as e:
+        logger.exception("get_desired_jobs failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
         raise HTTPException(status_code=500, detail="Internal Server Error")

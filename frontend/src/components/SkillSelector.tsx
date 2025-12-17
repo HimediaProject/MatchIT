@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { skillsApi } from '../services/apiService'
+import { skillsApi } from '../api/skills'
 
 type Props = {
   onChange?: (skills: string[]) => void
@@ -24,7 +24,6 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
   }, [open])
 
   useEffect(() => {
-    // debounce
     if (!query) {
       setSuggestions([])
       return
@@ -35,7 +34,7 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
         const res = await skillsApi.autocomplete(query)
         if (res && Array.isArray(res.skills)) setSuggestions(res.skills)
         else setSuggestions([])
-      } catch (e) {
+      } catch {
         setSuggestions([])
       }
     }, 250)
@@ -44,7 +43,7 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
     }
   }, [query])
 
-  function addSkill(skill: string) {
+  const addSkill = (skill: string) => {
     const trimmed = skill.trim()
     if (!trimmed) return
     if (selected.includes(trimmed)) return
@@ -54,7 +53,7 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
     setOpen(false)
   }
 
-  function removeSkill(skill: string) {
+  const removeSkill = (skill: string) => {
     setSelected((s) => s.filter((x) => x !== skill))
   }
 
@@ -82,7 +81,7 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
             onClick={() => setOpen(true)}
             className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary-300 hover:text-primary-700"
           >
-            +선택
+            + 스택 선택
           </button>
         )}
       </div>
@@ -101,7 +100,7 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
                 setOpen(false)
               }
             }}
-            placeholder="스킬 입력 (예: React, Python)"
+            placeholder="예: React, Python"
             className="w-full rounded-md border px-3 py-2 text-sm outline-none"
           />
 
@@ -118,7 +117,9 @@ const SkillSelector: React.FC<Props> = ({ onChange, initial = [] }) => {
               ))
             ) : (
               query && (
-                <div className="rounded px-2 py-1 text-sm text-slate-600">입력하신 '{query}'(으)로 추가하려면 Enter</div>
+                <div className="rounded px-2 py-1 text-sm text-slate-600">
+                  '{query}' 추가하려면 Enter
+                </div>
               )
             )}
           </div>
