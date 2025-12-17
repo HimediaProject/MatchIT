@@ -1,16 +1,17 @@
 from src.database import Base
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from sqlalchemy import (
     Column, Integer, String, Boolean, Date, DateTime, Text,
     ForeignKey, UniqueConstraint, CheckConstraint, Index, func
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
 # Base = declarative_base()
-
+KST = timezone(timedelta(hours = 9))
 
 # -------------------------------------------------------
 # CareerLevels
@@ -197,6 +198,7 @@ class JobPost(Base):
     CloseDate = Column("closedate", Date)
     ViewCount = Column("viewcount", Integer, default=0)
     Url = Column("url", String(500))
+    Embeded = Column('embeded', Vector(768), nullable = True)
     IsActive = Column("isactive", Boolean, default=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -236,9 +238,10 @@ class BootcampPost(Base):
     Qualification = Column("qualification", Text)
     Benefits = Column("benefits", Text)
     StartDate = Column("startdate", Date)
-    RegistrationDate = Column("registrationdate", Date)
+    RegistrationDate = Column("registrationdate", Date, default = lambda: datetime.now(KST))
     CloseDate = Column("closedate", Date)
     DetailUrl = Column("detailurl", String(500))
+    Embeded = Column('embeded', Vector(768), nullable = True)
     ViewCount = Column("viewcount", Integer, default=0)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
