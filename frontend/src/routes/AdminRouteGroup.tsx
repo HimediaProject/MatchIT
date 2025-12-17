@@ -4,6 +4,8 @@ import AdminDashboard from '../pages/admin/AdminDashboard'
 import AdminJobList from '../pages/admin/AdminJobList'
 import AdminUserList from '../pages/admin/AdminUserList'
 import AdminBootcamps from '../pages/admin/AdminBootcamps'
+import AdminBootcampEdit from '../pages/admin/AdminBootcampEdit'
+import AdminJobEdit from '../pages/admin/AdminJobEdit'
 
 /**
  * 관리자 전용 라우팅 그룹
@@ -26,8 +28,14 @@ export default function AdminRouteGroup() {
         {/* 채용 공고 관리 페이지 (/admin/jobposts) */}
         <Route path="jobposts" element={<AdminJobList />} />
 
+        {/* 채용 공고 수정 페이지 (/admin/jobposts/:jobId/edit) */}
+        <Route path="jobposts/:jobId/edit" element={<AdminJobEdit />} />
+
         {/* 부트캠프 관리 페이지 (/admin/bootcamps) */}
         <Route path="bootcamps" element={<AdminBootcamps />} />
+
+        {/* 부트캠프 수정 페이지 (/admin/bootcamps/:bootcampId/edit) */}
+        <Route path="bootcamps/:bootcampId/edit" element={<AdminBootcampEdit />} />
       </Route>
     </Routes>
   )
