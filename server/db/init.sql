@@ -257,3 +257,8 @@ CREATE TABLE UserSessions (
     ExpiresAt TIMESTAMP NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Role
+INSERT INTO Roles (RoleName) VALUES
+('user'),
+('admin');

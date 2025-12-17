@@ -36,12 +36,6 @@ def upgrade():
     # op.execute("SELECT setval(pg_get_serial_sequence('usernotificationsettings', 'usernotificationid'), 1, false);")
     
     # 2. 데이터 삽입
-    # Roles 테이블 더미 데이터
-    op.execute("""
-    INSERT INTO roles (rolename) VALUES
-    ('admin'),
-    ('user');
-    """)
 
     # CareerLevels 더미 데이터
     op.execute("""
