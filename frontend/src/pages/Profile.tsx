@@ -20,7 +20,7 @@ const ProfilePage = () => {
   type RecentViewItem = { postType?: 'Job' | 'Bootcamp'; targetId?: number; label: string }
 
   const [scraps, setScraps] = useState<ScrapItem[]>([])
-  const [recentViews, setRecentViews] = useState<RecentViewItem[]>([])
+  const [recentviews, setRecentViews] = useState<RecentViewItem[]>([])
   const navigate = useNavigate()
   const previewMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'true'
 
@@ -79,7 +79,7 @@ const ProfilePage = () => {
     const newRecentViews = [...recentViews]
     newRecentViews.splice(index, 1)
     setRecentViews(newRecentViews)
-    localStorage.setItem('recentViews', JSON.stringify(newRecentViews))
+    localStorage.setItem('recentviews', JSON.stringify(newRecentViews))
   }
 
   // 프로필 저장 함수
@@ -87,13 +87,13 @@ const ProfilePage = () => {
     setIsSaving(true)
     try {
       // 최근 열람 공고를 저장 전에 읽기
-      let recentViewsToSave: string[] = []
+      let recentviewsToSave: string[] = []
       try {
-        const raw = localStorage.getItem('recentViews')
+        const raw = localStorage.getItem('recentviews')
         if (raw) {
           const parsed = JSON.parse(raw)
           if (Array.isArray(parsed)) {
-            recentViewsToSave = parsed
+            recentviewsToSave = parsed
               .map((x: any) => {
                 if (typeof x === 'string') return String(x)
                 if (x && typeof x === 'object') return String(x.label ?? x.title ?? '')
@@ -114,7 +114,7 @@ const ProfilePage = () => {
         experience_range: selectedExperienceRangeId,
         skills: selectedStacks,
         desired_jobs: selectedInterests,
-        recentViews: recentViewsToSave,
+        recentviews: recentviewsToSave,
       }
 
       console.log('프로필 저장 요청:', profileData)
@@ -319,12 +319,12 @@ const ProfilePage = () => {
             if (Array.isArray(profileData.desired_jobs) && profileData.desired_jobs.length > 0) {
               setSelectedInterests(profileData.desired_jobs)
             }
-            if (Array.isArray(profileData.recentViews) && profileData.recentViews.length > 0) {
+            if (Array.isArray(profileData.recentviews) && profileData.recentviews.length > 0) {
               // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭해
               // 가능한 경우 postType/targetId를 보강하여 클릭 이동이 되게 처리
               let localNormalized: RecentViewItem[] = []
               try {
-                const raw = localStorage.getItem('recentViews')
+                const raw = localStorage.getItem('recentviews')
                 if (raw) {
                   const parsed = JSON.parse(raw)
                   const arr = Array.isArray(parsed) ? parsed : []
@@ -345,7 +345,7 @@ const ProfilePage = () => {
                 // ignore
               }
 
-              const merged = profileData.recentViews
+              const merged = profileData.recentviews
                 .slice(0, 5)
                 .map((x: any) => {
                   const label = String(x)
@@ -355,9 +355,9 @@ const ProfilePage = () => {
 
               setRecentViews(merged)
             } else {
-              // 서버에 recentViews가 없으면 로컬스토리지에서 불러와서 사용
+              // 서버에 recentviews가 없으면 로컬스토리지에서 불러와서 사용
               try {
-                const raw = localStorage.getItem('recentViews')
+                const raw = localStorage.getItem('recentviews')
                 if (raw) {
                   const parsed = JSON.parse(raw)
                   const arr = Array.isArray(parsed) ? parsed : []
@@ -532,7 +532,7 @@ const ProfilePage = () => {
 
               <div>
                 <p className="text-sm font-semibold text-slate-900">희망직무</p>
-                <div className="mt-3">
+                <div className="mt-3 relative">
                   <div className="flex flex-wrap gap-2">
                     {selectedInterests.map((job) => (
                       <span
@@ -560,7 +560,7 @@ const ProfilePage = () => {
 
                   {/* 검색창 UI 팝업 */}
                   {isJobSearchOpen && (
-                    <div className="absolute left-0 mt-3 w-full z-10 px-6">
+                    <div className="absolute inset-x-0 mt-3 w-full z-10">
                       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-slate-900/5">
                         {/* 검색 인풋 */}
                         <div className="relative mb-4">
@@ -649,7 +649,7 @@ const ProfilePage = () => {
 
               <div>
                 <p className="text-sm font-semibold text-slate-900">기술스택</p>
-                <div className="mt-3">
+                <div className="mt-3 relative">
                   <div className="flex flex-wrap gap-2">
                     {selectedStacks.map((stack) => (
                       <span
@@ -677,7 +677,7 @@ const ProfilePage = () => {
 
                   {/* 검색창 UI 팝업 */}
                   {isSkillSearchOpen && (
-                    <div className="absolute left-0 mt-3 w-full z-10 px-6">
+                    <div className="absolute inset-x-0 mt-3 w-full z-10">
                       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-slate-900/5">
                         {/* 검색 인풋 */}
                         <div className="relative mb-4">
@@ -777,7 +777,7 @@ const ProfilePage = () => {
           <section className="rounded-2xl border border-slate-100 bg-slate-50/70 p-6 shadow-soft">
             {/* 알림 영역: 채용 알림 / 맞춤형 정보 / 이벤트 소식 - 스크랩/최근열람과 동일한 카드 형식으로 노출 */}
             <div className="space-y-4">
-              <div>
+              <div className="hidden">
                 <h3 className="text-sm font-bold text-slate-900">알림 이력</h3>
                 {notifications.length === 0 ? (
                   <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">알림 이력이 없습니다.</div>
@@ -831,11 +831,11 @@ const ProfilePage = () => {
 
               <div>
                 <h3 className="text-sm font-bold text-slate-900">최근 열람 공고</h3>
-                {recentViews.length === 0 ? (
+                {recentviews.length === 0 ? (
                   <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">최근 열람한 공고가 없습니다.</div>
                 ) : (
                   <ul className="mt-2 space-y-2">
-                    {recentViews.map((r, i) => (
+                    {recentviews.map((r, i) => (
                       <li key={`${r.postType ?? 'unknown'}:${String(r.targetId ?? r.label)}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
                         <div className="flex items-start justify-between gap-3">
                           {r.postType && Number.isFinite(r.targetId) ? (

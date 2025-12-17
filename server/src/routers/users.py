@@ -5,7 +5,7 @@ from fastapi import APIRouter, \
                     status, \
                     HTTPException, \
                     Cookie
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional, Dict, Any, cast, Union
 from src.database import get_db
@@ -32,21 +32,65 @@ class ProfileOut(BaseModel):
     career_level: Optional[str] = None
     skills: List[str] = []
     desired_jobs: List[str] = []
-    recentViews: Optional[List[str]] = None
+    recentviews: Optional[List[str]] = None
 
     class Config:
         orm_mode = True
 
 
 class ProfileUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    career_level: Optional[Union[str, int]] = None
-    experience_range: Optional[Union[str, int]] = None
-    role_id: Optional[int] = None
-    skills: Optional[List[Union[str, int, Dict[str, Any]]]] = None
-    desired_jobs: Optional[List[Union[str, int, Dict[str, Any]]]] = None
-    recentViews: Optional[List[str]] = None
+    name: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=30,
+        example="홍길동",
+        description="사용자 이름 (2~30자)"
+    )
+    email: Optional[EmailStr] = Field(
+        None,
+        example="honggildong@example.com",
+        description="유효한 이메일 주소"
+    )
+    career_level: Optional[Union[str, int]] = Field(
+        None,
+        example="신입",
+        description="커리어 레벨 (예: 신입, 경력 또는 코드값)"
+    )
+    experience_range: Optional[Union[str, int]] = Field(
+    None,
+    examples=[
+        "1년 미만",
+        "3~5년",
+        "5년 이상",
+        0,
+        3
+    ],
+    description="경력 범위 (자연어 또는 코드값)"
+    )
+    role_id: Optional[int] = Field(
+        None,
+        ge=1,
+        example=2,
+        description="역할 ID (1 이상의 정수)"
+    )
+    skills: Optional[List[Union[str, int, Dict[str, Any]]]] = Field(
+        None,
+        example=[
+            "Python",
+            3,
+            {"skillid": 5, "skillname": "FastAPI"}
+        ],
+        description="보유 기술 목록"
+    )
+    desired_jobs: Optional[List[Union[str, int, Dict[str, Any]]]] = Field(
+        None,
+        example=[
+            "Backend Developer",
+            {"desiredjobid": 2, "jobname": "API Engineer"}
+        ],
+        description="희망 직무 목록"
+    )
+    recentviews: Optional[List[str]] = None
 
 class JobPostOut(BaseModel):
     id: int
@@ -75,6 +119,28 @@ class UserScrapGet(BaseModel):
 
     description:
         특정 유저가 스크랩한 항목(직무/부트캠프)의 목록을 조회.
+        filter를 통해, 직무 또는 부트캠프 별로 필터링.
+    '''
+    post_type: Optional[str] = None
+    job_post_id: Optional[int] = None
+    bootcamp_post_id: Optional[int] = None
+    job_post: Optional[JobPostOut] = None
+    bootcamp_post: Optional[BootcampPostOut] = None
+
+    class Config:
+        orm_mode = True
+
+class UserRecentViewsGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/recentviews
+
+    params:
+        post_type,
+        job_post_id, bootcamp_post_id
+
+    description:
+        특정 유저가 최근 열람한 항목(직무/부트캠프)의 목록을 조회.
         filter를 통해, 직무 또는 부트캠프 별로 필터링.
     '''
     post_type: Optional[str] = None
@@ -201,11 +267,11 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
     career_name = user.career_level.CareerName if user.career_level else None
     experience_name = user.experience_range.RangeName if getattr(user, 'experience_range', None) else None
 
-    recentViews = None
+    recentviews = None
     _rv = getattr(user, "RecentViews", None)
     if _rv:
         try:
-            recentViews = json.loads(_rv)
+            recentviews = json.loads(_rv)
         except Exception:
             pass
 
@@ -217,7 +283,7 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
         experience_range=experience_name,
         skills=user_skills,
         desired_jobs=user_desired_jobs,
-        recentViews=recentViews
+        recentviews=recentviews
     )
 
 
@@ -486,9 +552,9 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
         user.DesiredJobID = resolved_jobs[0].DesiredJobID if len(resolved_jobs) > 0 else None
 
     # 최근 열람(문자열 리스트) 저장
-    if data.recentViews is not None and hasattr(user, "RecentViews"):
+    if data.recentviews is not None and hasattr(user, "RecentViews"):
         try:
-            setattr(user, "RecentViews", json.dumps(list(data.recentViews), ensure_ascii=False))
+            setattr(user, "RecentViews", json.dumps(list(data.recentviews), ensure_ascii=False))
         except Exception:
             setattr(user, "RecentViews", None)
 
@@ -686,19 +752,6 @@ def read_notifications(user_id: int, db: Session = Depends(get_db)):
         )
         for n in notifications
     ]
-
-@router.post("/debug/recentviews")
-def debug_recent_views(db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.userid == 4).first()
-
-    user.recentviews = [1, 2, 3, 4]
-    db.commit()
-    db.refresh(user)
-
-    return {
-        "userid": user.userid,
-        "recentviews": user.recentviews
-    }
 
 if __name__ == "__main__":
     import uvicorn

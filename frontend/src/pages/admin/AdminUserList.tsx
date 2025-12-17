@@ -2,24 +2,11 @@ import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
 import { adminApi } from "../../api/admin";
 
-// API가 role을 문자열 혹은 객체(Name 등)로 내려줄 수 있으므로 소문자 문자열로 정규화
-const normalizeRole = (role: any): "user" | "admin" => {
-  if (typeof role === "string") {
-    return role.toLowerCase() === "admin" ? "admin" : "user";
-  }
-  if (role && typeof role === "object") {
-    const name =
-      role.Name || role.name || role.role || role.role_name || role.Role || "";
-    return String(name).toLowerCase() === "admin" ? "admin" : "user";
-  }
-  return "user";
-};
-
 interface AdminUser {
   userid: number;
   email: string;
   name?: string;
-  role: "user" | "admin";
+  role: number;  // 1 for user, 2 for admin
 }
 
 export default function AdminUserList() {
@@ -27,7 +14,8 @@ export default function AdminUserList() {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [newRole, setNewRole] = useState<"user" | "admin">("user");
+  const [newRole, setNewRole] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadUsers = async () => {
     try {
@@ -38,7 +26,7 @@ export default function AdminUserList() {
         userid: u.userid ?? u.user_id ?? u.id,
         email: u.email ?? u.Email ?? "",
         name: u.name ?? u.username ?? u.full_name ?? "",
-        role: normalizeRole(u.role),
+        role: typeof u.role === "number" ? u.role : 1,
       }));
       setUsers(normalized);
     } catch (error) {
@@ -89,12 +77,32 @@ export default function AdminUserList() {
     setShowRoleModal(true);
   };
 
+  const filteredUsers = users.filter(user =>
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">회원 관리</h1>
-        <p className="text-gray-600 mt-2">전체 사용자 조회 및 관리</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">회원 관리</h1>
+            <p className="text-gray-600 mt-2">전체 사용자 조회 및 관리</p>
+          </div>
+
+          <div className="mt-2">
+            <input
+              type="text"
+              placeholder="이름 또는 이메일로 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
       </div>
+
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -125,14 +133,14 @@ export default function AdminUserList() {
               </thead>
 
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      사용자가 없습니다.
+                      {searchTerm ? "검색 결과가 없습니다." : "사용자가 없습니다."}
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  filteredUsers.map((user) => (
                     <tr
                       key={user.userid}
                       className="border-b border-gray-200 hover:bg-gray-50"
@@ -149,12 +157,12 @@ export default function AdminUserList() {
                       <td className="px-6 py-4 text-sm">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            user.role === "admin"
+                            user.role === 2
                               ? "bg-red-100 text-red-800"
                               : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {user.role === "admin" ? "관리자" : "일반"}
+                          {user.role === 2 ? "관리자" : "일반"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
@@ -195,11 +203,11 @@ export default function AdminUserList() {
               </label>
               <select
                 value={newRole}
-                onChange={(e) => setNewRole(e.target.value as "user" | "admin")}
+                onChange={(e) => setNewRole(Number(e.target.value))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="user">일반 사용자</option>
-                <option value="admin">관리자</option>
+                <option value={1}>일반 사용자</option>
+                <option value={2}>관리자</option>
               </select>
             </div>
 
