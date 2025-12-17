@@ -1,20 +1,22 @@
 import AdminLayout from "./AdminLayout";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi } from "../../api/admin";
-
-interface Bootcamp {
-  bootcampid: number;
-  bootcampname: string;
-  description?: string;
-}
+import type { AdminBootcamp } from "../../types/bootcamp";
 
 export default function AdminBootcamps() {
-  const [bootcamps, setBootcamps] = useState<Bootcamp[]>([]);
+  const [bootcamps, setBootcamps] = useState<AdminBootcamp[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingBootcamp, setEditingBootcamp] = useState<Bootcamp | null>(null);
+  const [editingBootcamp, setEditingBootcamp] = useState<AdminBootcamp | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const [editedInstitution, setEditedInstitution] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // 페이지네이션 상태 (클라이언트 사이드)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 페이지당 항목 수
 
   const loadBootcamps = async () => {
     try {
@@ -32,6 +34,11 @@ export default function AdminBootcamps() {
     loadBootcamps();
   }, []);
 
+  // 검색어가 변경되면 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleDeleteBootcamp = async (bootcampId: number) => {
     if (!window.confirm("정말 이 부트캠프를 삭제하시겠습니까?")) return;
 
@@ -45,9 +52,10 @@ export default function AdminBootcamps() {
     }
   };
 
-  const handleOpenEditModal = (bootcamp: Bootcamp) => {
+  const handleOpenEditModal = (bootcamp: AdminBootcamp) => {
     setEditingBootcamp(bootcamp);
     setEditedName(bootcamp.bootcampname);
+    setEditedInstitution(bootcamp.institution || "");
     setEditedDescription(bootcamp.description || "");
     setShowEditModal(true);
   };
@@ -58,6 +66,7 @@ export default function AdminBootcamps() {
     try {
       await adminApi.updateBootcamp(editingBootcamp.bootcampid, {
         bootcampname: editedName,
+        institution: editedInstitution,
         description: editedDescription,
       });
 
@@ -67,6 +76,7 @@ export default function AdminBootcamps() {
             ? {
                 ...b,
                 bootcampname: editedName,
+                institution: editedInstitution,
                 description: editedDescription,
               }
             : b
@@ -80,11 +90,69 @@ export default function AdminBootcamps() {
     }
   };
 
+  const filteredBootcamps = bootcamps.filter((bootcamp) =>
+    bootcamp.bootcampname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bootcamp.institution && bootcamp.institution.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // 페이지네이션 계산 (클라이언트 사이드)
+  const total = filteredBootcamps.length;
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentBootcamps = filteredBootcamps.slice(startIndex, endIndex);
+
+  // 페이지 번호 생성 (Bootcamps.tsx와 동일한 로직)
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push(-1);
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push(-1);
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push(-1);
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push(-1);
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">부트캠프 관리</h1>
-        <p className="text-gray-600 mt-2">전체 부트캠프 조회, 수정, 삭제</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">부트캠프 관리</h1>
+            <p className="text-gray-600 mt-2">전체 부트캠프 조회, 수정, 삭제</p>
+          </div>
+
+          <div className="mt-2">
+            <input
+              type="text"
+              placeholder="부트캠프명 또는 기관명으로 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -101,10 +169,10 @@ export default function AdminBootcamps() {
                     ID
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
-                    이름
+                    제목
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
-                    설명
+                    기관명
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     작업
@@ -113,14 +181,14 @@ export default function AdminBootcamps() {
               </thead>
 
               <tbody>
-                {bootcamps.length === 0 ? (
+                {filteredBootcamps.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      부트캠프가 없습니다.
+                      {bootcamps.length === 0 ? "부트캠프가 없습니다." : "검색 결과가 없습니다."}
                     </td>
                   </tr>
                 ) : (
-                  bootcamps.map((bootcamp) => (
+                  currentBootcamps.map((bootcamp) => (
                     <tr
                       key={bootcamp.bootcampid}
                       className="border-b border-gray-200 hover:bg-gray-50"
@@ -129,12 +197,15 @@ export default function AdminBootcamps() {
                         {bootcamp.bootcampid}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {bootcamp.bootcampname}
+                        <Link
+                          to={`/bootcamps/${bootcamp.bootcampid}`}
+                          className="text-slate-900 hover:text-primary-600 transition-colors cursor-pointer"
+                        >
+                          {bootcamp.bootcampname}
+                        </Link>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {bootcamp.description
-                          ? bootcamp.description.substring(0, 50) + "..."
-                          : "-"}
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {bootcamp.institution || "-"}
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
                         <button
@@ -156,8 +227,52 @@ export default function AdminBootcamps() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
       )}
+
+        {/* 페이지네이션 */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              이전
+            </button>
+
+            {getPageNumbers().map((pageNum, idx) => {
+              if (pageNum === -1) {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`min-w-[40px] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    currentPage === pageNum
+                      ? 'border-primary-600 bg-primary-600 text-white'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            >
+              다음
+            </button>
+          </div>
+        )}
 
       {/* 수정 모달 */}
       {showEditModal && editingBootcamp && (
@@ -173,6 +288,18 @@ export default function AdminBootcamps() {
                 type="text"
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                기관명
+              </label>
+              <input
+                type="text"
+                value={editedInstitution}
+                onChange={(e) => setEditedInstitution(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

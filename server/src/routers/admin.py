@@ -43,6 +43,7 @@ class JobPostUpdate(BaseModel):
 class BootcampOut(BaseModel):
     bootcampid: int
     bootcampname: str
+    institution: Optional[str] = None
     description: Optional[str] = None
 
     class Config:
@@ -51,6 +52,7 @@ class BootcampOut(BaseModel):
 
 class BootcampUpdate(BaseModel):
     bootcampname: Optional[str] = None
+    institution: Optional[str] = None
     description: Optional[str] = None
 
 
@@ -268,6 +270,7 @@ def get_all_bootcamps(db: Session = Depends(get_db)):
             result.append({
                 "bootcampid": getattr(b, 'BootcampID', None),
                 "bootcampname": getattr(b, 'Title', '') or '',
+                "institution": getattr(b, 'InstituteName', '') or '',
                 "description": getattr(b, 'EducationContent', None) or getattr(b, 'Benefits', None) or '',
             })
         return result
@@ -289,6 +292,8 @@ def update_bootcamp(bootcamp_id: int, data: BootcampUpdate, db: Session = Depend
 
         if data.bootcampname is not None:
             bootcamp.Title = data.bootcampname
+        if data.institution is not None:
+            bootcamp.InstituteName = data.institution
         if data.description is not None:
             bootcamp.EducationContent = data.description
 
@@ -300,6 +305,7 @@ def update_bootcamp(bootcamp_id: int, data: BootcampUpdate, db: Session = Depend
         return {
             "bootcampid": bootcamp.BootcampID,
             "bootcampname": bootcamp.Title or '',
+            "institution": bootcamp.InstituteName or '',
             "description": bootcamp.EducationContent or bootcamp.Benefits or '',
         }
     except HTTPException:
