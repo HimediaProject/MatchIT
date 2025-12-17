@@ -411,17 +411,17 @@ const ProfilePage = () => {
                   .filter(Boolean) as ScrapItem[]
                 setScraps(scrapItems.slice(0, 5))
 
-                const notiRes = await usersApi.getNotifications(userId)
-                const mappedNoti = (notiRes || []).map((n: any, i: number) => ({
-                  id: Date.now() + i,
-                  category: n.notification_type || '맞춤형 정보',
-                  text: n.notification_type || '설정 알림',
-                  timestamp: n.notificationtime || '',
-                }))
-                setNotifications(mappedNoti.slice(0, 3))
+                // const notiRes = await usersApi.getNotifications(userId)
+                // const mappedNoti = (notiRes || []).map((n: any, i: number) => ({
+                //   id: Date.now() + i,
+                //   category: n.notification_type || '맞춤형 정보',
+                //   text: n.notification_type || '설정 알림',
+                //   timestamp: n.notificationtime || '',
+                // }))
+                // setNotifications(mappedNoti.slice(0, 3))
               }
             } catch (e) {
-              console.error('Failed to fetch scraps/notifications:', e)
+              console.error('Failed to fetch scraps:', e)
             }
           }
         } catch (e) {
