@@ -8,10 +8,6 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-<<<<<<< HEAD
-  },
-=======
     historyApiFallback: true,
   }
->>>>>>> ae4afd53f00d5287960daae91e036fff2c697340
 })
