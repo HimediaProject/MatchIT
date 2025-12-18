@@ -102,8 +102,6 @@ const BootcampsPage = () => {
   const [selectedFunding, setSelectedFunding] = useState<Set<Bootcamp['funding']>>(new Set())
   // const [selectedLevels, setSelectedLevels] = useState<Set<Bootcamp['level']>>(new Set())
 
-  // 마감된 공고 표시 여부
-  const [showExpired, setShowExpired] = useState(false)
 
   /**
    * 페이지네이션 상태
@@ -157,7 +155,6 @@ const BootcampsPage = () => {
         const response = await bootcampApi.getBootcamps({ 
           page: currentPage,          // 현제 페이지 번호전달
           size: itemsPerPage,         // 페이지당 항목 수 전달
-          show_expired: showExpired,  // 마감일 추가
           sort: sort,                 // 정렬 기준 추가
           online_offline: selectedModes.size > 0
             ? Array.from(selectedModes).map(m => m === '혼합' ? '혼합형': m)
@@ -188,7 +185,7 @@ const BootcampsPage = () => {
     }
 
     fetchBootcamps()
-  }, [currentPage, itemsPerPage, showExpired, sort, selectedModes, selectedFunding, selectedFields]) // ✅ sort가 바뀔 때마다 다시 호출
+  }, [currentPage, itemsPerPage, sort, selectedModes, selectedFunding, selectedFields]) // ✅ sort가 바뀔 때마다 다시 호출
 
   /**
    * ❌ 더 이상 사용 안함: 필터 옵션은 allFields, allModes, allFundings 사용
@@ -324,7 +321,6 @@ const BootcampsPage = () => {
     setSelectedFields(new Set())
     setSelectedModes(new Set())
     setSelectedFunding(new Set())
-    setShowExpired(false)
     setCurrentPage(1)
   }
 
@@ -508,21 +504,6 @@ const BootcampsPage = () => {
                       {fund}
                     </label>
                   ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">마감 공고</h3>
-                <div className="mt-3 space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={showExpired}
-                      onChange={(e) => setShowExpired(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    마감된 공고 보기
-                  </label>
                 </div>
               </div>
 

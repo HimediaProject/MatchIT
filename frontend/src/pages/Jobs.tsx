@@ -340,12 +340,14 @@ const JobsPage = () => {
                       {exp}
                     </label>
                   ))}
-                  <button
-                    onClick={resetAllFilters}
-                    className="mt-2 text-xs font-semibold text-primary-700 underline"
-                  >
-                    필터 전체 초기화
-                  </button>
+                  <div>
+                    <button
+                      onClick={resetAllFilters}
+                      className="mt-2 text-xs font-semibold text-primary-700 underline"
+                    >
+                      필터 전체 초기화
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
