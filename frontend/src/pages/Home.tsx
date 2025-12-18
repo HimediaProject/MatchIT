@@ -322,17 +322,22 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(45,109,255,0.08),transparent_30%),radial-gradient(circle_at_80%_10%,rgba(245,159,0,0.08),transparent_20%)]" />
         <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-16 md:px-6 lg:grid-cols-2 lg:py-20">
           <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700">
-              내 스택 기반 AI 추천
-            </div>
-            <div className="space-y-6 max-w-20xl">
-              <h1 className="text-3xl font-bold leading-relaxed text-slate-900 sm:text-4xl lg:text-5xl">
-                내 스택에 완벽하게 맞춘 <br /> 채용과 부트캠프 매칭 플랫폼
+            <div className="space-y-6 max-w-4xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700">
+                내 스택 기반 AI 추천
+              </div>
+              
+              <h1 className="text-2xl font-bold leading-relaxed text-slate-900 sm:text-3xl lg:text-4xl -mt-6">
+                내 스택에 완벽하게 맞춘 <br />
+                채용과 부트캠프 매칭 플랫폼
               </h1>
-              <p className="max-w-2xl text-xl text-slate-600">
-                기술 스택과 커리어 단계를 입력하면 나에게 꼭 맞는 성장 기회를 추천받을 수 있습니다. 지금 바로 시작해보세요.
+              
+              <p className="max-w-2xl text-base text-slate-600">
+                기술 스택과 커리어 단계를 입력하면 나에게 꼭 맞는 성장 기회를 추천받을 수 있습니다. 
+                지금 바로 시작해보세요.
               </p>
             </div>
+
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
@@ -471,7 +476,7 @@ const HomePage = () => {
 
                 // 커리어 레벨 1 사용자는 기술 스택이 필수
                 if (isCareerLevelOne && selectedStacks.length === 0) {
-                  window.alert('커리어 레벨 1은 기술 스택 키워드를 최소 1개 입력해주세요.')
+                  window.alert('기술 스택 키워드를 최소 1개 입력해주세요.')
                   return
                 }
                 
