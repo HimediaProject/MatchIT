@@ -69,10 +69,8 @@ class User(Base):
     RoleID = Column("roleid", Integer, ForeignKey("roles.roleid"), default=1)
     CareerLevelID = Column("careerlevelid", Integer, ForeignKey("careerlevels.careerlevelid"))
     RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
-    # ExperienceRangeID = Column("experiencerangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    DesiredJobID = Column("desiredjobid", Integer, ForeignKey("desiredjobs.desiredjobid"))
     RecentViews = Column("recentviews", Text)
 
     role = relationship("Role", back_populates="users")

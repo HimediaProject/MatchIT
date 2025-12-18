@@ -233,14 +233,10 @@ const ProfilePage = () => {
         // 응답 데이터 정규화
         const careerList = Array.isArray(cls) ? cls : (cls?.careerlevels || [])
         const expList = Array.isArray(ers) ? ers : (ers?.experienceranges || [])
-        const jobList = Array.isArray(jobs) ? jobs : (jobs?.desiredjobs || [])
 
         setCareerLevels(careerList)
         setExperienceRanges(expList)
         
-        // 희망직무를 name만 추출하여 배열로 설정
-        const jobNames = jobList.map((j: any) => j.name || j.JobName || '')
-        setAllWantedJobs(jobNames)
 
         if (careerList.length > 0 && selectedCareerLevelId === null) {
           const firstId = careerList[0]?.id ?? careerList[0]?.CareerLevelID ?? null

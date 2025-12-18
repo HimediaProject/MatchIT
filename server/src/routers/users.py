@@ -550,8 +550,6 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
         for job in resolved_jobs:
             user.desired_jobs.append(job)
 
-        user.DesiredJobID = resolved_jobs[0].DesiredJobID if len(resolved_jobs) > 0 else None
-
     # 최근 열람(문자열 리스트) 저장
     if data.recentviews is not None and hasattr(user, "RecentViews"):
         try:

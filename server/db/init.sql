@@ -45,7 +45,6 @@ CREATE TABLE Users (
     RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
     RangeID INT,
-    DesiredJobID INT,
     RecentViews TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
