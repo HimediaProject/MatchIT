@@ -121,8 +121,14 @@ export default function AdminBootcamps() {
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto admin-table">
             <table className="w-full">
+              <colgroup>
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '60%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">

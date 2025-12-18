@@ -158,8 +158,15 @@ export default function AdminUserList() {
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto admin-table">
             <table className="w-full">
+              <colgroup>
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '20%' }} />
+              </colgroup>
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">

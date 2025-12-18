@@ -30,3 +30,14 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Admin tables: fixed column widths and truncation to keep layouts consistent */
+.admin-table table {
+  table-layout: fixed;
+}
+.admin-table th,
+.admin-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
