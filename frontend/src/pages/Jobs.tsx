@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCategories, fetchJobList, fetchSkills, type JobPost } from '../api/jobposts'
 import { SortOption } from '../api/sortoption'
+import { usersApi } from '../api/users'
 
 const experienceFilters = ['신입', '1~3년', '3~5년', '5년 이상']
 
@@ -27,6 +28,8 @@ const JobsPage = () => {
   }
 
   const [compareList, setCompareList] = useState<JobPost[]>(getInitialCompare)
+  const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set())
+  const [scrapLoadingIds, setScrapLoadingIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     try {
@@ -156,6 +159,58 @@ const JobsPage = () => {
       }
       return [...prev, job]
     })
+  }
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const scraps = await usersApi.getMyScraps()
+        if (!Array.isArray(scraps)) return
+        const ids = new Set<number>()
+        scraps.forEach((s: any) => {
+          if (s?.post_type === 'Job' && s?.job_post_id) ids.add(Number(s.job_post_id))
+        })
+        if (mounted) setScrappedIds(ids)
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const toggleScrapForJob = async (jobId: number) => {
+    if (scrapLoadingIds.has(jobId)) return
+    setScrapLoadingIds((prev) => new Set(prev).add(jobId))
+    try {
+      if (scrappedIds.has(jobId)) {
+        await usersApi.removeMyScrap('Job', jobId)
+        setScrappedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(jobId)
+          return next
+        })
+      } else {
+        await usersApi.addMyScrap('Job', jobId)
+        setScrappedIds((prev) => new Set(prev).add(jobId))
+      }
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        window.alert('스크랩 처리에 실패했습니다.')
+      }
+    } finally {
+      setScrapLoadingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(jobId)
+        return next
+      })
+    }
   }
 
   const removeFromCompare = (id: number) => {
@@ -354,6 +409,18 @@ const JobsPage = () => {
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleScrapForJob(job.PostID)
+                      }}
+                      disabled={scrapLoadingIds.has(job.PostID)}
+                      className={`flex h-9 w-9 items-center justify-center rounded-md border transition ${scrappedIds.has(job.PostID) ? 'border-primary-200 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                      aria-label="스크랩"
+                    >
+                      <svg className="h-4 w-4" fill={scrappedIds.has(job.PostID) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                    </button>
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

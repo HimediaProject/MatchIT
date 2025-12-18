@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { SortOption } from '../api/sortoption'
 import { bootcampApi, type BootcampItem } from '../api/bootcamp'
 import { useNavigate } from 'react-router-dom'
+import { usersApi } from '../api/users'
 
 type Bootcamp = {
   id: string
@@ -229,6 +230,8 @@ const BootcampsPage = () => {
   }
 
   const [compareList, setCompareList] = useState<Bootcamp[]>(getInitialCompare)
+  const [scrappedIds, setScrappedIds] = useState<Set<string>>(new Set())
+  const [scrapLoadingIds, setScrapLoadingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     try {
@@ -250,6 +253,59 @@ const BootcampsPage = () => {
       }
       return [...prev, boot]
     })
+  }
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const res = await usersApi.getMyScraps()
+        if (!Array.isArray(res)) return
+        const ids = new Set<string>()
+        res.forEach((s: any) => {
+          if (s?.post_type === 'Bootcamp' && s?.bootcamp_post_id) ids.add(String(s.bootcamp_post_id))
+        })
+        if (mounted) setScrappedIds(ids)
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const toggleScrapForBootcamp = async (bootId: string) => {
+    if (scrapLoadingIds.has(bootId)) return
+    setScrapLoadingIds((p) => new Set(p).add(bootId))
+    const idNum = Number(bootId)
+    try {
+      if (scrappedIds.has(bootId)) {
+        await usersApi.removeMyScrap('Bootcamp', idNum)
+        setScrappedIds((p) => {
+          const next = new Set(p)
+          next.delete(bootId)
+          return next
+        })
+      } else {
+        await usersApi.addMyScrap('Bootcamp', idNum)
+        setScrappedIds((p) => new Set(p).add(bootId))
+      }
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e)
+      if (msg.includes('401') || msg.includes('403')) {
+        if (window.confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+          navigate('/login')
+        }
+      } else {
+        window.alert('스크랩 처리에 실패했습니다.')
+      }
+    } finally {
+      setScrapLoadingIds((p) => {
+        const next = new Set(p)
+        next.delete(bootId)
+        return next
+      })
+    }
   }
 
   const removeFromCompare = (id: string) => setCompareList((prev) => prev.filter((b) => b.id !== id))
@@ -533,6 +589,18 @@ const BootcampsPage = () => {
                     )}
                   </div>
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleScrapForBootcamp(boot.id)
+                      }}
+                      disabled={scrapLoadingIds.has(boot.id)}
+                      className={`flex h-9 w-9 items-center justify-center rounded-md border transition ${scrappedIds.has(boot.id) ? 'border-primary-200 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                      aria-label="스크랩"
+                    >
+                      <svg className="h-4 w-4" fill={scrappedIds.has(boot.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                    </button>
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
