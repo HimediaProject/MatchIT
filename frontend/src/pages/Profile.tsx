@@ -72,37 +72,52 @@ const ProfilePage = () => {
     setScraps(newScraps)
   }
 
-  // 최근 열람 삭제 핸들러
-  const handleDeleteRecentView = (index: number) => {
+  // 최근 열람 삭제 핸들러 (항목 객체으로 삭제)
+  const handleDeleteRecentView = (item: RecentViewItem) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
 
-    const newRecentViews = [...recentviews]
-    newRecentViews.splice(index, 1)
+    const newRecentViews = recentviews.filter((r) => {
+      // 동일 항목(가능하면 postType + targetId + label)만 제거
+      const samePostType = (r.postType ?? '') === (item.postType ?? '')
+      const sameTarget = Number(r.targetId) === Number(item.targetId)
+      const sameLabel = String(r.label) === String(item.label)
+      return !(samePostType && (sameTarget || sameLabel))
+    })
+
     setRecentViews(newRecentViews)
-    localStorage.setItem('recentviews', JSON.stringify(newRecentViews))
+    try {
+      localStorage.setItem('recentviews', JSON.stringify(newRecentViews))
+    } catch (e) {
+      // ignore
+    }
   }
 
   // 프로필 저장 함수
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
-      // 최근 열람 공고를 저장 전에 읽기
+      // 최근 열람 공고를 현재 상태값에서 읽어서 저장 (타입별로 최대 50건)
       let recentviewsToSave: string[] = []
       try {
-        const raw = localStorage.getItem('recentviews')
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) {
-            recentviewsToSave = parsed
-              .map((x: any) => {
-                if (typeof x === 'string') return String(x)
-                if (x && typeof x === 'object') return String(x.label ?? x.title ?? '')
-                return ''
-              })
-              .filter(Boolean)
-              .slice(0, 5)
-          }
-        }
+        const jobLabels = recentviews
+          .filter((r) => r.postType === 'Job')
+          .map((r) => formatRecentLabel(r.label))
+          .filter(Boolean)
+          .slice(0, 50)
+
+        const bootLabels = recentviews
+          .filter((r) => r.postType === 'Bootcamp')
+          .map((r) => formatRecentLabel(r.label))
+          .filter(Boolean)
+          .slice(0, 50)
+
+        const others = recentviews
+          .filter((r) => !r.postType)
+          .map((r) => formatRecentLabel(r.label))
+          .filter(Boolean)
+          .slice(0, 50)
+
+        recentviewsToSave = [...jobLabels, ...bootLabels, ...others]
       } catch (e) {
         // ignore
       }
@@ -320,8 +335,7 @@ const ProfilePage = () => {
               setSelectedInterests(profileData.desired_jobs)
             }
             if (Array.isArray(profileData.recentviews) && profileData.recentviews.length > 0) {
-              // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭해
-              // 가능한 경우 postType/targetId를 보강하여 클릭 이동이 되게 처리
+              // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭
               let localNormalized: RecentViewItem[] = []
               try {
                 const raw = localStorage.getItem('recentviews')
@@ -345,17 +359,30 @@ const ProfilePage = () => {
                 // ignore
               }
 
-              const merged = profileData.recentviews
-                .slice(0, 5)
+              const mergedAll = profileData.recentviews
                 .map((x: any) => {
-                  const label = String(x)
-                  const found = localNormalized.find((y) => y.label === label && y.postType && Number.isFinite(y.targetId))
-                  return found ? found : { label }
+                  const raw = String(x)
+                  const stripped = formatRecentLabel(raw)
+                  const found = localNormalized.find((y) => (y.label === raw || y.label === stripped) && y.postType && Number.isFinite(y.targetId))
+                  if (found) return found
+
+                  // Detect bracket prefixes emitted by server (e.g. "[채용] Title" / "[부트캠프] Title")
+                  const isJobPref = /^\s*\[(?:채용|Job)\]/i.test(raw)
+                  const isBootPref = /^\s*\[(?:부트캠프|Bootcamp)\]/i.test(raw)
+                  if (isJobPref) return { postType: 'Job', label: stripped }
+                  if (isBootPref) return { postType: 'Bootcamp', label: stripped }
+
+                  return { label: stripped }
                 })
 
-              setRecentViews(merged)
+              // 타입별로 최대 50건씩 제한 (postType이 지정된 항목은 해당 섹션으로)
+              const jobItems = mergedAll.filter((m) => m.postType === 'Job').slice(0, 50)
+              const bootItems = mergedAll.filter((m) => m.postType === 'Bootcamp').slice(0, 50)
+              const others = mergedAll.filter((m) => !m.postType).slice(0, 50)
+
+              setRecentViews([...jobItems, ...bootItems, ...others])
             } else {
-              // 서버에 recentviews가 없으면 로컬스토리지에서 불러와서 사용
+              // 서버에 recentviews가 없으면 로컬스토리지에서 불러와서 사용 (타입별 최대 50건)
               try {
                 const raw = localStorage.getItem('recentviews')
                 if (raw) {
@@ -373,7 +400,12 @@ const ProfilePage = () => {
                       return null
                     })
                     .filter(Boolean) as RecentViewItem[]
-                  if (normalized.length > 0) setRecentViews(normalized.slice(0, 5))
+
+                  const jobItems = normalized.filter((m) => m.postType === 'Job' && Number.isFinite(m.targetId)).slice(0, 50)
+                  const bootItems = normalized.filter((m) => m.postType === 'Bootcamp' && Number.isFinite(m.targetId)).slice(0, 50)
+                  const others = normalized.filter((m) => !(m.postType === 'Job' && Number.isFinite(m.targetId)) && !(m.postType === 'Bootcamp' && Number.isFinite(m.targetId))).slice(0, 50)
+
+                  if (normalized.length > 0) setRecentViews([...jobItems, ...bootItems, ...others])
                 }
               } catch (e) {
                 // ignore
@@ -443,6 +475,14 @@ const ProfilePage = () => {
 
   const jobScraps = scraps.filter((s) => s.postType === 'Job')
   const bootcampScraps = scraps.filter((s) => s.postType === 'Bootcamp')
+  const jobRecentViews = recentviews.filter((r) => r.postType === 'Job')
+  const bootcampRecentViews = recentviews.filter((r) => r.postType === 'Bootcamp')
+
+  const formatRecentLabel = (label?: string) => {
+    if (!label) return ''
+    // Remove leading bracketed prefixes like [채용], [부트캠프], [Job], [Bootcamp]
+    return String(label).replace(/^\s*\[(?:채용|부트캠프|Job|Bootcamp)\]\s*/i, '')
+  }
 
   return (
     <div className="bg-white">
@@ -895,44 +935,105 @@ const ProfilePage = () => {
 
               <div>
                 <h3 className="text-sm font-bold text-slate-900">최근 열람 공고</h3>
-                {recentviews.length === 0 ? (
-                  <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">최근 열람한 공고가 없습니다.</div>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {recentviews.map((r, i) => (
-                      <li key={`${r.postType ?? 'unknown'}:${String(r.targetId ?? r.label)}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
-                        <div className="flex items-start justify-between gap-3">
-                          {r.postType && Number.isFinite(r.targetId) ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const url = r.postType === 'Job' ? `/jobs/${r.targetId}` : `/bootcamps/${r.targetId}`
-                                window.open(url, '_blank', 'noopener,noreferrer')
-                              }}
-                              className="flex-1 text-left"
-                            >
-                              {r.label}
-                            </button>
-                          ) : (
-                            <div className="flex-1">{r.label}</div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteRecentView(i)
-                            }}
-                            className="shrink-0 text-slate-400 hover:text-red-500"
-                            aria-label="최근 열람 삭제"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="mt-2 grid gap-4">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-slate-700">채용공고</h4>
+                      <button
+                        onClick={() => navigate('/recentviews?type=Job')}
+                        className="text-sm text-primary-600 hover:underline"
+                      >
+                        더보기
+                      </button>
+                    </div>
+                    {jobRecentViews.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">채용공고 최근 열람이 없습니다.</div>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {jobRecentViews.slice(0, 2).map((r, i) => (
+                          <li key={`rjob:${String(r.targetId ?? r.label)}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                            <div className="flex items-start justify-between gap-3">
+                              {r.postType && Number.isFinite(r.targetId) ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    window.open(`/jobs/${r.targetId}`, '_blank', 'noopener,noreferrer')
+                                  }}
+                                  className="flex-1 text-left"
+                                >
+                                  {formatRecentLabel(r.label)}
+                                </button>
+                              ) : (
+                                <div className="flex-1">{formatRecentLabel(r.label)}</div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRecentView(r)
+                                }}
+                                className="shrink-0 text-slate-400 hover:text-red-500"
+                                aria-label="최근 열람 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-slate-700">부트캠프</h4>
+                      <button
+                        onClick={() => navigate('/recentviews?type=Bootcamp')}
+                        className="text-sm text-primary-600 hover:underline"
+                      >
+                        더보기
+                      </button>
+                    </div>
+                    {bootcampRecentViews.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">부트캠프 최근 열람이 없습니다.</div>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {bootcampRecentViews.slice(0, 2).map((r, i) => (
+                          <li key={`rboot:${String(r.targetId ?? r.label)}:${i}`} className="rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-800">
+                            <div className="flex items-start justify-between gap-3">
+                              {r.postType && Number.isFinite(r.targetId) ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    window.open(`/bootcamps/${r.targetId}`, '_blank', 'noopener,noreferrer')
+                                  }}
+                                  className="flex-1 text-left"
+                                >
+                                  {formatRecentLabel(r.label)}
+                                </button>
+                              ) : (
+                                <div className="flex-1">{formatRecentLabel(r.label)}</div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRecentView(r)
+                                }}
+                                className="shrink-0 text-slate-400 hover:text-red-500"
+                                aria-label="최근 열람 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </section>

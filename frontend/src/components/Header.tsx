@@ -134,7 +134,7 @@ const Header = () => {
                 ].join(' ')
               }
             >
-              🔧 관리자
+              관리자
             </NavLink>
           )}
         </nav>
