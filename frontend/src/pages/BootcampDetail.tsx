@@ -126,42 +126,10 @@ const BootcampDetailPage = () => {
     if (!bootcamp?.Title) return
     const numericId = Number(id)
     if (!Number.isFinite(numericId)) return
-    const label = `[부트캠프] ${bootcamp.Title}`
-    try {
-      const raw = localStorage.getItem('recentviews')
-      const arr = raw ? JSON.parse(raw) : []
-      const current = Array.isArray(arr) ? arr : []
-
-      const normalized = current
-        .map((x: any) => {
-          if (typeof x === 'string') return { label: String(x) }
-          if (x && typeof x === 'object') {
-            const postType = String(x.postType ?? x.type ?? '')
-            const targetId = Number(x.targetId ?? x.id)
-            const lbl = String(x.label ?? x.title ?? '')
-            return { postType, targetId, label: lbl }
-          }
-          return null
-        })
-        .filter(Boolean) as Array<{ postType?: string; targetId?: number; label: string }>;
-
-      const item = { postType: 'Bootcamp', targetId: numericId, label }
-      const next = [
-        item,
-        ...normalized.filter((x) => !(x?.postType === 'Bootcamp' && Number(x?.targetId) === numericId) && x.label !== label),
-      ].slice(0, 5)
-      if (numericId > 0) {
-        localStorage.setItem('recentviews', JSON.stringify(next))
-      }
-    } catch {
-      try {
-        if (numericId > 0) {
-          localStorage.setItem('recentviews', JSON.stringify([{ postType: 'Bootcamp', targetId: numericId, label }]))
-        }
-      } catch {
-        // ignore
-      }
-    }
+    if (numericId <= 0) return
+    void usersApi.addMyRecentView('Bootcamp', numericId).catch(() => {
+      // ignore
+    })
   }, [bootcamp?.Title, id])
 
   useEffect(() => {

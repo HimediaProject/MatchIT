@@ -71,7 +71,6 @@ class User(Base):
     RangeID = Column("rangeid", Integer, ForeignKey("experienceranges.rangeid"), nullable=True)
     CreatedAt = Column("createdat", DateTime(timezone=True), server_default=func.now())
     UpdatedAt = Column("updatedat", DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    RecentViews = Column("recentviews", Text)
 
     role = relationship("Role", back_populates="users")
     career_level = relationship("CareerLevel", back_populates="users")
@@ -80,6 +79,7 @@ class User(Base):
     skills = relationship("Skill", secondary="userskills", back_populates="users")
     notifications = relationship("UserNotificationSetting", back_populates="user")
     scraps = relationship("UserScrap", back_populates="user")
+    recentviews = relationship("UserRecentView", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
     desired_jobs = relationship("DesiredJob", secondary="userdesiredjobs", back_populates="users")
 
@@ -228,6 +228,7 @@ class JobPost(Base):
     job_category = relationship("JobCategory", back_populates="job_posts")
     skills = relationship("Skill", secondary="jobpostskills", back_populates="job_posts")
     scraps = relationship("UserScrap", back_populates="job_post")
+    recentviews = relationship("UserRecentView", back_populates="job_post")
 
 
 class JobPostSkill(Base):
@@ -269,6 +270,7 @@ class BootcampPost(Base):
 
     job_category = relationship("JobCategory", back_populates="bootcamp_posts")
     scraps = relationship("UserScrap", back_populates="bootcamp_post")
+    recentviews = relationship("UserRecentView", back_populates="bootcamp_post")
 
 
 # -------------------------------------------------------
@@ -300,6 +302,37 @@ class UserScrap(Base):
     user = relationship("User", back_populates="scraps")
     job_post = relationship("JobPost", back_populates="scraps")
     bootcamp_post = relationship("BootcampPost", back_populates="scraps")
+
+
+# -------------------------------------------------------
+# UserRecentViews
+# -------------------------------------------------------
+class UserRecentView(Base):
+    __tablename__ = "userrecentviews"
+
+    RecentViewID = Column("recentviewid", Integer, primary_key=True, autoincrement=True)
+    UserID = Column("userid", Integer, ForeignKey("users.userid"), nullable=False)
+    PostType = Column("posttype", String(20), nullable=False)
+    JobPostID = Column("jobpostid", Integer, ForeignKey("jobposts.postid"))
+    BootcampPostID = Column("bootcamppostid", Integer, ForeignKey("bootcampposts.bootcampid"))
+    RecentViewedAt = Column("recentviewedat", DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint(
+            "(PostType = 'Job' AND JobPostID IS NOT NULL AND BootcampPostID IS NULL) "
+            "OR (PostType = 'Bootcamp' AND BootcampPostID IS NOT NULL AND JobPostID IS NULL)",
+            name="chk_userrecentviews_only_one_ref"
+        ),
+        CheckConstraint("PostType IN ('Job','Bootcamp')"),
+          Index("uq_userrecentviews_job", UserID, JobPostID, unique=True,
+              postgresql_where=(PostType == 'Job')),
+          Index("uq_userrecentviews_bootcamp", UserID, BootcampPostID, unique=True,
+              postgresql_where=(PostType == 'Bootcamp')),
+    )
+
+    user = relationship("User", back_populates="recentviews")
+    job_post = relationship("JobPost", back_populates="recentviews")
+    bootcamp_post = relationship("BootcampPost", back_populates="recentviews")
 
 
 # -------------------------------------------------------

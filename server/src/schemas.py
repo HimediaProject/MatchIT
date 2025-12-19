@@ -142,6 +142,21 @@ class UserScrapPost(BaseModel):
     post_type: Post_type
     target_id: int
 
+class UserRecentViewPost(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/recentviews
+
+    params:
+        post_type(Job, Bootcamp),
+        target_id
+
+    description:
+        특정 유저의 최근 열람 목록에 새로운 항목을 추가합니다.
+    '''
+    post_type: Post_type
+    target_id: int
+
 class JobPost(BaseModel):
     '''
     endpoint:
@@ -503,6 +518,23 @@ class UserScrapGet(BaseModel):
 
     description:
         특정 유저가 스크랩한 항목(직무/부트캠프)의 목록을 조회.
+        filter를 통해, 직무 또는 부트캠프 별로 필터링.
+    '''
+    post_type: Optional[Post_type] = None
+    job_post_id: Optional[int] = None
+    bootcamp_post_id: Optional[int] = None
+
+class UserRecentViewGet(BaseModel):
+    '''
+    endpoint:
+        /users/{user_id}/recentviews
+
+    params:
+        post_type,
+        job_post_id, bootcamp_post_id
+
+    description:
+        특정 유저가 최근 열람한 항목(직무/부트캠프)의 목록을 조회.
         filter를 통해, 직무 또는 부트캠프 별로 필터링.
     '''
     post_type: Optional[Post_type] = None

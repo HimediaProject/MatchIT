@@ -61,6 +61,37 @@ export const usersApi = {
     return res.json()
   },
 
+  async getMyRecentViews() {
+    const url = `${API_BASE_URL}/users/me/recentviews`
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error(`Get my recentviews failed: ${res.status}`)
+    return res.json()
+  },
+
+  async addMyRecentView(postType: 'Job' | 'Bootcamp', targetId: number) {
+    const url = `${API_BASE_URL}/users/me/recentviews`
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ post_type: postType, target_id: targetId }),
+    })
+    if (!res.ok) throw new Error(`Add recentview failed: ${res.status}`)
+    return res.json()
+  },
+
+  async removeMyRecentView(postType: 'Job' | 'Bootcamp', targetId: number) {
+    const url = `${API_BASE_URL}/users/me/recentviews`
+    const res = await fetch(url, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ post_type: postType, target_id: targetId }),
+    })
+    if (!res.ok) throw new Error(`Remove recentview failed: ${res.status}`)
+    return res.json()
+  },
+
   async getNotifications(userId: number) {
     const url = `${API_BASE_URL}/users/${userId}/notifications`
     const res = await fetch(url, { credentials: 'include' })

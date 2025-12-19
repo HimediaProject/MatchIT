@@ -72,6 +72,7 @@ const ProfilePage = () => {
     setScraps(newScraps)
   }
 
+<<<<<<< HEAD
   // 최근 열람 삭제 핸들러 (항목 객체으로 삭제)
   const handleDeleteRecentView = (item: RecentViewItem) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
@@ -90,38 +91,32 @@ const ProfilePage = () => {
     } catch (e) {
       // ignore
     }
+=======
+  // 최근 열람 삭제 핸들러
+  const handleDeleteRecentView = async (index: number) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return
+
+    const target = recentviews[index]
+    if (!target || !target.postType || !Number.isFinite(target.targetId)) return
+
+    try {
+      await usersApi.removeMyRecentView(target.postType, Number(target.targetId))
+    } catch (e) {
+      console.error('최근 열람 삭제 실패:', e)
+      alert('최근 열람 삭제에 실패했습니다.')
+      return
+    }
+
+    const next = [...recentviews]
+    next.splice(index, 1)
+    setRecentViews(next)
+>>>>>>> 1e69241 (user 테이블 정리, recentview 테이블 생성 및 적용함)
   }
 
   // 프로필 저장 함수
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
-      // 최근 열람 공고를 현재 상태값에서 읽어서 저장 (타입별로 최대 50건)
-      let recentviewsToSave: string[] = []
-      try {
-        const jobLabels = recentviews
-          .filter((r) => r.postType === 'Job')
-          .map((r) => formatRecentLabel(r.label))
-          .filter(Boolean)
-          .slice(0, 50)
-
-        const bootLabels = recentviews
-          .filter((r) => r.postType === 'Bootcamp')
-          .map((r) => formatRecentLabel(r.label))
-          .filter(Boolean)
-          .slice(0, 50)
-
-        const others = recentviews
-          .filter((r) => !r.postType)
-          .map((r) => formatRecentLabel(r.label))
-          .filter(Boolean)
-          .slice(0, 50)
-
-        recentviewsToSave = [...jobLabels, ...bootLabels, ...others]
-      } catch (e) {
-        // ignore
-      }
-
       const profileData = {
         name,
         email,
@@ -129,7 +124,6 @@ const ProfilePage = () => {
         experience_range: selectedExperienceRangeId,
         skills: selectedStacks,
         desired_jobs: selectedInterests,
-        recentviews: recentviewsToSave,
       }
 
       console.log('프로필 저장 요청:', profileData)
@@ -330,6 +324,7 @@ const ProfilePage = () => {
             if (Array.isArray(profileData.desired_jobs) && profileData.desired_jobs.length > 0) {
               setSelectedInterests(profileData.desired_jobs)
             }
+<<<<<<< HEAD
             if (Array.isArray(profileData.recentviews) && profileData.recentviews.length > 0) {
               // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭
               let localNormalized: RecentViewItem[] = []
@@ -406,6 +401,31 @@ const ProfilePage = () => {
               } catch (e) {
                 // ignore
               }
+=======
+            try {
+              const recentRes: any[] = await usersApi.getMyRecentViews()
+              const recentItems = (recentRes || [])
+                .map((r: any) => {
+                  const postType = String(r?.post_type ?? r?.postType ?? '')
+                  if (postType === 'Job') {
+                    const targetId = Number(r?.job_post_id ?? r?.jobPostId)
+                    const label = String(r?.job_post?.title ?? r?.job_post?.Title ?? '')
+                    if (!Number.isFinite(targetId) || !label) return null
+                    return { postType: 'Job' as const, targetId, label }
+                  }
+                  if (postType === 'Bootcamp') {
+                    const targetId = Number(r?.bootcamp_post_id ?? r?.bootcampPostId)
+                    const label = String(r?.bootcamp_post?.title ?? r?.bootcamp_post?.Title ?? '')
+                    if (!Number.isFinite(targetId) || !label) return null
+                    return { postType: 'Bootcamp' as const, targetId, label }
+                  }
+                  return null
+                })
+                .filter(Boolean) as RecentViewItem[]
+              setRecentViews(recentItems.slice(0, 5))
+            } catch (e) {
+              console.error('Failed to fetch recentviews:', e)
+>>>>>>> 1e69241 (user 테이블 정리, recentview 테이블 생성 및 적용함)
             }
 
             // 스크랩/알림을 별도 API로 가져오기 (서버의 /users/{user_id}/...)

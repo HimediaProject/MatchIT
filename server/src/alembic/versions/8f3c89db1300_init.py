@@ -36,6 +36,12 @@ def upgrade():
     # op.execute("SELECT setval(pg_get_serial_sequence('usernotificationsettings', 'usernotificationid'), 1, false);")
     
     # 2. 데이터 삽입
+    # Roles 테이블 더미 데이터
+    op.execute("""
+    INSERT INTO roles (rolename) VALUES
+    ('user'),
+    ('admin');
+    """)
 
     # CareerLevels 더미 데이터
     op.execute("""
@@ -89,6 +95,7 @@ def upgrade():
 
 def downgrade():
     # 더미 데이터 삭제 (역순으로)
+    op.execute("DELETE FROM userrecentviews;")
     op.execute("DELETE FROM userscraps;")
     op.execute("DELETE FROM bootcampposts;")
     op.execute("DELETE FROM jobpostskills;")

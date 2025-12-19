@@ -45,7 +45,6 @@ CREATE TABLE Users (
     RoleID INT NOT NULL DEFAULT 1,  -- 1 = user
     CareerLevelID INT,
     RangeID INT,
-    RecentViews TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_role
@@ -245,6 +244,38 @@ CREATE UNIQUE INDEX uq_userscraps_job
 
 CREATE UNIQUE INDEX uq_userscraps_bootcamp
     ON UserScraps (UserID, BootcampPostID)
+    WHERE PostType = 'Bootcamp';
+
+-- 최근 열람 (PostType ENUM → CHECK, COALESCE UNIQUE → 부분 인덱스로 대체 추천)
+CREATE TABLE UserRecentViews (
+    RecentViewID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    UserID INT NOT NULL,
+    PostType VARCHAR(20) NOT NULL,
+    JobPostID INT NULL,
+    BootcampPostID INT NULL,
+    RecentViewedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_userrecentviews_posttype
+        CHECK (PostType IN ('Job', 'Bootcamp')),
+    CONSTRAINT fk_userrecentviews_user
+        FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    CONSTRAINT fk_userrecentviews_jobpost
+        FOREIGN KEY (JobPostID) REFERENCES JobPosts(PostID),
+    CONSTRAINT fk_userrecentviews_bootcamppost
+        FOREIGN KEY (BootcampPostID) REFERENCES BootcampPosts(BootcampID),
+    CONSTRAINT chk_userrecentviews_only_one_ref
+        CHECK (
+            (PostType = 'Job' AND JobPostID IS NOT NULL AND BootcampPostID IS NULL) OR
+            (PostType = 'Bootcamp' AND BootcampPostID IS NOT NULL AND JobPostID IS NULL)
+        )
+);
+
+-- UserRecentViews의 "User별, 타입별 한 번만" 제약을 위해 부분 유니크 인덱스 사용
+CREATE UNIQUE INDEX uq_userrecentviews_job
+    ON UserRecentViews (UserID, JobPostID)
+    WHERE PostType = 'Job';
+
+CREATE UNIQUE INDEX uq_userrecentviews_bootcamp
+    ON UserRecentViews (UserID, BootcampPostID)
     WHERE PostType = 'Bootcamp';
 
 -- Login Session DB 저장

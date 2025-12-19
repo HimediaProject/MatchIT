@@ -25,6 +25,14 @@ const JobDetail = () => {
 
   useEffect(() => {
     if (!isValidId) return
+    void usersApi.addMyRecentView('Job', id).catch(() => {
+      // ignore
+    })
+  }, [id, isValidId])
+
+  useEffect(() => {
+    if (!isValidId) return
+
     let mounted = true
     const load = async () => {
       try {

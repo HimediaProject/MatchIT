@@ -122,6 +122,9 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
         db.query(models.UserScrap).filter(
             models.UserScrap.UserID == user_id
         ).delete()
+        db.query(models.UserRecentView).filter(
+            models.UserRecentView.UserID == user_id
+        ).delete()
         db.query(models.SocialLogin).filter(
             models.SocialLogin.UserID == user_id
         ).delete()

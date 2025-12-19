@@ -18,7 +18,7 @@ import json
 from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
-from src.schemas import UserScrapPost
+from src.schemas import UserScrapPost, UserRecentViewPost
 
 
 router = APIRouter(prefix="/users", tags=['유저 프로필 기능'])
@@ -32,7 +32,6 @@ class ProfileOut(BaseModel):
     career_level: Optional[str] = None
     skills: List[str] = []
     desired_jobs: List[str] = []
-    recentviews: Optional[List[str]] = None
 
     class Config:
         orm_mode = True
@@ -90,7 +89,6 @@ class ProfileUpdate(BaseModel):
         ],
         description="희망 직무 목록"
     )
-    recentviews: Optional[List[str]] = None
 
 class JobPostOut(BaseModel):
     id: int
@@ -197,6 +195,17 @@ def get_user_scrap(db: Session, user_id: int):
         .all()
     )
 
+def get_user_recentview(db: Session, user_id: int):
+    return (
+        db.query(models.UserRecentView)
+        .options(joinedload(models.UserRecentView.job_post))
+        .options(joinedload(models.UserRecentView.bootcamp_post))
+        .filter(models.UserRecentView.UserID == user_id)
+        .order_by(models.UserRecentView.RecentViewedAt.desc())
+        .limit(10)
+        .all()
+    )
+
 def get_user_notifications(db: Session, user_id: int):
     notifications = (
         db.query(models.UserNotificationSetting)
@@ -263,18 +272,10 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
     career_name = None
     experience_name = None
     user_skills = [s.SkillName for s in user.skills]
-    user_desired_jobs = [j.JobName for j in (user.desired_jobs or [])]
+    user_desired_jobs = [j.JobName for j in user.desired_jobs]
 
     career_name = user.career_level.CareerName if user.career_level else None
     experience_name = user.experience_range.RangeName if getattr(user, 'experience_range', None) else None
-
-    recentviews = None
-    _rv = getattr(user, "RecentViews", None)
-    if _rv:
-        try:
-            recentviews = json.loads(_rv)
-        except Exception:
-            pass
 
     return ProfileOut(
         user_id=user.UserID,
@@ -284,7 +285,6 @@ def read_profile(user_id: int, db: Session = Depends(get_db)):
         experience_range=experience_name,
         skills=user_skills,
         desired_jobs=user_desired_jobs,
-        recentviews=recentviews
     )
 
 
@@ -550,13 +550,6 @@ def update_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(get_
         for job in resolved_jobs:
             user.desired_jobs.append(job)
 
-    # 최근 열람(문자열 리스트) 저장
-    if data.recentviews is not None and hasattr(user, "RecentViews"):
-        try:
-            setattr(user, "RecentViews", json.dumps(list(data.recentviews), ensure_ascii=False))
-        except Exception:
-            setattr(user, "RecentViews", None)
-
     try:
         db.commit()
     except IntegrityError as e:
@@ -728,6 +721,161 @@ def delete_my_scrap(data: UserScrapPost, current_user: models.User = Depends(get
         logger.exception("스크랩 삭제 실패")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/me/recentviews", response_model=List[UserRecentViewsGet])
+def read_my_recentviews(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    recentviews = get_user_recentview(db, current_user.UserID)
+    result: List[UserRecentViewsGet] = []
+    for recentview in recentviews:
+        job_post = None
+        bootcamp_post = None
+
+        if recentview.PostType == "Job" and recentview.job_post:
+            job_post = JobPostOut(
+                id=recentview.job_post.PostID,
+                title=recentview.job_post.Title,
+                company_name=recentview.job_post.CompanyName,
+            )
+        if recentview.PostType == "Bootcamp" and recentview.bootcamp_post:
+            bootcamp_post = BootcampPostOut(
+                id=recentview.bootcamp_post.BootcampID,
+                title=recentview.bootcamp_post.Title,
+                institute_name=recentview.bootcamp_post.InstituteName,
+            )
+
+        result.append(
+            UserRecentViewsGet(
+                post_type=recentview.PostType,
+                job_post_id=recentview.JobPostID,
+                bootcamp_post_id=recentview.BootcampPostID,
+                job_post=job_post,
+                bootcamp_post=bootcamp_post,
+            )
+        )
+    return result
+
+
+@router.get("/{user_id}/recentviews", response_model=List[UserRecentViewsGet])
+def read_userrecentview(user_id: int, db: Session = Depends(get_db)):
+    recentviews = get_user_recentview(db, user_id)
+    result: List[UserRecentViewsGet] = []
+    for recentview in recentviews:
+        job_post = None
+        bootcamp_post = None
+
+        if recentview.PostType == "Job" and recentview.job_post:
+            job_post = JobPostOut(
+                id=recentview.job_post.PostID,
+                title=recentview.job_post.Title,
+                company_name=recentview.job_post.CompanyName,
+            )
+
+        if recentview.PostType == "Bootcamp" and recentview.bootcamp_post:
+            bootcamp_post = BootcampPostOut(
+                id=recentview.bootcamp_post.BootcampID,
+                title=recentview.bootcamp_post.Title,
+                institute_name=recentview.bootcamp_post.InstituteName,
+            )
+
+        result.append(
+            UserRecentViewsGet(
+                post_type=recentview.PostType,
+                job_post_id=recentview.JobPostID,
+                bootcamp_post_id=recentview.BootcampPostID,
+                job_post=job_post,
+                bootcamp_post=bootcamp_post,
+            )
+        )
+    return result
+
+
+@router.post("/me/recentviews", response_model=Dict[str, Any])
+def create_my_recentviews(data: UserRecentViewPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 최근 열람 추가 (Job 또는 Bootcamp)."""
+    try:
+        # 최대 최근열람 개수 제한 (초과 시 가장 오래된 것 삭제)
+        MAX_RECENTVIEWS = 10
+
+        if data.post_type.value.lower() == 'job':
+            existing = db.query(models.UserRecentView).filter(
+                models.UserRecentView.UserID == current_user.UserID,
+                models.UserRecentView.PostType == 'Job',
+                models.UserRecentView.JobPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_recentviewed"}
+
+            recentview = models.UserRecentView(
+                UserID=current_user.UserID,
+                PostType='Job',
+                JobPostID=data.target_id,
+            )
+        else:
+            existing = db.query(models.UserRecentView).filter(
+                models.UserRecentView.UserID == current_user.UserID,
+                models.UserRecentView.PostType == 'Bootcamp',
+                models.UserRecentView.BootcampPostID == data.target_id,
+            ).first()
+            if existing:
+                return {"status": "ok", "message": "already_recentviewed"}
+
+            recentview = models.UserRecentView(
+                UserID=current_user.UserID,
+                PostType='Bootcamp',
+                BootcampPostID=data.target_id,
+            )
+
+        current_count = db.query(models.UserRecentView).filter(
+            models.UserRecentView.UserID == current_user.UserID
+        ).count()
+
+        if current_count >= MAX_RECENTVIEWS:
+            oldest = (
+                db.query(models.UserRecentView)
+                .filter(models.UserRecentView.UserID == current_user.UserID)
+                .order_by(models.UserRecentView.RecentViewedAt.asc())
+                .first()
+            )
+            if oldest:
+                db.delete(oldest)
+                db.flush()
+
+        db.add(recentview)
+        db.commit()
+        db.refresh(recentview)
+        return {"status": "ok", "recentview_id": recentview.RecentViewID}
+    except Exception as e:
+        db.rollback()
+        logger.exception("최근 열람 생성 실패")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/me/recentviews", response_model=Dict[str, Any])
+def delete_my_recentview(data: UserRecentViewPost, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """현재 로그인한 사용자의 최근 열람 삭제"""
+    try:
+        if data.post_type.value.lower() == 'job':
+            recentview = db.query(models.UserRecentView).filter(
+                models.UserRecentView.UserID == current_user.UserID,
+                models.UserRecentView.PostType == 'Job',
+                models.UserRecentView.JobPostID == data.target_id,
+            ).first()
+        else:
+            recentview = db.query(models.UserRecentView).filter(
+                models.UserRecentView.UserID == current_user.UserID,
+                models.UserRecentView.PostType == 'Bootcamp',
+                models.UserRecentView.BootcampPostID == data.target_id,
+            ).first()
+
+        if not recentview:
+            return {"status": "ok", "message": "not_found"}
+
+        db.delete(recentview)
+        db.commit()
+        return {"status": "ok", "message": "deleted"}
+    except Exception as e:
+        db.rollback()
+        logger.exception("최근 열람 삭제 실패")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # @router.get("/{user_id}/notifications", response_model=List[UserNotifications])
 # def read_notifications(user_id: int, db: Session = Depends(get_db)):
