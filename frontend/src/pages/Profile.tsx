@@ -72,26 +72,6 @@ const ProfilePage = () => {
     setScraps(newScraps)
   }
 
-<<<<<<< HEAD
-  // 최근 열람 삭제 핸들러 (항목 객체으로 삭제)
-  const handleDeleteRecentView = (item: RecentViewItem) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return
-
-    const newRecentViews = recentviews.filter((r) => {
-      // 동일 항목(가능하면 postType + targetId + label)만 제거
-      const samePostType = (r.postType ?? '') === (item.postType ?? '')
-      const sameTarget = Number(r.targetId) === Number(item.targetId)
-      const sameLabel = String(r.label) === String(item.label)
-      return !(samePostType && (sameTarget || sameLabel))
-    })
-
-    setRecentViews(newRecentViews)
-    try {
-      localStorage.setItem('recentviews', JSON.stringify(newRecentViews))
-    } catch (e) {
-      // ignore
-    }
-=======
   // 최근 열람 삭제 핸들러
   const handleDeleteRecentView = async (index: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
@@ -110,7 +90,6 @@ const ProfilePage = () => {
     const next = [...recentviews]
     next.splice(index, 1)
     setRecentViews(next)
->>>>>>> 1e69241 (user 테이블 정리, recentview 테이블 생성 및 적용함)
   }
 
   // 프로필 저장 함수
@@ -324,84 +303,6 @@ const ProfilePage = () => {
             if (Array.isArray(profileData.desired_jobs) && profileData.desired_jobs.length > 0) {
               setSelectedInterests(profileData.desired_jobs)
             }
-<<<<<<< HEAD
-            if (Array.isArray(profileData.recentviews) && profileData.recentviews.length > 0) {
-              // 서버 recentViews는 문자열만 내려오므로, localStorage의 구조화된 recentViews와 라벨 매칭
-              let localNormalized: RecentViewItem[] = []
-              try {
-                const raw = localStorage.getItem('recentviews')
-                if (raw) {
-                  const parsed = JSON.parse(raw)
-                  const arr = Array.isArray(parsed) ? parsed : []
-                  localNormalized = arr
-                    .map((x: any) => {
-                      if (typeof x === 'string') return { label: String(x) }
-                      if (x && typeof x === 'object') {
-                        const postType = String(x.postType ?? x.type ?? '')
-                        const targetId = Number(x.targetId ?? x.id)
-                        const label = String(x.label ?? x.title ?? '')
-                        return { postType: postType === 'Job' || postType === 'Bootcamp' ? postType : undefined, targetId, label }
-                      }
-                      return null
-                    })
-                    .filter(Boolean) as RecentViewItem[]
-                }
-              } catch {
-                // ignore
-              }
-
-              const mergedAll = profileData.recentviews
-                .map((x: any) => {
-                  const raw = String(x)
-                  const stripped = formatRecentLabel(raw)
-                  const found = localNormalized.find((y) => (y.label === raw || y.label === stripped) && y.postType && Number.isFinite(y.targetId))
-                  if (found) return found
-
-                  // Detect bracket prefixes emitted by server (e.g. "[채용] Title" / "[부트캠프] Title")
-                  const isJobPref = /^\s*\[(?:채용|Job)\]/i.test(raw)
-                  const isBootPref = /^\s*\[(?:부트캠프|Bootcamp)\]/i.test(raw)
-                  if (isJobPref) return { postType: 'Job', label: stripped }
-                  if (isBootPref) return { postType: 'Bootcamp', label: stripped }
-
-                  return { label: stripped }
-                })
-
-              // 타입별로 최대 50건씩 제한 (postType이 지정된 항목은 해당 섹션으로)
-              const jobItems = mergedAll.filter((m) => m.postType === 'Job').slice(0, 50)
-              const bootItems = mergedAll.filter((m) => m.postType === 'Bootcamp').slice(0, 50)
-              const others = mergedAll.filter((m) => !m.postType).slice(0, 50)
-
-              setRecentViews([...jobItems, ...bootItems, ...others])
-            } else {
-              // 서버에 recentviews가 없으면 로컬스토리지에서 불러와서 사용 (타입별 최대 50건)
-              try {
-                const raw = localStorage.getItem('recentviews')
-                if (raw) {
-                  const parsed = JSON.parse(raw)
-                  const arr = Array.isArray(parsed) ? parsed : []
-                  const normalized = arr
-                    .map((x: any) => {
-                      if (typeof x === 'string') return { label: String(x) }
-                      if (x && typeof x === 'object') {
-                        const postType = String(x.postType ?? x.type ?? '')
-                        const targetId = Number(x.targetId ?? x.id)
-                        const label = String(x.label ?? x.title ?? '')
-                        return { postType: postType === 'Job' || postType === 'Bootcamp' ? postType : undefined, targetId, label }
-                      }
-                      return null
-                    })
-                    .filter(Boolean) as RecentViewItem[]
-
-                  const jobItems = normalized.filter((m) => m.postType === 'Job' && Number.isFinite(m.targetId)).slice(0, 50)
-                  const bootItems = normalized.filter((m) => m.postType === 'Bootcamp' && Number.isFinite(m.targetId)).slice(0, 50)
-                  const others = normalized.filter((m) => !(m.postType === 'Job' && Number.isFinite(m.targetId)) && !(m.postType === 'Bootcamp' && Number.isFinite(m.targetId))).slice(0, 50)
-
-                  if (normalized.length > 0) setRecentViews([...jobItems, ...bootItems, ...others])
-                }
-              } catch (e) {
-                // ignore
-              }
-=======
             try {
               const recentRes: any[] = await usersApi.getMyRecentViews()
               const recentItems = (recentRes || [])
@@ -425,7 +326,6 @@ const ProfilePage = () => {
               setRecentViews(recentItems.slice(0, 5))
             } catch (e) {
               console.error('Failed to fetch recentviews:', e)
->>>>>>> 1e69241 (user 테이블 정리, recentview 테이블 생성 및 적용함)
             }
 
             // 스크랩/알림을 별도 API로 가져오기 (서버의 /users/{user_id}/...)
